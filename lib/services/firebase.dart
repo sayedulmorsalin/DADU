@@ -230,41 +230,45 @@ Future<void> submitOrder({
   }
 }
 
-Future<bool> updateUserDetailsAfterBuy(String email,
-    Map<String, dynamic> updatedData) async {
-  try {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('email', isEqualTo: email)
-        .limit(1)
-        .get();
+  Future<bool> updateUserDetailsAfterBuy(String email, Map<String, dynamic> updatedData) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
 
-    if (querySnapshot.docs.isNotEmpty) {
-      final docRef = querySnapshot.docs.first.reference;
-
-      // NEW: Handle array fields specially
-      final Map<String, dynamic> updateOperations = {};
-
-      updatedData.forEach((key, value) {
-        if (key == 'to_verify' && value is List) {
-          // Append to existing array using FieldValue
-          updateOperations[key] = FieldValue.arrayUnion(value);
-        } else if (key == 'to_verify_count') {
-          // Increment count
-          updateOperations[key] = FieldValue.increment(value);
-        } else {
-          // Normal field update
-          updateOperations[key] = value;
-        }
-      });
-
-      await docRef.update(updateOperations);
-      return true;
+      if (querySnapshot.docs.isNotEmpty) {
+        final docRef = querySnapshot.docs.first.reference;
+        await docRef.update(updatedData);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print("Error updating user details: $e");
+      return false;
     }
-    return false;
-  } catch (e) {
-    print("Error updating user details: $e");
-    return false;
   }
-}
+
+
+// Add this method to your dataBase class in services/firebase.dart
+  Future<List<Map<String, dynamic>>> getBanners() async {
+    try {
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('banners')
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'id': doc.id,
+          'imageUrl': data['imageUrl'],
+          'createdAt': data['createdAt'],
+        };
+      }).toList();
+    } catch (e) {
+      print("Error fetching active banners: $e");
+      return [];
+    }
+  }
 }

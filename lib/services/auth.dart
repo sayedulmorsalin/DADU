@@ -165,13 +165,9 @@ class Auth {
       'free_delivery_status': false,
       'cart_items': [],
       'to_verify': [],
-      'to_verify_count': 0,
       'to_ship': [],
-      'to_ship_count': 0,
       'to_receive': [],
-      'to_receive_count': 0,
       'completed': [],
-      'completed_count': 0,
       'last_updated': FieldValue.serverTimestamp(),
     };
 

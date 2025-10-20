@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/user/profile.dart';
 import 'package:dadu/services/api.dart';
 import 'package:flutter/material.dart';
@@ -172,66 +173,43 @@ class _CheckOutState extends State<CheckOut> {
 
       // Upload payment proof if needed
       if (!_freeDeliverySelected && _paymentProofImage != null) {
-        paymentProof = await _imageService.uploadProfileImage(
-          _paymentProofImage!,
-        );
+        paymentProof = await _imageService.uploadProfileImage(_paymentProofImage!);
       }
 
-      // Prepare order data
-      final orderData = {
-        'customerName': _nameController.text,
-        'customerEmail': currentUser.email,
-        'phone': _phoneController.text,
-        'address': _addressController.text,
-        'district': selectedDistrict ?? '',
-        'thana': selectedThana ?? '',
-        'paymentMethod': _paymentMethod,
-        'paymentProof': paymentProof ?? '',
-        'items':
-            widget.cartItems
-                .map(
-                  (item) => {
-                    'id': item.id,
-                    'name': item.name,
-                    'price': item.price,
-                    'quantity': item.quantity,
-                    'imageUrl': item.imageUrl,
-                    'order_uid':
-                        '${DateTime.now().millisecondsSinceEpoch}-${item.id}',
-                    'size': item.size,
-                  },
-                )
-                .toList(),
-        'subtotal': widget.totalAmount,
-        'deliveryCharge': deliveryCharge,
-        'total': _total,
-        'order_status': "verify",
-        'freeDeliveryUsed': _freeDeliverySelected,
-        'baseDeliveryCharge': baseDeliveryCharge,
-        'deliveryPoints': deliveryPoints,
-      };
-
-      // Submit order
-      await db.submitOrder(orderData: orderData, userEmail: currentUser.email!);
-
-      // Update user details
+      // Create order data to save in user collection
       final userUpdateData = {
-        "to_verify":
-            widget.cartItems
-                .map(
-                  (item) => {
-                    'id': item.id,
-                    'name': item.name,
-                    'price': item.price,
-                    'quantity': item.quantity,
-                    'imageUrl': item.imageUrl,
-                    'order_uid':
-                        '${DateTime.now().millisecondsSinceEpoch}-${item.id}',
-                  },
-                )
-                .toList(),
-        "to_verify_count": totalQuantity,
+        "to_verify": FieldValue.arrayUnion([
+          {
+            'order_id': 'ORD-${DateTime.now().millisecondsSinceEpoch}',
+            'customerName': _nameController.text,
+            'customerEmail': currentUser.email,
+            'phone': _phoneController.text,
+            'address': _addressController.text,
+            'district': selectedDistrict ?? '',
+            'thana': selectedThana ?? '',
+            'paymentMethod': _paymentMethod,
+            'paymentProof': paymentProof ?? '',
+            'items': widget.cartItems.map((item) => {
+              'id': item.id,
+              'name': item.name,
+              'price': item.price,
+              'quantity': item.quantity,
+              'imageUrl': item.imageUrl,
+              'order_uid': '${DateTime.now().millisecondsSinceEpoch}-${item.id}',
+              'size': item.size,
+            }).toList(),
+            'subtotal': widget.totalAmount,
+            'deliveryCharge': deliveryCharge,
+            'total': _total,
+            'order_status': "verify",
+            'freeDeliveryUsed': _freeDeliverySelected,
+            'baseDeliveryCharge': baseDeliveryCharge,
+            'deliveryPoints': deliveryPoints,
+            'order_date': DateTime.now().millisecondsSinceEpoch,
+          }
+        ]),
         'freeDeliveryUsed': _freeDeliverySelected,
+        'cart_item': {}, // Clear cart
       };
 
       await db.updateUserDetailsAfterBuy(currentUser.email!, userUpdateData);

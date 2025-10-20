@@ -40,6 +40,12 @@ class _HomeState extends State<Home> {
   String? profileImageUrl;
   bool profileImageLoading = false;
 
+  // New variables for banners
+  List<Map<String, dynamic>> banners = [];
+  int currentBannerIndex = 0;
+  PageController bannerPageController = PageController();
+  Timer? bannerAutoScrollTimer;
+
   @override
   void initState() {
     super.initState();
@@ -57,9 +63,8 @@ class _HomeState extends State<Home> {
       _auth.anonymousLogin();
     }
 
-
-
     initializeData();
+    _loadBanners(); // Load banners from database
 
     scrollController.addListener(() {
       if (scrollController.position.pixels >=
@@ -71,6 +76,45 @@ class _HomeState extends State<Home> {
       }
     });
     _recordLoginTime();
+  }
+
+  @override
+  void dispose() {
+    bannerAutoScrollTimer?.cancel();
+    bannerPageController.dispose();
+    super.dispose();
+  }
+
+  // Load banners from database
+  Future<void> _loadBanners() async {
+    try {
+      final bannerData = await db.getBanners(); // You'll need to implement this method in your database service
+      if (mounted) {
+        setState(() {
+          banners = bannerData;
+        });
+        // Start auto-scroll if we have multiple banners
+        if (banners.length > 1) {
+          _startAutoScroll();
+        }
+      }
+    } catch (e) {
+      print("Error loading banners: $e");
+    }
+  }
+
+  // Auto-scroll banners every 5 seconds
+  void _startAutoScroll() {
+    bannerAutoScrollTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+      if (bannerPageController.hasClients && banners.length > 1) {
+        final nextPage = (currentBannerIndex + 1) % banners.length;
+        bannerPageController.animateToPage(
+          nextPage,
+          duration: Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
   // New method to load profile image
@@ -152,7 +196,7 @@ class _HomeState extends State<Home> {
       });
     }
   }
-  // if i want to show offer aspect ratio will be 9:16 / 1080x1920
+
   void _showImageDialog() {
     showDialog(
       context: context,
@@ -164,7 +208,7 @@ class _HomeState extends State<Home> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             image: const DecorationImage(
-              image: AssetImage('assets/icon/user_icon.png'), // Your image asset
+              image: AssetImage('assets/icon/user_icon.png'),
               fit: BoxFit.cover,
             ),
           ),
@@ -185,8 +229,7 @@ class _HomeState extends State<Home> {
     );
   }
 
-
-// Updated navigation method
+  // Updated navigation method
   void _navigateToProfile() async {
     if (loggedin) {
       await Navigator.push(
@@ -210,7 +253,6 @@ class _HomeState extends State<Home> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -230,7 +272,7 @@ class _HomeState extends State<Home> {
           height: 100,
         ),
       )
-          : null, // Hide completely when false
+          : null,
       body: Stack(
         children: [
           SafeArea(
@@ -292,6 +334,104 @@ class _HomeState extends State<Home> {
                   ),
                 ),
                 const SizedBox(height: 10),
+
+                // Scrollable Banner Section
+                if (banners.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Container(
+                      height: MediaQuery.of(context).size.width / 2.16,
+                      child: Stack(
+                        children: [
+                          // Banner PageView
+                          PageView.builder(
+                            controller: bannerPageController,
+                            itemCount: banners.length,
+                            onPageChanged: (index) {
+                              setState(() {
+                                currentBannerIndex = index;
+                              });
+                            },
+                            itemBuilder: (context, index) {
+                              final banner = banners[index];
+                              return Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  color: Colors.grey[300],
+                                  image: banner['imageUrl'] != null
+                                      ? DecorationImage(
+                                    image: NetworkImage(banner['imageUrl']),
+                                    fit: BoxFit.cover,
+                                  )
+                                      : const DecorationImage(
+                                    image: AssetImage('assets/icon/banner.jpg'),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: () {
+                                      // Handle banner tap
+                                      if (banner['action'] != null) {
+                                        // Navigate to specific page or perform action
+                                        print('Banner ${banner['id']} tapped');
+                                      }
+                                    },
+                                    child: Container(),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                          // Page Indicators
+                          if (banners.length > 1)
+                            Positioned(
+                              bottom: 10,
+                              left: 0,
+                              right: 0,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(banners.length, (index) {
+                                  return Container(
+                                    width: 8,
+                                    height: 8,
+                                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: currentBannerIndex == index
+                                          ? Colors.white
+                                          : Colors.white.withOpacity(0.5),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                // Placeholder banner when no banners are available
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Container(
+                      width: double.infinity,
+                      height: MediaQuery.of(context).size.width / 2.16,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.grey[300],
+                        image: const DecorationImage(
+                          image: AssetImage('assets/icon/banner.jpg'),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -308,6 +448,7 @@ class _HomeState extends State<Home> {
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: InfoBanner(),
                 ),
+
                 if (isLoading)
                   const Center(child: CircularProgressIndicator())
                 else if (filteredProducts.isEmpty)
