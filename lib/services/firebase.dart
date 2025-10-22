@@ -271,4 +271,18 @@ Future<void> submitOrder({
       return [];
     }
   }
+
+
+  Stream<String?> getVersionStream() {
+    return FirebaseFirestore.instance
+        .collection('version')
+        .doc('jL4qHQOWC9wGMKyBGMAT')
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.exists) {
+        return snapshot.get('version').toString();
+      }
+      return null;
+    });
+  }
 }

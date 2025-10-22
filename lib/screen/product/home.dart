@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fuzzy/fuzzy.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'brands.dart';
 import 'info_banner.dart';
 import 'product_item.dart';
@@ -444,6 +445,48 @@ class _HomeState extends State<Home> {
                     _buildBrandItem("Others", "assets/icon/other.png"),
                   ],
                 ),
+                StreamBuilder<String?>(
+                  stream: db.getVersionStream(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData && snapshot.data != null) {
+                      final version = int.tryParse(snapshot.data!);
+                      print("version ===  ${version}");
+                      if (version != null && version > 1) {
+                        return Container(
+                          color: Colors.amberAccent,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: const [
+                                  Icon(Icons.update),
+                                  SizedBox(width: 8),
+                                  Text("New update is available!"),
+                                ],
+                              ),
+                              TextButton(
+                                onPressed: () async {
+                                  const url = 'https://appnest-seven.vercel.app/';
+                                  if (await canLaunchUrl(Uri.parse(url))) {
+                                    await launchUrl(Uri.parse(url));
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Could not launch $url')),
+                                    );
+                                  }
+                                },
+                                child: const Text("UPDATE"),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    }
+                    return const SizedBox.shrink(); // Return empty when no update
+                  },
+                ),
+
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: InfoBanner(),

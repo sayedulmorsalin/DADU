@@ -5,6 +5,7 @@ import 'package:dadu/services/api.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/district_upozila.dart';
 import '../../model/cart_model.dart';
 import '../../services/auth.dart';
@@ -13,6 +14,7 @@ import '../../services/firebase.dart';
 class CheckOut extends StatefulWidget {
   final List<CartItem> cartItems;
   final double totalAmount;
+
 
   const CheckOut({
     super.key,
@@ -45,6 +47,7 @@ class _CheckOutState extends State<CheckOut> {
   int baseDeliveryCharge = 0;
   int deliveryCharge = 0;
   double _total = 0;
+  bool needupdate = false;
 
   final Auth _auth = Auth();
   final ImageService _imageService = ImageService();
@@ -157,6 +160,16 @@ class _CheckOutState extends State<CheckOut> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please upload payment proof screenshot'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    if(needupdate){
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please update your app first'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -662,6 +675,47 @@ class _CheckOutState extends State<CheckOut> {
             const SizedBox(height: 16),
             _buildOrderSummary(),
             const SizedBox(height: 32),
+            StreamBuilder<String?>(
+              stream: db.getVersionStream(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  final version = int.tryParse(snapshot.data!);
+                  if (version != null && version > 1) {
+                    needupdate = true;
+                    return Container(
+                      color: Colors.amberAccent,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: const [
+                              Icon(Icons.update),
+                              SizedBox(width: 8),
+                              Text("New update is available!"),
+                            ],
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              const url = 'https://appnest-seven.vercel.app/';
+                              if (await canLaunchUrl(Uri.parse(url))) {
+                                await launchUrl(Uri.parse(url));
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Could not launch $url')),
+                                );
+                              }
+                            },
+                            child: const Text("UPDATE"),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                }
+                return const SizedBox.shrink(); // Return empty when no update
+              },
+            ),
             SizedBox(
               width: double.infinity,
               height: 50,
