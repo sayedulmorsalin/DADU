@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:dadu/screen/product/product_details.dart';
 import 'package:dadu/screen/user/cart.dart';
 import 'package:dadu/screen/user/profile.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
@@ -21,7 +22,16 @@ class Home extends StatefulWidget {
   State<Home> createState() => _HomeState();
 }
 
-class _HomeState extends State<Home> {
+class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
+
+
+  List<Map<String, dynamic>> flashProducts = [];
+
+  Future<void> loadFlashSaleProducts() async {
+    flashProducts = await db.getFlashSaleProducts();
+    setState(() {});
+  }
+
   final dataBase db = new dataBase();
   final Auth _auth = Auth();
   late Fuzzy fuzzy;
@@ -46,6 +56,10 @@ class _HomeState extends State<Home> {
   int currentBannerIndex = 0;
   PageController bannerPageController = PageController();
   Timer? bannerAutoScrollTimer;
+  Timer? flashTimer;
+  late AnimationController flashAnimController;
+  late Animation<double> flashBounce;
+
 
   @override
   void initState() {
@@ -66,6 +80,23 @@ class _HomeState extends State<Home> {
 
     initializeData();
     _loadBanners(); // Load banners from database
+    flashTimer = Timer.periodic(Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+
+    flashAnimController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 700),
+    );
+
+    flashBounce = Tween<double>(begin: 0.0, end: 8.0)
+        .chain(CurveTween(curve: Curves.elasticOut))
+        .animate(flashAnimController);
+
+    flashAnimController.repeat(reverse: true);
+
+    loadFlashSaleProducts();
+
 
     scrollController.addListener(() {
       if (scrollController.position.pixels >=
@@ -77,11 +108,144 @@ class _HomeState extends State<Home> {
       }
     });
     _recordLoginTime();
+
   }
+
+  Widget flashSaleItem(Map<String, dynamic> product) {
+    final String title = product['name'] ?? 'No Name';
+    final String image = product['image5'] ??
+        product['image20'] ??
+        'assets/demo_item_image/d1.jpg';
+    final dynamic expire = product['flash-expire'];
+    final String remaining = formatRemainingTime(expire);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProductDetails(
+                productid: product['id'],
+                title: product['name'],
+                price: product["price"],
+                image20: product['image20'],
+                description: product['details'],
+                videoLink: product['videoLink'],
+                brand: product['brand'],
+                image5: product['image5'],
+              ),
+            ),
+          );
+        },
+        child: Padding(padding: EdgeInsets.all(8),child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product Image
+            Expanded(
+              child: ClipRRect(
+
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  image,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      Image.asset('assets/demo_item_image/d1.jpg'),
+                ),
+              ),
+            ),
+
+            SizedBox(height: 4),
+
+            // Product Name
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+
+            SizedBox(height: 2),
+
+            // Flash Sale Countdown
+            Text(
+              remaining == "Expired"
+                  ? "Expired"
+                  : "⏳ $remaining",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: remaining == "Expired" ? Colors.red : Colors.green,
+              ),
+            ),
+
+            SizedBox(height: 2),
+
+            // Flash Price
+            Text(
+              "Price: ৳${product['price']}",
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.orange,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),)
+      ),
+    );
+  }
+
+
+  String formatRemainingTime(dynamic ts) {
+    if (ts == null) return "Expired";
+
+    // If Firestore Timestamp → convert to DateTime
+    DateTime end;
+
+    if (ts is Timestamp) {
+      end = ts.toDate();
+    }
+    // If stored as a String → parse it
+    else if (ts is String) {
+      end = DateTime.tryParse(ts) ?? DateTime.now();
+    }
+    // If already DateTime
+    else if (ts is DateTime) {
+      end = ts;
+    }
+    else {
+      return "Expired";
+    }
+
+    Duration diff = end.difference(DateTime.now());
+
+    if (diff.isNegative) return "Expired";
+
+    String two(int n) => n.toString().padLeft(2, "0");
+
+    return "${two(diff.inHours)}:${two(diff.inMinutes % 60)}:${two(diff.inSeconds % 60)}";
+  }
+
+
 
   @override
   void dispose() {
+    flashTimer?.cancel();
     bannerAutoScrollTimer?.cancel();
+    flashAnimController.dispose();
     bannerPageController.dispose();
     super.dispose();
   }
@@ -445,12 +609,71 @@ class _HomeState extends State<Home> {
                     _buildBrandItem("Others", "assets/icon/other.png"),
                   ],
                 ),
+
+                if (flashProducts.isNotEmpty)
+                  Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: Container(
+                        padding: EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.red, Colors.red.shade100],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AnimatedBuilder(
+                              animation: flashAnimController,
+                              builder: (context, child) {
+                                return Transform.translate(
+                                  offset: Offset(0, -flashBounce.value),
+                                  child: child,
+                                );
+                              },
+                              child: Text(
+                                "Flash Sale 🔥",
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+
+                            SizedBox(height: 10),
+
+                            SizedBox(
+                              height: 270, // Adjust height based on your flashSaleItem design
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                itemCount: flashProducts.length,
+                                itemBuilder: (context, index) {
+                                  final product = flashProducts[index];
+                                  return Container(
+                                    width: 180, // width of each item
+                                    margin: EdgeInsets.only(right: 10),
+                                    child: flashSaleItem(product),
+                                  );
+                                },
+                              ),
+                            ),
+
+                          ],
+                    ),
+                  ),
+                  )
+                else
+                  SizedBox(),
+
+
                 StreamBuilder<String?>(
                   stream: db.getVersionStream(),
                   builder: (context, snapshot) {
                     if (snapshot.hasData && snapshot.data != null) {
                       final version = int.tryParse(snapshot.data!);
-                      print("version ===  ${version}");
+                      //print("version ===  ${version}");
                       if (version != null && version > 1) {
                         return Container(
                           color: Colors.amberAccent,

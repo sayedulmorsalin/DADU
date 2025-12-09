@@ -1,14 +1,22 @@
+import 'dart:io';
 import 'package:dadu/screen/user/cart.dart';
 import 'package:dadu/screen/user/check_out.dart';
 import 'package:dadu/services/auth.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
-
 import '../../model/cart_model.dart';
 import '../../services/firebase.dart';
 import '../authentication/sign_up_2nd.dart';
 import '../authentication/sign_up_first.dart';
+import 'dart:typed_data';
+import 'package:flutter/services.dart';   // contains ByteData
+import 'package:flutter_file_downloader/flutter_file_downloader.dart';
+
+
 
 class ProductDetails extends StatefulWidget {
   final String title;
@@ -66,6 +74,49 @@ class _ProductDetailsState extends State<ProductDetails> {
       throw Exception('Could not launch $url');
     }
   }
+
+  Future<bool> requestImagePermission() async {
+    // Android 13+ (READ_MEDIA_IMAGES)
+    final photosPermission = await Permission.photos.request();
+    if (photosPermission.isGranted) return true;
+
+    // Android 12 and below
+    final storagePermission = await Permission.storage.request();
+    if (storagePermission.isGranted) return true;
+
+    return false;
+  }
+
+
+  Future<void> saveImageToDevice(String url) async {
+    FileDownloader.downloadFile(
+      url: url,
+      name: "dadu_${DateTime.now().millisecondsSinceEpoch}.jpg",
+      // Download to /storage/emulated/0/Download/Dadu/
+      downloadDestination: DownloadDestinations.publicDownloads,
+      subPath: "Dadu", // optional folder inside Downloads
+
+      onProgress: (String? fileName, double progress) {
+        // you can show a progress indicator if you want
+        // print("Downloading: $progress%");
+      },
+
+      onDownloadCompleted: (String path) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Saved to: $path")),
+        );
+      },
+
+      onDownloadError: (String errorMessage) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Download error: $errorMessage")),
+        );
+      },
+    );
+  }
+
+
+
 
   Widget method1() {
     return Row(
@@ -223,7 +274,8 @@ class _ProductDetailsState extends State<ProductDetails> {
           );
 
           String productId = widget.productid;
-          String size = selectedSize??"no size"; // Your selected size (e.g., "M", "L")
+          String size =
+              selectedSize ?? "no size"; // Your selected size (e.g., "M", "L")
 
           // 1. Handle old cart format (int quantity) if exists for this product
           if (cartItems.containsKey(productId)) {
@@ -254,7 +306,9 @@ class _ProductDetailsState extends State<ProductDetails> {
           }
 
           // 3. Update cart
-          await db.updateUserDetails(currentUser.email!, {"cart_item": cartItems});
+          await db.updateUserDetails(currentUser.email!, {
+            "cart_item": cartItems,
+          });
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -323,7 +377,7 @@ class _ProductDetailsState extends State<ProductDetails> {
               quantity: 1,
               imageUrl: widget.image5,
               brand: widget.brand,
-              size: selectedSize??"0",
+              size: selectedSize ?? "0",
             ),
           ];
 
@@ -404,6 +458,17 @@ class _ProductDetailsState extends State<ProductDetails> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          ElevatedButton(
+                            onPressed: () {
+                              saveImageToDevice(widget.image20);
+                            },
+                            child: Text("Download image"),
+                          ),
+                        ],
+                      ),
                       Text(
                         widget.title,
                         style: const TextStyle(
@@ -437,14 +502,15 @@ class _ProductDetailsState extends State<ProductDetails> {
                           if (widget.videoLink == "No videoLink available") {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Video is not available now, it will be added soon'),
+                                content: Text(
+                                  'Video is not available now, it will be added soon',
+                                ),
                                 duration: Duration(seconds: 2),
                               ),
                             );
                           } else {
                             _launchURL(widget.videoLink);
                           }
-
                         },
                         child: Row(
                           mainAxisSize: MainAxisSize.min,

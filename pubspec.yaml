@@ -48,6 +48,12 @@ dependencies:
   flutter_image_compress: ^2.4.0
   intl: ^0.20.2
   flutter_dotenv: ^6.0.0
+  path_provider: ^2.1.5
+  permission_handler: ^12.0.1
+  flutter_downloader: ^1.12.0
+  dio: ^5.9.0
+  flutter_file_downloader: ^2.1.0
+
 
 
 dev_dependencies:
@@ -89,6 +95,7 @@ flutter:
     - assets/icon/Logo.jpg
     - assets/icon/user_icon.png
     - assets/icon/banner.jpg
+    - .env
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -87,7 +87,7 @@ class _CartState extends State<Cart> {
         return;
       }
 
-      /// ✅ Start processing cart with size support
+      /// Start processing cart with size support
       final cartItem = userDetails?['cart_item'];
       List<CartItem> loadedCartItems = [];
 

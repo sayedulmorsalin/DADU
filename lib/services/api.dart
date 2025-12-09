@@ -37,6 +37,8 @@ class ImageService {
   Future<String> uploadProfileImage(File image) async {
     try {
       final compressedBytes = await compressProfileImage(image);
+      print(cloudName);
+      print(uploadPreset);
 
       final request = http.MultipartRequest('POST', _uploadUrl)
         ..fields['upload_preset'] = uploadPreset
