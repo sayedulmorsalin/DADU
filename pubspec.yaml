@@ -96,6 +96,8 @@ flutter:
     - assets/icon/user_icon.png
     - assets/icon/banner.jpg
     - .env
+    - assets/icon/jersey.png
+    - assets/icon/pant.png
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

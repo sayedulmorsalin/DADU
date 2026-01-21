@@ -112,11 +112,19 @@ class _CheckOutState extends State<CheckOut> {
         .where((item) => item.brand == 'Gloves')
         .fold(0, (sum, item) => sum + item.quantity);
 
+    int jerseyCount = widget.cartItems
+        .where((item) => item.brand == 'jersey')
+        .fold(0, (sum, item) => sum + item.quantity);
+
+    int pantCount = widget.cartItems
+        .where((item) => item.brand == 'pant')
+        .fold(0, (sum, item) => sum + item.quantity);
+
     int othersCount = widget.cartItems
         .where((item) => item.brand == 'Others')
         .fold(0, (sum, item) => sum + item.quantity);
 
-    int discountItems = glovesCount + othersCount;
+    int discountItems = glovesCount + othersCount + jerseyCount + pantCount;
     int totalQuantity = widget.cartItems.fold(
       0,
       (sum, item) => sum + item.quantity,

@@ -600,12 +600,14 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 5,
+                  crossAxisCount: 4,
                   children: [
                     _buildBrandItem("Adidas", "assets/icon/adidas.png"),
                     _buildBrandItem("Nike", "assets/icon/Nike.png"),
                     _buildBrandItem("Puma", "assets/icon/puma.png"),
                     _buildBrandItem("Gloves", "assets/icon/gloves.png"),
+                    _buildBrandItem("Jersey", "assets/icon/jersey.png"),
+                    _buildBrandItem("Pant", "assets/icon/pant.png"),
                     _buildBrandItem("Others", "assets/icon/other.png"),
                   ],
                 ),
