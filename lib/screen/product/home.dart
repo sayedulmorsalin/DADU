@@ -742,11 +742,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   },
                 ),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: InfoBanner(),
-                ),
-
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: GiftBoxBanner(
@@ -757,6 +752,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                       );
                     },
                   ),
+                ),
+
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: InfoBanner(),
                 ),
 
 
