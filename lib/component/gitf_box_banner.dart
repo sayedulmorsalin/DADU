@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
 class GiftBoxBanner extends StatefulWidget {
@@ -13,53 +12,89 @@ class GiftBoxBanner extends StatefulWidget {
 class _GiftBoxBannerState extends State<GiftBoxBanner>
     with SingleTickerProviderStateMixin {
 
-  late AnimationController controller;
+  late final AnimationController controller;
 
-  late Animation<double> floatAnim;
-  late Animation<double> lidSlide;
-  late Animation<double> lidRotate;
-  late Animation<double> popScale;
-
-  bool opened = false;
+  late final Animation<double> floatAnim;
+  late final Animation<double> lidSlide;
+  late final Animation<double> lidRotate;
+  late final Animation<double> popScale;
 
   @override
   void initState() {
     super.initState();
 
-    /// ONE controller only (safer + faster)
     controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
+      duration: const Duration(milliseconds: 2400),
+    )..repeat();
 
-    /// floating (loop)
-    floatAnim = Tween(begin: 0.0, end: -14.0).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeInOut),
-    );
+    floatAnim = TweenSequence<double>([
+      TweenSequenceItem<double>(
+        tween: Tween<double>(begin: 0, end: -10),
+        weight: 1,
+      ),
+      TweenSequenceItem<double>(
+        tween: Tween<double>(begin: -10, end: 0),
+        weight: 1,
+      ),
+    ]).animate(controller);
 
-    /// open animation
-    lidSlide = Tween(begin: 0.0, end: -60.0).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeOut),
-    );
+    lidSlide = TweenSequence<double>([
+      TweenSequenceItem<double>(
+        tween: Tween<double>(begin: 0, end: -60),
+        weight: 1,
+      ),
+      TweenSequenceItem<double>(
+        tween: ConstantTween<double>(-60),
+        weight: 1,
+      ),
+      TweenSequenceItem<double>(
+        tween: Tween<double>(begin: -60, end: 0),
+        weight: 1,
+      ),
+      TweenSequenceItem<double>(
+        tween: ConstantTween<double>(0),
+        weight: 1,
+      ),
+    ]).animate(controller);
 
-    lidRotate = Tween(begin: 0.0, end: -0.5).animate(
-      CurvedAnimation(parent: controller, curve: Curves.easeOutBack),
-    );
+    lidRotate = TweenSequence<double>([
+      TweenSequenceItem<double>(
+        tween: Tween<double>(begin: 0, end: -0.5),
+        weight: 1,
+      ),
+      TweenSequenceItem<double>(
+        tween: ConstantTween<double>(-0.5),
+        weight: 1,
+      ),
+      TweenSequenceItem<double>(
+        tween: Tween<double>(begin: -0.5, end: 0),
+        weight: 1,
+      ),
+      TweenSequenceItem<double>(
+        tween: ConstantTween<double>(0),
+        weight: 1,
+      ),
+    ]).animate(controller);
 
-    popScale = Tween(begin: 0.0, end: 1.6).animate(
-      CurvedAnimation(parent: controller, curve: Curves.elasticOut),
-    );
-
-    /// floating loop
-    controller.repeat(reverse: true);
-
-    /// auto open once after 2s
-    Timer(const Duration(seconds: 2), () {
-      if (!mounted) return;
-
-      opened = true;
-      controller.forward(); // play big open
-    });
+    popScale = TweenSequence<double>([
+      TweenSequenceItem<double>(
+        tween: Tween<double>(begin: 0, end: 1.6),
+        weight: 1,
+      ),
+      TweenSequenceItem<double>(
+        tween: ConstantTween<double>(1.6),
+        weight: 1,
+      ),
+      TweenSequenceItem<double>(
+        tween: Tween<double>(begin: 1.6, end: 0),
+        weight: 1,
+      ),
+      TweenSequenceItem<double>(
+        tween: ConstantTween<double>(0),
+        weight: 1,
+      ),
+    ]).animate(controller);
   }
 
   @override
@@ -71,7 +106,7 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: widget.onOpen, // navigate only on tap
+      onTap: widget.onOpen,
       child: AnimatedBuilder(
         animation: controller,
         builder: (_, __) {
@@ -85,32 +120,20 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                   colors: [Color(0xFFFF512F), Color(0xFFFFC371)],
                 ),
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.orange.withOpacity(.35),
-                    blurRadius: 25,
-                    spreadRadius: 3,
-                  ),
-                ],
               ),
               child: Row(
                 children: [
-
-                  /// 🎁 gift
                   SizedBox(
                     width: 90,
                     height: 90,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-
-                        /// pop emoji
                         Transform.scale(
-                          scale: opened ? popScale.value : 0,
-                          child: const Text("🎉", style: TextStyle(fontSize: 42)),
+                          scale: popScale.value,
+                          child: const Text("🎉",
+                              style: TextStyle(fontSize: 42)),
                         ),
-
-                        /// bottom
                         Container(
                           width: 65,
                           height: 48,
@@ -119,12 +142,10 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-
-                        /// lid
                         Transform.translate(
-                          offset: Offset(0, opened ? lidSlide.value : 0),
+                          offset: Offset(0, lidSlide.value),
                           child: Transform.rotate(
-                            angle: opened ? lidRotate.value : 0,
+                            angle: lidRotate.value,
                             child: Container(
                               width: 72,
                               height: 22,
@@ -138,31 +159,17 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                       ],
                     ),
                   ),
-
                   const SizedBox(width: 18),
-
                   const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Daily Gift Box 🎁",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          "Tap to claim your surprise",
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ],
+                    child: Text(
+                      "Special Gift Box 🎁",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-
-                  const Icon(Icons.arrow_forward_ios, color: Colors.white),
                 ],
               ),
             ),

@@ -11,6 +11,7 @@ import 'package:fuzzy/fuzzy.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../component/gitf_box_banner.dart';
 import 'brands.dart';
+import 'gift_box.dart';
 import 'info_banner.dart';
 import 'product_item.dart';
 import '../../services/auth.dart';
@@ -567,9 +568,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
                                     onTap: () {
-                                      // Handle banner tap
                                       if (banner['action'] != null) {
-                                        // Navigate to specific page or perform action
                                         print('Banner ${banner['id']} tapped');
                                       }
                                     },
@@ -608,7 +607,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                     ),
                   )
                 else
-                // Placeholder banner when no banners are available
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Container(
@@ -742,21 +740,22 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   },
                 ),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: InfoBanner(),
-                ),
-
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: GiftBoxBanner(
                     onOpen: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => Cart()),
+                        MaterialPageRoute(builder: (_) => GiftBox()),
                       );
                     },
                   ),
+                ),
+
+
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: InfoBanner(),
                 ),
 
 
@@ -775,7 +774,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                       crossAxisCount: 2,
                       mainAxisSpacing: 10,
                       crossAxisSpacing: 10,
-                      childAspectRatio: 0.75,
+                      childAspectRatio: 0.8,
                     ),
                     itemBuilder: (context, index) {
                       final product = filteredProducts[index];
