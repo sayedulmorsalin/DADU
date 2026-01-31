@@ -107,6 +107,20 @@ Future<List<String>> getProductNames() async {
   }
 }
 
+Future<Map<String, dynamic>> getProductByName(String name) async {
+  final snap = await FirebaseFirestore.instance
+      .collection('products')
+      .where('name', isEqualTo: name)
+      .limit(1)
+      .get();
+
+  return {
+    ...snap.docs.first.data(),
+    'id': snap.docs.first.id,
+  };
+}
+
+
 Future<void> incrementClickCount(String productId) async {
   try {
     await FirebaseFirestore.instance

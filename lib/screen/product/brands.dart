@@ -116,7 +116,7 @@ class _BrandsState extends State<Brands> {
                 crossAxisCount: 2,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
-                childAspectRatio: 0.70, // slightly lower for breathing space
+                childAspectRatio: 0.70,
               ),
               itemBuilder: (context, index) {
                 final product = brandProducts[index];

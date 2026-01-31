@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../component/gitf_box_banner.dart';
 import 'brands.dart';
 import 'info_banner.dart';
 import 'product_item.dart';
@@ -45,7 +46,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   ScrollController scrollController = ScrollController();
   double splashOpacity = 1.0;
   double blurSigma = 30.0;
-  Timer? _debounce;
   bool showFab = false;
   bool loggedin = false;
   String? profileImageUrl;
@@ -59,6 +59,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   Timer? flashTimer;
   late AnimationController flashAnimController;
   late Animation<double> flashBounce;
+
+  bool showSearchResults = false;
+
+  List<String> productNames = [];
+  List<String> searchResults = [];
+
 
 
   @override
@@ -77,6 +83,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       print("Not logged in");
       _auth.anonymousLogin();
     }
+
 
     initializeData();
     _loadBanners(); // Load banners from database
@@ -305,8 +312,14 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   }
 
   Future<void> initializeData() async {
-    final names = await db.getProductNames();
-    fuzzy = Fuzzy(names);
+    productNames = await db.getProductNames();
+
+    fuzzy = Fuzzy(
+      productNames,
+      options: FuzzyOptions(
+        threshold: 0.3,
+      ),
+    );
 
     final initialProducts = await db.getProduct();
     allProducts = initialProducts;
@@ -347,19 +360,24 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     setState(() => isLoadingMore = false);
   }
 
-  void handleSearch(String query) async {
-    if (query.isEmpty) {
-      setState(() => filteredProducts = allProducts);
-    } else {
-      final results = fuzzy.search(query);
-      final matchedNames = results.map((r) => r.item.toString()).toList();
-      setState(() => isLoading = true);
-      final matchedProducts = await db.getSearchedProduct(matchedNames);
+  void handleSearch(String query) {
+    query = query.trim();
+
+    if (query.length < 2) {
       setState(() {
-        filteredProducts = matchedProducts;
-        isLoading = false;
+        searchResults.clear();
+        showSearchResults = false;
       });
+      return;
     }
+
+    final results = fuzzy.search(query);
+
+    setState(() {
+      searchResults =
+          results.map((r) => r.item.toString()).take(6).toList();
+      showSearchResults = true;
+    });
   }
 
 
@@ -432,12 +450,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                       Expanded(
                         child: TextField(
                           controller: searchController,
-                          onChanged: (query) {
-                            if (_debounce?.isActive ?? false) _debounce!.cancel();
-                            _debounce = Timer(const Duration(seconds: 3), () {
-                              handleSearch(query);
-                            });
-                          },
+                          onChanged: handleSearch,   // 🔥 instant search
                           onSubmitted: handleSearch,
                           decoration: InputDecoration(
                             hintText: 'Search (e.g., nike 11)',
@@ -445,14 +458,14 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                             filled: true,
                             fillColor: Colors.grey[300],
                             border: const OutlineInputBorder(
-                              borderRadius: BorderRadius.all(
-                                Radius.circular(10),
-                              ),
+                              borderRadius: BorderRadius.all(Radius.circular(10)),
                               borderSide: BorderSide.none,
                             ),
                           ),
                         ),
+
                       ),
+
                       IconButton(
                         icon: profileImageLoading
                             ? CircularProgressIndicator(strokeWidth: 2)
@@ -467,6 +480,52 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                     ],
                   ),
                 ),
+                const SizedBox(height: 10),
+
+                if (showSearchResults)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black12, blurRadius: 6),
+                      ],
+                    ),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: searchResults.length,
+                      itemBuilder: (context, index) {
+                        final productName = searchResults[index];
+
+                        return ListTile(
+                          title: Text(productName),
+                          onTap: () async {
+                            final product = await db.getProductByName(productName);
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ProductDetails(
+                                  productid: product['id'],
+                                  title: product['name'],
+                                  price: product["price"],
+                                  image20: product['image20'],
+                                  description: product['details'],
+                                  videoLink: product['videoLink'],
+                                  brand: product['brand'],
+                                  image5: product['image5'],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+
                 const SizedBox(height: 10),
 
                 // Scrollable Banner Section
@@ -582,6 +641,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   ],
                 ),
 
+
                 if (flashProducts.isNotEmpty)
                   Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -686,6 +746,19 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: InfoBanner(),
                 ),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: GiftBoxBanner(
+                    onOpen: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => Cart()),
+                      );
+                    },
+                  ),
+                ),
+
 
                 if (isLoading)
                   const Center(child: CircularProgressIndicator())
