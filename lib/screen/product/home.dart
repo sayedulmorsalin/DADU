@@ -362,37 +362,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     }
   }
 
-  void _showImageDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(20),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            image: const DecorationImage(
-              image: AssetImage('assets/icon/user_icon.png'),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                top: 10,
-                right: 10,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   // Updated navigation method
   void _navigateToProfile() async {
@@ -608,6 +577,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                     _buildBrandItem("Gloves", "assets/icon/gloves.png"),
                     _buildBrandItem("Jersey", "assets/icon/jersey.png"),
                     _buildBrandItem("Pant", "assets/icon/pant.png"),
+                    _buildBrandItem("Dadu", "assets/logo/black_logo.png"),
                     _buildBrandItem("Others", "assets/icon/other.png"),
                   ],
                 ),
@@ -819,7 +789,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(imagePath, width: 30, height: 30, fit: BoxFit.contain),
+            Image.asset(imagePath, width: 50, height: 50, fit: BoxFit.contain),
             const SizedBox(height: 5),
             Text(
               brand,

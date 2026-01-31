@@ -65,8 +65,9 @@ class _BrandsState extends State<Brands> {
     return Scaffold(
       backgroundColor: const Color(0xFFf2f2ce),
       appBar: AppBar(
-        title: Text(widget.brandName),
+        title: Text(widget.brandName, style: TextStyle(fontWeight: FontWeight.bold),),
         backgroundColor: Colors.transparent,
+        centerTitle: true,
         elevation: 0,
       ),
       body: ListView(
@@ -76,27 +77,26 @@ class _BrandsState extends State<Brands> {
           Container(
             padding: const EdgeInsets.all(24),
             color: Colors.grey[200],
-            child: Row(
-              children: [
-                Image.asset(
-                  widget.brandLogo,
-                  width: 60,
-                  height: 60,
-                  fit: BoxFit.contain,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min, // important
+                children: [
+                  Image.asset(
+                    widget.brandLogo,
+                    width: 60,
+                    height: 60,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(width: 16),
+                  Text(
                     widget.brandName,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
