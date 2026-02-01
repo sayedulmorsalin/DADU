@@ -349,5 +349,29 @@ Future<void> submitOrder({
     }).toList();
   }
 
+  Future<List<Map<String, dynamic>>> getNewArrivalProducts() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('products')
+        .where("freeGift", isEqualTo: true)
+        .get();
+
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+
+      return {
+        "id": doc.id,
+        "name": data['name'] ?? "",
+        "price": data['price'] ?? "",
+        "oldPrice": data['oldPrice'] ?? "",
+        "image5": data['image5'] ?? "",
+        "image20": data['image20'] ?? "",
+        "details": data['details'] ?? "",
+        "videoLink": data['videoLink'] ?? "",
+        "brand": data['brand'] ?? "Others",
+        "freeGift": data['freeGift'] ?? false,
+      };
+    }).toList();
+  }
+
 
 }

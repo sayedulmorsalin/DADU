@@ -33,6 +33,13 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     flashProducts = await db.getFlashSaleProducts();
     setState(() {});
   }
+  List<Map<String, dynamic>> newArrivalProducts = [];
+
+  Future<void> loadNewArrivalProducts() async {
+    newArrivalProducts = await db.getNewArrivalProducts();
+    setState(() {});
+  }
+
 
   final dataBase db = new dataBase();
   final Auth _auth = Auth();
@@ -104,6 +111,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     flashAnimController.repeat(reverse: true);
 
     loadFlashSaleProducts();
+    loadNewArrivalProducts();
 
 
     scrollController.addListener(() {
@@ -675,14 +683,14 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                             SizedBox(height: 10),
 
                             SizedBox(
-                              height: 270, // Adjust height based on your flashSaleItem design
+                              height: 270,
                               child: ListView.builder(
                                 scrollDirection: Axis.horizontal,
                                 itemCount: flashProducts.length,
                                 itemBuilder: (context, index) {
                                   final product = flashProducts[index];
                                   return Container(
-                                    width: 180, // width of each item
+                                    width: 180,
                                     margin: EdgeInsets.only(right: 10),
                                     child: flashSaleItem(product),
                                   );
@@ -697,13 +705,69 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 else
                   SizedBox(),
 
+                if (newArrivalProducts.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Container(
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.red, Colors.yellow],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AnimatedBuilder(
+                            animation: flashAnimController,
+                            builder: (context, child) {
+                              return Transform.translate(
+                                offset: Offset(0, -flashBounce.value),
+                                child: child,
+                              );
+                            },
+                            child: Text(
+                              "New Arrivals 🔥",
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+
+                          SizedBox(height: 10),
+
+                          SizedBox(
+                            height: 270,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: newArrivalProducts.length,
+                              itemBuilder: (context, index) {
+                                final product = newArrivalProducts[index];
+                                return Container(
+                                  width: 180,
+                                  margin: EdgeInsets.only(right: 10),
+                                  child: flashSaleItem(product),
+                                );
+                              },
+                            ),
+                          ),
+
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SizedBox(),
+
 
                 StreamBuilder<String?>(
                   stream: db.getVersionStream(),
                   builder: (context, snapshot) {
                     if (snapshot.hasData && snapshot.data != null) {
                       final version = int.tryParse(snapshot.data!);
-                      //print("version ===  ${version}");
                       if (version != null && version > 1) {
                         return Container(
                           color: Colors.amberAccent,
