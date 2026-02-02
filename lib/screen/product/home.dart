@@ -347,7 +347,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       setState(() {
         blurSigma = 20.0 - (i * 2);
         splashOpacity = 1.0 - (i / 10.0);
-        // Show FAB when splash is almost faded (e.g., 80% faded)
         if (i > 7) showFab = true;
       });
     }
@@ -387,14 +386,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   }
 
 
-  // Updated navigation method
   void _navigateToProfile() async {
     if (loggedin) {
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => Profile()),
       );
-      // Refresh profile image after returning
       if (_auth.currentUser?.email != null) {
         _loadProfileImage(_auth.currentUser!.email!);
       }
@@ -403,7 +400,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
         context,
         MaterialPageRoute(builder: (context) => SignUpScreen()),
       );
-      // Check if user logged in during signup
       if (_auth.currentUser != null && !_auth.currentUser!.isAnonymous) {
         setState(() => loggedin = true);
         _loadProfileImage(_auth.currentUser!.email!);
@@ -456,7 +452,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                       Expanded(
                         child: TextField(
                           controller: searchController,
-                          onChanged: handleSearch,   // 🔥 instant search
+                          onChanged: handleSearch,
                           onSubmitted: handleSearch,
                           decoration: InputDecoration(
                             hintText: 'Search (e.g., nike 11)',
@@ -534,7 +530,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
                 const SizedBox(height: 10),
 
-                // Scrollable Banner Section
+
                 if (banners.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -542,7 +538,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                       height: MediaQuery.of(context).size.width / 2.16,
                       child: Stack(
                         children: [
-                          // Banner PageView
                           PageView.builder(
                             controller: bannerPageController,
                             itemCount: banners.length,
@@ -573,9 +568,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
                                     onTap: () {
-                                      if (banner['action'] != null) {
-                                        print('Banner ${banner['id']} tapped');
-                                      }
                                     },
                                     child: Container(),
                                   ),
@@ -805,10 +797,25 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: GiftBoxBanner(
                     onOpen: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => GiftBox()),
-                      );
+                      final currentUser = _auth.currentUser;
+                      if (currentUser?.isAnonymous==true) {
+                        if (mounted) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => SignUpScreen()),
+                            );
+                          });
+
+                        }
+                        return;
+                      }
+                      else{
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => GiftBox()),
+                        );
+                      }
                     },
                   ),
                 ),

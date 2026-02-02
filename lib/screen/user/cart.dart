@@ -34,14 +34,7 @@ class _CartState extends State<Cart> {
 
       if (currentUser == null) {
         if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You do not have an account please create one'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-          Navigator.pushReplacement(
+          Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => SignUpScreen()),
           );
@@ -51,17 +44,13 @@ class _CartState extends State<Cart> {
 
       if (currentUser.isAnonymous) {
         if (mounted) {
-          Navigator.pop(context);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => SignUpScreen()),
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You do not have an account please create one'),
-              duration: Duration(seconds: 2),
-            ),
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => SignUpScreen()),
+            );
+          });
+
         }
         return;
       }
@@ -77,17 +66,10 @@ class _CartState extends State<Cart> {
             context,
             MaterialPageRoute(builder: (context) => SignUpScreen2()),
           );
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Complete your profile'),
-              duration: Duration(seconds: 2),
-            ),
-          );
         }
         return;
       }
 
-      /// Start processing cart with size support
       final cartItem = userDetails?['cart_item'];
       List<CartItem> loadedCartItems = [];
 
@@ -96,7 +78,7 @@ class _CartState extends State<Cart> {
           final productId = entry.key;
           final value = entry.value;
 
-          // Handle old cart format (int quantity)
+
           if (value is int) {
             final productData = await db.getProductById(productId);
             if (productData != null) {
@@ -108,12 +90,12 @@ class _CartState extends State<Cart> {
                   quantity: value,
                   imageUrl: productData['image5'] ?? '',
                   brand: productData['brand'],
-                  size: "default", // Migrate old items to "default" size
+                  size: "default",
                 ),
               );
             }
           }
-          // Handle new cart format (size map)
+
           else if (value is Map<String, dynamic>) {
             for (var sizeEntry in value.entries) {
               String size = sizeEntry.key;
@@ -140,7 +122,7 @@ class _CartState extends State<Cart> {
         print('No cart items found or wrong format.');
       }
 
-      // Update UI state
+
       if (mounted) {
         setState(() {
           cartItems = loadedCartItems;
@@ -157,7 +139,6 @@ class _CartState extends State<Cart> {
     }
   }
 
-  // Clone cart items for state restoration on failure
   List<CartItem> _cloneCartItems() {
     return cartItems
         .map(
@@ -174,25 +155,25 @@ class _CartState extends State<Cart> {
         .toList();
   }
 
-  // Update Firestore cart with current items (size-aware)
+
   Future<void> _updateCartInFirestore() async {
     final currentUser = _auth.currentUser;
     if (currentUser == null || currentUser.email == null) {
       throw Exception("User not authenticated");
     }
 
-    // Convert cart items to Firestore map format (size-aware)
+
     final Map<String, dynamic> newCartMap = {};
     for (final item in cartItems) {
-      // Initialize product entry if not exists
+
       if (!newCartMap.containsKey(item.id)) {
         newCartMap[item.id] = <String, int>{};
       }
-      // Add/update size quantity
+
       (newCartMap[item.id] as Map<String, int>)[item.size] = item.quantity;
     }
 
-    // Update Firestore
+
     final success = await db.updateUserDetails(currentUser.email!, {
       'cart_item': newCartMap,
     });
@@ -200,7 +181,7 @@ class _CartState extends State<Cart> {
     if (!success) throw Exception("Firestore update failed");
   }
 
-  // Size-aware quantity update methods
+
   void _increaseQuantity(String id, String size) async {
     final oldCartItems = _cloneCartItems();
 
@@ -338,7 +319,7 @@ class _CartState extends State<Cart> {
               itemBuilder: (ctx, index) {
                 final item = cartItems[index];
                 return Dismissible(
-                  key: ValueKey('${item.id}_${item.size}'), // Unique key for size
+                  key: ValueKey('${item.id}_${item.size}'),
                   background: Container(
                     color: Colors.red,
                     alignment: Alignment.centerRight,
