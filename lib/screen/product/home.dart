@@ -806,7 +806,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                               MaterialPageRoute(builder: (_) => SignUpScreen()),
                             );
                           });
-
                         }
                         return;
                       }

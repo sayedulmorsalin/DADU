@@ -407,10 +407,40 @@ class dataBase {
         .doc(user.uid)
         .set({
       'fcmToken': token,
-      'email': user.email,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
+
+
+  Future<bool> getGiftStatus() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    final doc = await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+    if (!doc.exists) return false;
+
+    return doc.data()?['gift'] == true;
+  }
+
+  Future<void> setGiftStatus(bool value) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .set({
+      'gift': value,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+
+
 
 
 
