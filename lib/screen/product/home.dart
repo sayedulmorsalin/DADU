@@ -10,6 +10,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fuzzy/fuzzy.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../component/gitf_box_banner.dart';
+import '../../services/notification_service.dart';
 import 'brands.dart';
 import 'gift_box.dart';
 import 'info_banner.dart';
@@ -59,7 +60,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   String? profileImageUrl;
   bool profileImageLoading = false;
 
-  // New variables for banners
   List<Map<String, dynamic>> banners = [];
   int currentBannerIndex = 0;
   PageController bannerPageController = PageController();
@@ -72,6 +72,9 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
   List<String> productNames = [];
   List<String> searchResults = [];
+
+  late NotificationService notificationService;
+
 
 
 
@@ -92,9 +95,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       _auth.anonymousLogin();
     }
 
+    notificationService = NotificationService(db);
+    notificationService.init();
 
     initializeData();
-    _loadBanners(); // Load banners from database
+    _loadBanners();
     flashTimer = Timer.periodic(Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -168,7 +173,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
         child: Padding(padding: EdgeInsets.all(8),child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image
             Expanded(
               child: ClipRRect(
 
@@ -185,7 +189,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
             SizedBox(height: 4),
 
-            // Product Name
             Text(
               title,
               maxLines: 1,
@@ -195,7 +198,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
             SizedBox(height: 2),
 
-            // Flash Sale Countdown
             Text(
               remaining == "Expired"
                   ? "Expired"
@@ -209,7 +211,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
             SizedBox(height: 2),
 
-            // Flash Price
             Text(
               "Price: ৳${product['price']}",
               style: TextStyle(
@@ -228,17 +229,14 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   String formatRemainingTime(dynamic ts) {
     if (ts == null) return "Expired";
 
-    // If Firestore Timestamp → convert to DateTime
     DateTime end;
 
     if (ts is Timestamp) {
       end = ts.toDate();
     }
-    // If stored as a String → parse it
     else if (ts is String) {
       end = DateTime.tryParse(ts) ?? DateTime.now();
     }
-    // If already DateTime
     else if (ts is DateTime) {
       end = ts;
     }
@@ -266,15 +264,14 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  // Load banners from database
   Future<void> _loadBanners() async {
     try {
-      final bannerData = await db.getBanners(); // You'll need to implement this method in your database service
+      final bannerData = await db.getBanners();
       if (mounted) {
         setState(() {
           banners = bannerData;
         });
-        // Start auto-scroll if we have multiple banners
+
         if (banners.length > 1) {
           _startAutoScroll();
         }
@@ -284,9 +281,9 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     }
   }
 
-  // Auto-scroll banners every 5 seconds
+
   void _startAutoScroll() {
-    bannerAutoScrollTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+    bannerAutoScrollTimer = Timer.periodic(Duration(seconds: 2), (timer) {
       if (bannerPageController.hasClients && banners.length > 1) {
         final nextPage = (currentBannerIndex + 1) % banners.length;
         bannerPageController.animateToPage(
