@@ -224,6 +224,86 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       ),
     );
   }
+  Widget newArrivalItem(Map<String, dynamic> product) {
+    final String title = product['name'] ?? 'No Name';
+    final String image = product['image5'] ??
+        product['image20'] ??
+        'assets/demo_item_image/d1.jpg';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ProductDetails(
+                productid: product['id'],
+                title: product['name'],
+                price: product["price"],
+                image20: product['image20'],
+                description: product['details'],
+                videoLink: product['videoLink'],
+                brand: product['brand'],
+                image5: product['image5'],
+              ),
+            ),
+          );
+        },
+        child: Padding(padding: EdgeInsets.all(8),child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: ClipRRect(
+
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  image,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      Image.asset('assets/demo_item_image/d1.jpg'),
+                ),
+              ),
+            ),
+
+            SizedBox(height: 4),
+
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+
+            SizedBox(height: 2),
+
+
+            SizedBox(height: 2),
+
+            Text(
+              "Price: ৳${product['price']}",
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.orange,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),)
+      ),
+    );
+  }
 
 
   String formatRemainingTime(dynamic ts) {
@@ -738,7 +818,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                                 return Container(
                                   width: 180,
                                   margin: EdgeInsets.only(right: 10),
-                                  child: flashSaleItem(product),
+                                  child: newArrivalItem(product),
                                 );
                               },
                             ),

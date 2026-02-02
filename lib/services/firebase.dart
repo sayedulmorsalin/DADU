@@ -361,7 +361,7 @@ class dataBase {
     final snapshot =
         await FirebaseFirestore.instance
             .collection('products')
-            .where("freeGift", isEqualTo: true)
+            .where("newArrival", isEqualTo: true)
             .get();
 
     return snapshot.docs.map((doc) {
@@ -377,7 +377,7 @@ class dataBase {
         "details": data['details'] ?? "",
         "videoLink": data['videoLink'] ?? "",
         "brand": data['brand'] ?? "Others",
-        "freeGift": data['freeGift'] ?? false,
+        "newArrival": data['newArrival'] ?? false,
       };
     }).toList();
   }
