@@ -39,7 +39,7 @@ class DistrictUpozila {
       'Mehendiganj',
       'Muladi',
       'Wazirpur',
-      // Barishal Metropolitan Thanas
+      
       'Kotwali', 'Airport', 'Kawnia', 'Bandar', 'Bakerganj Metropolitan',
     ],
     'Bhola': [
@@ -93,7 +93,7 @@ class DistrictUpozila {
       'Shibganj',
     ],
     'Chattogram': [
-      // Upazilas
+      
       'Anwara',
       'Banshkhali',
       'Boalkhali',
@@ -108,7 +108,7 @@ class DistrictUpozila {
       'Sandwip',
       'Satkania',
       'Sitakunda',
-      // Metropolitan Thanas
+      
       'Akbarshah',
       'Bandar',
       'Bayazid',
@@ -123,7 +123,7 @@ class DistrictUpozila {
       'Panchlaish',
       'Patenga',
       'Karnaphuli',
-      // Railway Thana
+      
       'Chittagong Railway Thana',
     ],
     'Chuadanga': ['Alamdanga', 'Chuadanga Sadar', 'Damurhuda', 'Jibannagar'],
@@ -155,9 +155,9 @@ class DistrictUpozila {
       'Pekua',
     ],
     'Dhaka': [
-      // Upazilas
+      
       'Dhamrai', 'Dohar', 'Keraniganj', 'Nawabganj', 'Savar',
-      // Metropolitan Thanas
+      
       'Adabor',
       'Badda',
       'Bangsal',
@@ -207,7 +207,7 @@ class DistrictUpozila {
       'Vasantek',
       'Vatara',
       'Wari',
-      // Railway Thanas
+      
       'Kamalapur Railway Thana', 'Airport Railway Thana',
     ],
     'Dinajpur': [
@@ -255,7 +255,7 @@ class DistrictUpozila {
     ],
     'Gazipur': [
       'Gazipur Sadar', 'Kaliakair', 'Kaliganj', 'Kapasia', 'Sreepur',
-      // Metropolitan Thanas
+      
       'Joydebpur', 'Bhawal', 'Salna', 'Konabari',
     ],
     'Gopalganj': [
@@ -321,7 +321,7 @@ class DistrictUpozila {
       'Ramgarh',
     ],
     'Khulna': [
-      // Upazilas
+      
       'Batiaghata',
       'Dacope',
       'Dumuria',
@@ -331,7 +331,7 @@ class DistrictUpozila {
       'Phultala',
       'Rupsa',
       'Terokhada',
-      // Metropolitan Thanas
+      
       'Khan Jahan Ali',
       'Khalishpur',
       'Daulatpur',
@@ -339,7 +339,7 @@ class DistrictUpozila {
       'Labanchara',
       'Horintana',
       'Aranghata',
-      // Railway Thana
+      
       'Khulna Railway Thana',
     ],
     'Kishoreganj': [
@@ -420,7 +420,7 @@ class DistrictUpozila {
       'Tongibari',
     ],
     'Mymensingh': [
-      // Upazilas
+      
       'Bhaluka',
       'Dhobaura',
       'Fulbaria',
@@ -433,7 +433,7 @@ class DistrictUpozila {
       'Nandail',
       'Phulpur',
       'Trishal',
-      // Metropolitan Thanas
+      
       'Kotwali', 'Kistopur', 'Chorshuti', 'Charshibari', 'Chorkhai', 'Teroani',
     ],
     'Naogaon': [
@@ -452,7 +452,7 @@ class DistrictUpozila {
     'Narail': ['Kalia', 'Lohagara', 'Narail Sadar'],
     'Narayanganj': [
       'Araihazar', 'Bandar', 'Narayanganj Sadar', 'Rupganj', 'Sonargaon',
-      // Metropolitan Thanas
+      
       'Siddhirganj', 'Fatullah', 'Kadamrasul',
     ],
     'Narsingdi': [
@@ -541,7 +541,7 @@ class DistrictUpozila {
       'Kalukhali',
     ],
     'Rajshahi': [
-      // Upazilas
+      
       'Bagha',
       'Bagmara',
       'Charghat',
@@ -551,9 +551,9 @@ class DistrictUpozila {
       'Paba',
       'Puthia',
       'Tanore',
-      // Metropolitan Thanas
+      
       'Boalia', 'Motihar', 'Shah Makhdum', 'Rajpara', 'Chandrima',
-      // Railway Thana
+      
       'Rajshahi Railway Thana',
     ],
     'Rangamati': [
@@ -569,7 +569,7 @@ class DistrictUpozila {
       'Rajasthali',
     ],
     'Rangpur': [
-      // Upazilas
+      
       'Badarganj',
       'Gangachara',
       'Kaunia',
@@ -578,7 +578,7 @@ class DistrictUpozila {
       'Pirgachha',
       'Pirganj',
       'Taraganj',
-      // Metropolitan Thanas
+      
       'Kotwali',
       'Shahidbag',
       'Kajirhat',
@@ -636,7 +636,7 @@ class DistrictUpozila {
       'Tahirpur',
     ],
     'Sylhet': [
-      // Upazilas
+      
       'Balaganj',
       'Beanibazar',
       'Bishwanath',
@@ -650,7 +650,7 @@ class DistrictUpozila {
       'Sylhet Sadar',
       'Zakiganj',
       'Dakshin Surma',
-      // Metropolitan Thanas
+      
       'Airport',
       'Jalalabad',
       'Kotwali',
@@ -659,7 +659,7 @@ class DistrictUpozila {
       'South Surma',
       'Bandarbazar',
       'Shahjalal Upashahar',
-      // Railway Thana
+      
       'Sylhet Railway Thana',
     ],
     'Tangail': [

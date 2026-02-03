@@ -93,14 +93,14 @@ class dataBase {
       final doc =
           await FirebaseFirestore.instance
               .collection('product_names')
-              .doc('all_product_names') // Fixed document ID
+              .doc('all_product_names') 
               .get();
 
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
         return List<String>.from(data['names'] ?? []);
       }
-      return []; // Return empty list if document doesn't exist
+      return []; 
     } catch (e) {
       print("Error getting product names: $e");
       return [];
@@ -176,7 +176,7 @@ class dataBase {
         return querySnapshot.docs.first.data();
       }
 
-      return null; // No user found
+      return null; 
     } catch (e) {
       print("Error getting user details: $e");
       return null;
@@ -216,12 +216,12 @@ class dataBase {
           await FirebaseFirestore.instance
               .collection(
                 'products',
-              ) // <-- Replace with your actual collection name
+              ) 
               .doc(productId)
               .get();
 
       if (snapshot.exists) {
-        return snapshot.data(); // Returns a Map<String, dynamic>
+        return snapshot.data(); 
       } else {
         print('No product found with ID: $productId');
         return null;
@@ -238,10 +238,10 @@ class dataBase {
   }) async {
     try {
       orderData['timestamp'] = FieldValue.serverTimestamp();
-      // Save order to Firestore
+      
       await FirebaseFirestore.instance.collection('orders').add(orderData);
 
-      // Clear user's cart
+      
       await updateUserDetails(userEmail, {'cart_item': {}});
     } catch (e) {
       print("Order submission error: $e");
@@ -273,7 +273,7 @@ class dataBase {
     }
   }
 
-  // Add this method to your dataBase class in services/firebase.dart
+  
   Future<List<Map<String, dynamic>>> getBanners() async {
     try {
       QuerySnapshot querySnapshot =
@@ -327,7 +327,7 @@ class dataBase {
         "videoLink": data['videoLink'] ?? "",
         "brand": data['brand'] ?? "Others",
         "flashSell": data['flashSell'] ?? false,
-        "flash-expire": data['flash-expire'], // Firestore Timestamp
+        "flash-expire": data['flash-expire'], 
       };
     }).toList();
   }

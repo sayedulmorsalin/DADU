@@ -375,7 +375,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     });
   }
 
-  // New method to load profile image
+  
   void _loadProfileImage(String email) async {
     if (!mounted) return;
 
@@ -393,7 +393,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _recordLoginTime() async {
-    await Future.delayed(const Duration(seconds: 1)); // Ensure auth completes
+    await Future.delayed(const Duration(seconds: 1)); 
     await Auth().updateLastLogin();
   }
 
@@ -656,7 +656,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                             },
                           ),
 
-                          // Page Indicators
+                          
                           if (banners.length > 1)
                             Positioned(
                               bottom: 10,
@@ -869,7 +869,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                         );
                       }
                     }
-                    return const SizedBox.shrink(); // Return empty when no update
+                    return const SizedBox.shrink(); 
                   },
                 ),
 

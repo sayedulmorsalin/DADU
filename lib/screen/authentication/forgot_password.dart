@@ -1,5 +1,5 @@
 import 'package:dadu/screen/authentication/sign_in.dart';
-import 'package:dadu/services/auth.dart'; // Import Auth service
+import 'package:dadu/services/auth.dart'; 
 import 'package:flutter/material.dart';
 
 class ForgotPassword extends StatefulWidget {
@@ -13,7 +13,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   bool _isLoading = false;
-  final Auth _auth = Auth(); // Auth service instance
+  final Auth _auth = Auth(); 
 
 
   Future<void> _submitForm() async {
@@ -26,7 +26,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         final error = await _auth.sendPasswordResetEmail(email);
 
         if (error == null) {
-          // Show success message
+          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("Password reset link sent to $email"),
@@ -35,7 +35,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
             ),
           );
 
-          // Navigate back to sign in after a delay
+          
           Future.delayed(Duration(seconds: 2), () {
             Navigator.pushReplacement(
               context,
@@ -43,7 +43,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
             );
           });
         } else {
-          // Show error message
+          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(error),
@@ -92,7 +92,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo/Title
+                    
                     Container(
                       margin: EdgeInsets.only(bottom: 24),
                       child: Text(
@@ -105,7 +105,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       ),
                     ),
 
-                    // Email Field
+                    
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -126,7 +126,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
                     SizedBox(height: 24),
 
-                    // Reset Password button
+                    
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -153,7 +153,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
                     SizedBox(height: 16),
 
-                    // Back to sign in
+                    
                     TextButton(
                       onPressed: () {
                         Navigator.pushReplacement(

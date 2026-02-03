@@ -73,13 +73,13 @@ class _BrandsState extends State<Brands> {
       body: ListView(
         controller: scrollController,
         children: [
-          // Brand Header
+          
           Container(
             padding: const EdgeInsets.all(24),
             color: Colors.grey[200],
             child: Center(
               child: Row(
-                mainAxisSize: MainAxisSize.min, // important
+                mainAxisSize: MainAxisSize.min, 
                 children: [
                   Image.asset(
                     widget.brandLogo,

@@ -364,7 +364,7 @@ class _CartState extends State<Cart> {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                // Show size if not default
+                                
                                 if (item.size != "default")
                                   Text(
                                     'Size: ${item.size}',

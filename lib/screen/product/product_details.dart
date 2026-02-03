@@ -13,7 +13,7 @@ import '../../services/firebase.dart';
 import '../authentication/sign_up_2nd.dart';
 import '../authentication/sign_up_first.dart';
 import 'dart:typed_data';
-import 'package:flutter/services.dart';   // contains ByteData
+import 'package:flutter/services.dart';   
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 
 
@@ -55,7 +55,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   @override
   void initState() {
     super.initState();
-    // Set default size based on brand
+    
     if (widget.brand == "Puma" ||
         widget.brand == "Nike" ||
         widget.brand == "Others_boot" ||
@@ -76,11 +76,11 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   Future<bool> requestImagePermission() async {
-    // Android 13+ (READ_MEDIA_IMAGES)
+    
     final photosPermission = await Permission.photos.request();
     if (photosPermission.isGranted) return true;
 
-    // Android 12 and below
+    
     final storagePermission = await Permission.storage.request();
     if (storagePermission.isGranted) return true;
 
@@ -92,13 +92,13 @@ class _ProductDetailsState extends State<ProductDetails> {
     FileDownloader.downloadFile(
       url: url,
       name: "dadu_${DateTime.now().millisecondsSinceEpoch}.jpg",
-      // Download to /storage/emulated/0/Download/Dadu/
+      
       downloadDestination: DownloadDestinations.publicDownloads,
-      subPath: "Dadu", // optional folder inside Downloads
+      subPath: "Dadu", 
 
       onProgress: (String? fileName, double progress) {
-        // you can show a progress indicator if you want
-        // print("Downloading: $progress%");
+        
+        
       },
 
       onDownloadCompleted: (String path) {
@@ -211,18 +211,18 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   void sendMessageToWhatsApp(String number) async {
-    // Remove '+' and whitespace for WhatsApp URI scheme
+    
     final cleanedNumber = number.replaceAll(RegExp(r'[+\s]'), '');
     final sizeInfo = selectedSize != null ? " Size $selectedSize" : "";
     final message = Uri.encodeComponent(
       'Hey I want to order ${widget.title} Price ${widget.price}$sizeInfo Image URL ${widget.image20}',
     );
 
-    // WhatsApp app URL
+    
     final whatsappAppUrl = Uri.parse(
       'whatsapp://send?phone=$cleanedNumber&text=$message',
     );
-    // Web fallback URL
+    
     final whatsappWebUrl = Uri.parse('https://wa.me/$number?text=$message');
 
     try {
@@ -240,7 +240,7 @@ class _ProductDetailsState extends State<ProductDetails> {
     }
   }
 
-  // Add to Cart functionality
+  
   void _addToCart() async {
     final currentUser = _auth.currentUser;
     if (currentUser != null) {
@@ -275,37 +275,37 @@ class _ProductDetailsState extends State<ProductDetails> {
 
           String productId = widget.productid;
           String size =
-              selectedSize ?? "no size"; // Your selected size (e.g., "M", "L")
+              selectedSize ?? "no size"; 
 
-          // 1. Handle old cart format (int quantity) if exists for this product
+          
           if (cartItems.containsKey(productId)) {
             if (cartItems[productId] is int) {
-              // Convert old format to new size-based format
+              
               cartItems[productId] = {"default": cartItems[productId]};
             }
           }
 
-          // 2. Process size-based cart logic
+          
           if (cartItems.containsKey(productId)) {
-            // Get size map (guaranteed to be Map after conversion above)
+            
             Map<String, dynamic> sizeMap = cartItems[productId];
 
-            // 2a. SAME SIZE EXISTS: Increment quantity
+            
             if (sizeMap.containsKey(size)) {
               int currentQty = (sizeMap[size] is int) ? sizeMap[size] : 0;
               sizeMap[size] = currentQty + 1;
             }
-            // 2b. DIFFERENT SIZE: Add new size entry
+            
             else {
               sizeMap[size] = 1;
             }
           }
-          // 2c. NEW PRODUCT: Create size map
+          
           else {
             cartItems[productId] = {size: 1};
           }
 
-          // 3. Update cart
+          
           await db.updateUserDetails(currentUser.email!, {
             "cart_item": cartItems,
           });
@@ -334,12 +334,12 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   double _parsePrice(String priceStr) {
-    // Remove all non-digit characters except decimal point
+    
     String cleaned = priceStr.replaceAll(RegExp(r'[^\d.]'), '');
     return double.tryParse(cleaned) ?? 0.0;
   }
 
-  // Buy Now functionality
+  
   void _buyNow() async {
     final currentUser = _auth.currentUser;
     if (currentUser != null) {
@@ -426,7 +426,7 @@ class _ProductDetailsState extends State<ProductDetails> {
       ),
       body: Stack(
         children: [
-          // Main content with bottom padding for buttons
+          
           Padding(
             padding: const EdgeInsets.only(bottom: 80.0),
             child: ListView(
@@ -569,7 +569,7 @@ class _ProductDetailsState extends State<ProductDetails> {
             ),
           ),
 
-          // Add to Cart and Buy Now buttons
+          
           Positioned(
             bottom: 0,
             left: 0,
@@ -588,7 +588,7 @@ class _ProductDetailsState extends State<ProductDetails> {
               ),
               child: Row(
                 children: [
-                  // Add to Cart button
+                  
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
@@ -636,7 +636,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  // Buy Now button
+                  
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _buyNow,
@@ -662,9 +662,9 @@ class _ProductDetailsState extends State<ProductDetails> {
             ),
           ),
 
-          // Floating Action Button with menu - positioned above bottom bar
+          
           Positioned(
-            bottom: 90, // Positioned above the bottom button bar
+            bottom: 90, 
             right: 16,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,

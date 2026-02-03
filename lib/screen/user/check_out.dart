@@ -159,7 +159,7 @@ class _CheckOutState extends State<CheckOut> {
   Future<void> _submitOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Validate payment proof
+    
     if (!_freeDeliverySelected &&
         (_paymentMethod == 'bkash' ||
             _paymentMethod == 'nagad' ||
@@ -192,12 +192,12 @@ class _CheckOutState extends State<CheckOut> {
         throw Exception("User not authenticated");
       }
 
-      // Upload payment proof if needed
+      
       if (!_freeDeliverySelected && _paymentProofImage != null) {
         paymentProof = await _imageService.uploadProfileImage(_paymentProofImage!);
       }
 
-      // Create order data to save in user collection
+      
       final userUpdateData = {
         "to_verify": FieldValue.arrayUnion([
           {
@@ -230,7 +230,7 @@ class _CheckOutState extends State<CheckOut> {
           }
         ]),
         'freeDeliveryUsed': _freeDeliverySelected,
-        'cart_item': {}, // Clear cart
+        'cart_item': {}, 
       };
 
       await db.updateUserDetailsAfterBuy(currentUser.email!, userUpdateData);
@@ -721,7 +721,7 @@ class _CheckOutState extends State<CheckOut> {
                     );
                   }
                 }
-                return const SizedBox.shrink(); // Return empty when no update
+                return const SizedBox.shrink(); 
               },
             ),
             SizedBox(

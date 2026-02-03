@@ -1,4 +1,4 @@
-// sign_in_screen.dart
+
 import 'package:dadu/screen/authentication/forgot_password.dart';
 import 'package:dadu/screen/user/profile.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
@@ -85,7 +85,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo/Title
+                    
                     Container(
                       margin: EdgeInsets.only(bottom: 24),
                       child: Text(
@@ -98,7 +98,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
 
-                    // Email Field
+                    
                     TextFormField(
                       controller: _emailController,
                       decoration: InputDecoration(
@@ -119,7 +119,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
                     SizedBox(height: 16),
 
-                    // Password Field
+                    
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -175,7 +175,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
                     SizedBox(height: 24),
 
-                    // Sign In Button
+                    
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

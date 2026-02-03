@@ -1,10 +1,10 @@
-// sign_up_screen.dart
+
 import 'package:dadu/screen/authentication/sign_in.dart';
 import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../services/auth.dart'; // Import Auth service
+import '../../services/auth.dart'; 
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -21,7 +21,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  final Auth _auth = Auth(); // Auth service instance
+  final Auth _auth = Auth(); 
 
   @override
   void dispose() {
@@ -49,7 +49,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         final error = await _auth.registerWithEmailAndPassword(
             email,
             password,
-            "User" // Placeholder name, will be updated in next screen
+            "User" 
         );
 
         if (error == null) {
@@ -92,7 +92,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo/Title
+                    
                     Container(
                       margin: EdgeInsets.only(bottom: 24),
                       child: Text(
@@ -107,7 +107,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     SizedBox(height: 16),
 
-                    // Email Field
+                    
                     TextFormField(
                       controller: _emailController,
                       decoration: InputDecoration(
@@ -128,7 +128,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     SizedBox(height: 16),
 
-                    // Password Field with Eye Icon
+                    
                     TextFormField(
                       obscureText: _obscurePassword,
                       controller: _passwordController,
@@ -162,7 +162,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     SizedBox(height: 16),
 
-                    // Confirm Password Field with Eye Icon
+                    
                     TextFormField(
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
@@ -196,7 +196,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     SizedBox(height: 16),
 
-                    // Terms Checkbox
+                    
                     Row(
                       children: [
                         Checkbox(
@@ -268,7 +268,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     ),
                     SizedBox(height: 24),
 
-                    // Sign Up Button
+                    
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(

@@ -112,7 +112,7 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Profile image picker
+                        
                         GestureDetector(
                           onTap: _pickImage,
                           child: CircleAvatar(
@@ -132,7 +132,7 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                         ),
                         SizedBox(height: 16),
 
-                        // Name field
+                        
                         TextFormField(
                           controller: _nameController,
                           decoration: InputDecoration(
@@ -146,7 +146,7 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                         ),
                         SizedBox(height: 16),
 
-                        // Phone field
+                        
                         TextFormField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
@@ -166,7 +166,7 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                         ),
                         SizedBox(height: 16),
 
-                        // District and Thana dropdowns
+                        
                         SizedBox(
                           height: 150,
                           child: LayoutBuilder(
@@ -191,7 +191,7 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                         ),
                         SizedBox(height: 16),
 
-                        // Address field
+                        
                         TextFormField(
                           controller: _addressController,
                           decoration: InputDecoration(
@@ -205,7 +205,7 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                         ),
                         SizedBox(height: 24),
 
-                        // Submit button
+                        
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             padding: EdgeInsets.symmetric(vertical: 14),

@@ -12,7 +12,7 @@ class ProductItem extends StatelessWidget {
   final String description;
   final String videoLink;
   final String brand;
-  final dataBase db = dataBase(); // Database instance
+  final dataBase db = dataBase(); 
 
   ProductItem({
     super.key,

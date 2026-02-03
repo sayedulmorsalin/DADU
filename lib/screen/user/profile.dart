@@ -92,7 +92,7 @@ class _ProfileState extends State<Profile> {
         currentUser.email.toString(),
       );
 
-      // Check if address exists
+      
       Address = userDetails?['address'] ?? '';
       if (Address.isEmpty || Address == '') {
         if (mounted) {
@@ -104,7 +104,7 @@ class _ProfileState extends State<Profile> {
         return;
       }
 
-      // Update all profile data
+      
       if (mounted) {
         setState(() {
           Name = userDetails?['name'] ?? '';
@@ -147,7 +147,7 @@ class _ProfileState extends State<Profile> {
       if (pickedFile == null) return null;
 
       File imageFile = File(pickedFile.path);
-      return await imageService.uploadProfileImage(imageFile); // Return URL
+      return await imageService.uploadProfileImage(imageFile); 
     } catch (e) {
       print("Error updating profile picture: $e");
       return null;
@@ -165,7 +165,7 @@ class _ProfileState extends State<Profile> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            // State variables for the dialog
+            
             bool _isSaving = false;
 
             return AlertDialog(
@@ -177,7 +177,7 @@ class _ProfileState extends State<Profile> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Profile picture section
+                    
                     GestureDetector(
                       onTap: () async {
                         setDialogState(() => _isUpdatingProfilePic = true);
@@ -239,7 +239,7 @@ class _ProfileState extends State<Profile> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Name Field
+                    
                     TextFormField(
                       initialValue: tempName,
                       onChanged: (value) => tempName = value,
@@ -254,7 +254,7 @@ class _ProfileState extends State<Profile> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Phone Field
+                    
                     TextFormField(
                       initialValue: tempPhone,
                       onChanged: (value) => tempPhone = value,
@@ -270,7 +270,7 @@ class _ProfileState extends State<Profile> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Email (read-only)
+                    
                     TextFormField(
                       initialValue: Email,
                       enabled: false,
@@ -302,22 +302,22 @@ class _ProfileState extends State<Profile> {
                             setDialogState(() => _isSaving = true);
 
                             try {
-                              // Prepare updated data - using correct Firestore field names
+                              
                               Map<String, dynamic> updatedData = {
                                 'name': tempName,
                                 'phone': tempPhone,
                                 'profile_pic':
-                                    tempProfilePic, // Match Firestore field name
+                                    tempProfilePic, 
                               };
 
-                              // Save to Firestore
+                              
                               bool success = await db.updateUserDetails(
                                 Email,
                                 updatedData,
                               );
 
                               if (success) {
-                                // Update local state
+                                
                                 setState(() {
                                   Name = tempName;
                                   Phone = tempPhone;
@@ -402,7 +402,7 @@ class _ProfileState extends State<Profile> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // District Dropdown
+                    
                     DropdownButtonFormField<String>(
                       value: tempDistrict,
                       items:
@@ -435,7 +435,7 @@ class _ProfileState extends State<Profile> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Thana Dropdown
+                    
                     DropdownButtonFormField<String>(
                       value: thanaList.isNotEmpty ? tempThana : null,
                       items:
@@ -467,7 +467,7 @@ class _ProfileState extends State<Profile> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Address Text Field
+                    
                     TextFormField(
                       initialValue: tempAddress,
                       onChanged: (value) => tempAddress = value,
@@ -501,21 +501,21 @@ class _ProfileState extends State<Profile> {
                             setDialogState(() => _isSaving = true);
 
                             try {
-                              // Prepare updated address data
+                              
                               Map<String, dynamic> updatedData = {
                                 'district': tempDistrict,
                                 'thana': tempThana,
                                 'address': tempAddress,
                               };
 
-                              // Save to Firestore
+                              
                               bool success = await db.updateUserDetails(
                                 Email,
                                 updatedData,
                               );
 
                               if (success) {
-                                // Update local state
+                                
                                 setState(() {
                                   District = tempDistrict;
                                   Thana = tempThana;
@@ -674,7 +674,7 @@ class _ProfileState extends State<Profile> {
                             final confirmPassword =
                                 confirmPasswordController.text;
 
-                            // Validation
+                            
                             if (currentPassword.isEmpty ||
                                 newPassword.isEmpty ||
                                 confirmPassword.isEmpty) {
@@ -709,7 +709,7 @@ class _ProfileState extends State<Profile> {
                               );
 
                               if (result == null) {
-                                // Success
+                                
                                 if (mounted) {
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -748,7 +748,7 @@ class _ProfileState extends State<Profile> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading indicator while data is loading
+    
     if (_isLoading) {
       return Scaffold(
         backgroundColor: const Color(0xFFf2f2ce),
@@ -774,7 +774,7 @@ class _ProfileState extends State<Profile> {
       );
     }
 
-    // Show error message if there was an error
+    
     if (_error.isNotEmpty) {
       return Scaffold(
         backgroundColor: const Color(0xFFf2f2ce),
@@ -809,7 +809,7 @@ class _ProfileState extends State<Profile> {
       );
     }
 
-    // Normal profile view
+    
     return Scaffold(
       backgroundColor: const Color(0xFFf2f2ce),
       appBar: AppBar(
@@ -846,7 +846,7 @@ class _ProfileState extends State<Profile> {
       children: [
         GestureDetector(
           onTap: () async {
-            // Show fullscreen image if we're not currently updating
+            
             if (!_isUpdatingProfilePic) {
               _showFullScreenProfilePicture();
             }
@@ -917,7 +917,7 @@ class _ProfileState extends State<Profile> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // In _buildOrderSection
+            
             GestureDetector(
               onTap: () => _navigateToOrderPage(context, 'To Verify', toVerify),
               child: _buildOrderStatus(
@@ -959,8 +959,8 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  // 4. Navigation function for orders
-  // In _ProfileState class
+  
+  
   void _navigateToOrderPage(
     BuildContext context,
     String status,
@@ -1214,7 +1214,7 @@ class _ProfileState extends State<Profile> {
         _changePassword();
         break;
       case 'Help Center':
-        _showHelpCenter(); // Now this opens the help center with clickable items
+        _showHelpCenter(); 
         break;
       case 'Logout':
         _logout();
@@ -1307,25 +1307,25 @@ class _ProfileState extends State<Profile> {
               ),
               TextButton(
                 onPressed: () async {
-                  // Close the dialog first
+                  
                   Navigator.pop(context);
 
                   try {
-                    // Perform the actual logout
+                    
                     await _auth.signOut();
 
-                    // Navigate to home screen or login screen
+                    
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) => Home()),
                     );
 
-                    // Show success message
+                    
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Logged out successfully')),
                     );
                   } catch (e) {
-                    // Show error message if logout fails
+                    
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Logout failed: $e")),
                     );
