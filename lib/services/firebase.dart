@@ -400,7 +400,7 @@ class dataBase {
     if (user == null) return;
 
     final collectionName =
-    user.isAnonymous ? 'anonymous_user' : 'users';
+    user.isAnonymous ? 'anonymous_users' : 'users';
 
     await FirebaseFirestore.instance
         .collection(collectionName)
@@ -440,7 +440,17 @@ class dataBase {
   }
 
 
+  Future<String?> getPaymentNumber() async {
 
+    final doc = await FirebaseFirestore.instance
+        .collection("paymentNumber")
+        .doc('9O1UpVqUrdyuTqiA3YQH')
+        .get();
+
+    if (!doc.exists) return null;
+
+    return doc.data()?['number']?.toString();
+  }
 
 
 

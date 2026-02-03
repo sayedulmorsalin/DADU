@@ -9,16 +9,21 @@ class NotificationService {
   NotificationService(this.db);
 
   Future<void> init() async {
-    final token = await FirebaseMessaging.instance.getToken();
+    await _messaging.requestPermission();
+
+    final token = await _messaging.getToken();
 
     if (token != null) {
+      print("🔥 FCM TOKEN: $token");
       await db.updateFCMToken(token);
     }
 
-    FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+    _messaging.onTokenRefresh.listen((newToken) {
+      print("🔄 NEW FCM TOKEN: $newToken");
       db.updateFCMToken(newToken);
     });
   }
+
 
   Future<String?> createFCMToken() async {
     await _messaging.requestPermission();

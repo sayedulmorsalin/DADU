@@ -26,21 +26,19 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
-
-
   List<Map<String, dynamic>> flashProducts = [];
 
   Future<void> loadFlashSaleProducts() async {
     flashProducts = await db.getFlashSaleProducts();
     setState(() {});
   }
+
   List<Map<String, dynamic>> newArrivalProducts = [];
 
   Future<void> loadNewArrivalProducts() async {
     newArrivalProducts = await db.getNewArrivalProducts();
     setState(() {});
   }
-
 
   final dataBase db = new dataBase();
   final Auth _auth = Auth();
@@ -75,9 +73,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
   late NotificationService notificationService;
 
-
-
-
   @override
   void initState() {
     super.initState();
@@ -109,19 +104,19 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       duration: Duration(milliseconds: 700),
     );
 
-    flashBounce = Tween<double>(begin: 0.0, end: 8.0)
-        .chain(CurveTween(curve: Curves.elasticOut))
-        .animate(flashAnimController);
+    flashBounce = Tween<double>(
+      begin: 0.0,
+      end: 8.0,
+    ).chain(CurveTween(curve: Curves.elasticOut)).animate(flashAnimController);
 
     flashAnimController.repeat(reverse: true);
 
     loadFlashSaleProducts();
     loadNewArrivalProducts();
 
-
     scrollController.addListener(() {
       if (scrollController.position.pixels >=
-          scrollController.position.maxScrollExtent - 200 &&
+              scrollController.position.maxScrollExtent - 200 &&
           !isLoadingMore &&
           !isLoading &&
           searchController.text.isEmpty) {
@@ -129,12 +124,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       }
     });
     _recordLoginTime();
-
   }
 
   Widget flashSaleItem(Map<String, dynamic> product) {
     final String title = product['name'] ?? 'No Name';
-    final String image = product['image5'] ??
+    final String image =
+        product['image5'] ??
         product['image20'] ??
         'assets/demo_item_image/d1.jpg';
     final dynamic expire = product['flash-expire'];
@@ -145,11 +140,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
       child: GestureDetector(
@@ -157,76 +148,80 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ProductDetails(
-                productid: product['id'],
-                title: product['name'],
-                price: product["price"],
-                image20: product['image20'],
-                description: product['details'],
-                videoLink: product['videoLink'],
-                brand: product['brand'],
-                image5: product['image5'],
-              ),
+              builder:
+                  (context) => ProductDetails(
+                    productid: product['id'],
+                    title: product['name'],
+                    price: product["price"],
+                    image20: product['image20'],
+                    description: product['details'],
+                    videoLink: product['videoLink'],
+                    brand: product['brand'],
+                    image5: product['image5'],
+                  ),
             ),
           );
         },
-        child: Padding(padding: EdgeInsets.all(8),child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: ClipRRect(
-
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  image,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      Image.asset('assets/demo_item_image/d1.jpg'),
+        child: Padding(
+          padding: EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    image,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder:
+                        (_, __, ___) =>
+                            Image.asset('assets/demo_item_image/d1.jpg'),
+                  ),
                 ),
               ),
-            ),
 
-            SizedBox(height: 4),
+              SizedBox(height: 4),
 
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-
-            SizedBox(height: 2),
-
-            Text(
-              remaining == "Expired"
-                  ? "Expired"
-                  : "⏳ $remaining",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: remaining == "Expired" ? Colors.red : Colors.green,
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
-            ),
 
-            SizedBox(height: 2),
+              SizedBox(height: 2),
 
-            Text(
-              "Price: ৳${product['price']}",
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.orange,
-                fontWeight: FontWeight.bold,
+              Text(
+                remaining == "Expired" ? "Expired" : "⏳ $remaining",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: remaining == "Expired" ? Colors.red : Colors.green,
+                ),
               ),
-            ),
-          ],
-        ),)
+
+              SizedBox(height: 2),
+
+              Text(
+                "Price: ৳${product['price']}",
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
+
   Widget newArrivalItem(Map<String, dynamic> product) {
     final String title = product['name'] ?? 'No Name';
-    final String image = product['image5'] ??
+    final String image =
+        product['image5'] ??
         product['image20'] ??
         'assets/demo_item_image/d1.jpg';
 
@@ -235,11 +230,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: Offset(0, 2),
-          ),
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
         ],
       ),
       child: GestureDetector(
@@ -247,64 +238,66 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ProductDetails(
-                productid: product['id'],
-                title: product['name'],
-                price: product["price"],
-                image20: product['image20'],
-                description: product['details'],
-                videoLink: product['videoLink'],
-                brand: product['brand'],
-                image5: product['image5'],
-              ),
+              builder:
+                  (context) => ProductDetails(
+                    productid: product['id'],
+                    title: product['name'],
+                    price: product["price"],
+                    image20: product['image20'],
+                    description: product['details'],
+                    videoLink: product['videoLink'],
+                    brand: product['brand'],
+                    image5: product['image5'],
+                  ),
             ),
           );
         },
-        child: Padding(padding: EdgeInsets.all(8),child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: ClipRRect(
-
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  image,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      Image.asset('assets/demo_item_image/d1.jpg'),
+        child: Padding(
+          padding: EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    image,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder:
+                        (_, __, ___) =>
+                            Image.asset('assets/demo_item_image/d1.jpg'),
+                  ),
                 ),
               ),
-            ),
 
-            SizedBox(height: 4),
+              SizedBox(height: 4),
 
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-
-            SizedBox(height: 2),
-
-
-            SizedBox(height: 2),
-
-            Text(
-              "Price: ৳${product['price']}",
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.orange,
-                fontWeight: FontWeight.bold,
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
-            ),
-          ],
-        ),)
+
+              SizedBox(height: 2),
+
+              SizedBox(height: 2),
+
+              Text(
+                "Price: ৳${product['price']}",
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
-
 
   String formatRemainingTime(dynamic ts) {
     if (ts == null) return "Expired";
@@ -313,14 +306,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
     if (ts is Timestamp) {
       end = ts.toDate();
-    }
-    else if (ts is String) {
+    } else if (ts is String) {
       end = DateTime.tryParse(ts) ?? DateTime.now();
-    }
-    else if (ts is DateTime) {
+    } else if (ts is DateTime) {
       end = ts;
-    }
-    else {
+    } else {
       return "Expired";
     }
 
@@ -332,8 +322,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
     return "${two(diff.inHours)}:${two(diff.inMinutes % 60)}:${two(diff.inSeconds % 60)}";
   }
-
-
 
   @override
   void dispose() {
@@ -361,7 +349,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     }
   }
 
-
   void _startAutoScroll() {
     bannerAutoScrollTimer = Timer.periodic(Duration(seconds: 2), (timer) {
       if (bannerPageController.hasClients && banners.length > 1) {
@@ -375,7 +362,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     });
   }
 
-  
   void _loadProfileImage(String email) async {
     if (!mounted) return;
 
@@ -393,19 +379,14 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   }
 
   Future<void> _recordLoginTime() async {
-    await Future.delayed(const Duration(seconds: 1)); 
+    await Future.delayed(const Duration(seconds: 1));
     await Auth().updateLastLogin();
   }
 
   Future<void> initializeData() async {
     productNames = await db.getProductNames();
 
-    fuzzy = Fuzzy(
-      productNames,
-      options: FuzzyOptions(
-        threshold: 0.3,
-      ),
-    );
+    fuzzy = Fuzzy(productNames, options: FuzzyOptions(threshold: 0.3));
 
     final initialProducts = await db.getProduct();
     allProducts = initialProducts;
@@ -459,12 +440,10 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     final results = fuzzy.search(query);
 
     setState(() {
-      searchResults =
-          results.map((r) => r.item.toString()).take(6).toList();
+      searchResults = results.map((r) => r.item.toString()).take(6).toList();
       showSearchResults = true;
     });
   }
-
 
   void _navigateToProfile() async {
     if (loggedin) {
@@ -491,22 +470,23 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFf2f2ce),
-      floatingActionButton: showFab
-          ? FloatingActionButton.large(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => Cart()),
-          );
-        },
-        backgroundColor: Colors.transparent,
-        child: Image.asset(
-          'assets/icon/bag.png',
-          width: 100,
-          height: 100,
-        ),
-      )
-          : null,
+      floatingActionButton:
+          showFab
+              ? FloatingActionButton.large(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => Cart()),
+                  );
+                },
+                backgroundColor: Colors.transparent,
+                child: Image.asset(
+                  'assets/icon/bag.png',
+                  width: 100,
+                  height: 100,
+                ),
+              )
+              : null,
       body: Stack(
         children: [
           SafeArea(
@@ -540,25 +520,29 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                             filled: true,
                             fillColor: Colors.grey[300],
                             border: const OutlineInputBorder(
-                              borderRadius: BorderRadius.all(Radius.circular(10)),
+                              borderRadius: BorderRadius.all(
+                                Radius.circular(10),
+                              ),
                               borderSide: BorderSide.none,
                             ),
                           ),
                         ),
-
                       ),
 
                       IconButton(
-                        icon: profileImageLoading
-                            ? CircularProgressIndicator(strokeWidth: 2)
-                            : (loggedin && profileImageUrl != null
-                            ? CircleAvatar(
-                          radius: 20,
-                          backgroundImage: NetworkImage(profileImageUrl!),
-                        )
-                            : Icon(Icons.person)),
+                        icon:
+                            profileImageLoading
+                                ? CircularProgressIndicator(strokeWidth: 2)
+                                : (loggedin && profileImageUrl != null
+                                    ? CircleAvatar(
+                                      radius: 20,
+                                      backgroundImage: NetworkImage(
+                                        profileImageUrl!,
+                                      ),
+                                    )
+                                    : Icon(Icons.person)),
                         onPressed: _navigateToProfile,
-                      )
+                      ),
                     ],
                   ),
                 ),
@@ -585,21 +569,24 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                         return ListTile(
                           title: Text(productName),
                           onTap: () async {
-                            final product = await db.getProductByName(productName);
+                            final product = await db.getProductByName(
+                              productName,
+                            );
 
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => ProductDetails(
-                                  productid: product['id'],
-                                  title: product['name'],
-                                  price: product["price"],
-                                  image20: product['image20'],
-                                  description: product['details'],
-                                  videoLink: product['videoLink'],
-                                  brand: product['brand'],
-                                  image5: product['image5'],
-                                ),
+                                builder:
+                                    (_) => ProductDetails(
+                                      productid: product['id'],
+                                      title: product['name'],
+                                      price: product["price"],
+                                      image20: product['image20'],
+                                      description: product['details'],
+                                      videoLink: product['videoLink'],
+                                      brand: product['brand'],
+                                      image5: product['image5'],
+                                    ),
                               ),
                             );
                           },
@@ -610,10 +597,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
                 const SizedBox(height: 10),
 
-
                 if (banners.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     child: Container(
                       height: MediaQuery.of(context).size.width / 2.16,
                       child: Stack(
@@ -629,26 +618,32 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                             itemBuilder: (context, index) {
                               final banner = banners[index];
                               return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 4),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(12),
                                   color: Colors.grey[300],
-                                  image: banner['imageUrl'] != null
-                                      ? DecorationImage(
-                                    image: NetworkImage(banner['imageUrl']),
-                                    fit: BoxFit.cover,
-                                  )
-                                      : const DecorationImage(
-                                    image: AssetImage('assets/icon/banner.jpg'),
-                                    fit: BoxFit.cover,
-                                  ),
+                                  image:
+                                      banner['imageUrl'] != null
+                                          ? DecorationImage(
+                                            image: NetworkImage(
+                                              banner['imageUrl'],
+                                            ),
+                                            fit: BoxFit.cover,
+                                          )
+                                          : const DecorationImage(
+                                            image: AssetImage(
+                                              'assets/icon/banner.jpg',
+                                            ),
+                                            fit: BoxFit.cover,
+                                          ),
                                 ),
                                 child: Material(
                                   color: Colors.transparent,
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(12),
-                                    onTap: () {
-                                    },
+                                    onTap: () {},
                                     child: Container(),
                                   ),
                                 ),
@@ -656,7 +651,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                             },
                           ),
 
-                          
                           if (banners.length > 1)
                             Positioned(
                               bottom: 10,
@@ -664,16 +658,21 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                               right: 0,
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
-                                children: List.generate(banners.length, (index) {
+                                children: List.generate(banners.length, (
+                                  index,
+                                ) {
                                   return Container(
                                     width: 8,
                                     height: 8,
-                                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: currentBannerIndex == index
-                                          ? Colors.white
-                                          : Colors.white.withOpacity(0.5),
+                                      color:
+                                          currentBannerIndex == index
+                                              ? Colors.white
+                                              : Colors.white.withOpacity(0.5),
                                     ),
                                   );
                                 }),
@@ -685,7 +684,10 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   )
                 else
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     child: Container(
                       width: double.infinity,
                       height: MediaQuery.of(context).size.width / 2.16,
@@ -716,63 +718,86 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   ],
                 ),
 
-
                 if (flashProducts.isNotEmpty)
                   Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Container(
-                        padding: EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Colors.red, Colors.red.shade100],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Container(
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Colors.red, Colors.red.shade100],
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AnimatedBuilder(
-                              animation: flashAnimController,
-                              builder: (context, child) {
-                                return Transform.translate(
-                                  offset: Offset(0, -flashBounce.value),
-                                  child: child,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AnimatedBuilder(
+                            animation: flashAnimController,
+                            builder: (context, child) {
+                              return Transform.translate(
+                                offset: Offset(0, -flashBounce.value),
+                                child: child,
+                              );
+                            },
+                            child: Text(
+                              "Flash Sale 🔥",
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+
+                          SizedBox(height: 10),
+
+                          SizedBox(
+                            height: 270,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: flashProducts.length,
+                              itemBuilder: (context, index) {
+                                final product = flashProducts[index];
+                                return Container(
+                                  width: 180,
+                                  margin: EdgeInsets.only(right: 10),
+                                  child: flashSaleItem(product),
                                 );
                               },
-                              child: Text(
-                                "Flash Sale 🔥",
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
                             ),
-
-                            SizedBox(height: 10),
-
-                            SizedBox(
-                              height: 270,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: flashProducts.length,
-                                itemBuilder: (context, index) {
-                                  final product = flashProducts[index];
-                                  return Container(
-                                    width: 180,
-                                    margin: EdgeInsets.only(right: 10),
-                                    child: flashSaleItem(product),
-                                  );
-                                },
-                              ),
-                            ),
-
-                          ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                   )
                 else
                   SizedBox(),
+
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: GiftBoxBanner(
+                    onOpen: () {
+                      final currentUser = _auth.currentUser;
+                      if (currentUser?.isAnonymous == true) {
+                        if (mounted) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => SignUpScreen()),
+                            );
+                          });
+                        }
+                        return;
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => GiftBox()),
+                        );
+                      }
+                    },
+                  ),
+                ),
 
                 if (newArrivalProducts.isNotEmpty)
                   Padding(
@@ -823,14 +848,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                               },
                             ),
                           ),
-
                         ],
                       ),
                     ),
                   )
                 else
                   SizedBox(),
-
 
                 StreamBuilder<String?>(
                   stream: db.getVersionStream(),
@@ -840,7 +863,10 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                       if (version != null && version > 1) {
                         return Container(
                           color: Colors.amberAccent,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -853,12 +879,15 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                               ),
                               TextButton(
                                 onPressed: () async {
-                                  const url = 'https://appnest-seven.vercel.app/';
+                                  const url =
+                                      'https://appnest-seven.vercel.app/';
                                   if (await canLaunchUrl(Uri.parse(url))) {
                                     await launchUrl(Uri.parse(url));
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Could not launch $url')),
+                                      SnackBar(
+                                        content: Text('Could not launch $url'),
+                                      ),
                                     );
                                   }
                                 },
@@ -869,42 +898,14 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                         );
                       }
                     }
-                    return const SizedBox.shrink(); 
+                    return const SizedBox.shrink();
                   },
                 ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: GiftBoxBanner(
-                    onOpen: () {
-                      final currentUser = _auth.currentUser;
-                      if (currentUser?.isAnonymous==true) {
-                        if (mounted) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => SignUpScreen()),
-                            );
-                          });
-                        }
-                        return;
-                      }
-                      else{
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => GiftBox()),
-                        );
-                      }
-                    },
-                  ),
-                ),
-
 
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: InfoBanner(),
                 ),
-
 
                 if (isLoading)
                   const Center(child: CircularProgressIndicator())
@@ -917,12 +918,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                     itemCount: filteredProducts.length,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 0.8,
-                    ),
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 10,
+                          crossAxisSpacing: 10,
+                          childAspectRatio: 0.8,
+                        ),
                     itemBuilder: (context, index) {
                       final product = filteredProducts[index];
                       return ProductItem(
@@ -930,15 +931,19 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                         title: product['name'] ?? 'No Title',
                         price: '৳${product['price']?.toString() ?? '0'}',
                         imagePath:
-                        product['image5'] ?? 'assets/demo_item_image/d1.jpg',
+                            product['image5'] ??
+                            'assets/demo_item_image/d1.jpg',
                         image20:
-                        product['image20'] ?? 'assets/demo_item_image/d1.jpg',
+                            product['image20'] ??
+                            'assets/demo_item_image/d1.jpg',
                         description:
-                        product['details'] ?? 'No details available',
+                            product['details'] ?? 'No details available',
                         videoLink:
-                        product['videoLink'] ?? 'No videoLink available',
+                            product['videoLink'] ?? 'No videoLink available',
                         brand: product['brand'] ?? 'No brand available',
-                        image5: product['image5']??'assets/demo_item_image/d1.jpg',
+                        image5:
+                            product['image5'] ??
+                            'assets/demo_item_image/d1.jpg',
                       );
                     },
                   ),
@@ -965,9 +970,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                         sigmaX: blurSigma,
                         sigmaY: blurSigma,
                       ),
-                      child: Container(
-                        color: Colors.white.withOpacity(0.4),
-                      ),
+                      child: Container(color: Colors.white.withOpacity(0.4)),
                     ),
                     Center(
                       child: Column(
@@ -976,7 +979,10 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                           AnimatedOpacity(
                             opacity: splashOpacity > 0.5 ? 1.0 : 0.0,
                             duration: const Duration(milliseconds: 400),
-                            child: Image.asset('assets/icon/user_icon.png', width: 250),
+                            child: Image.asset(
+                              'assets/icon/user_icon.png',
+                              width: 250,
+                            ),
                           ),
                           const SizedBox(height: 20),
                         ],
@@ -998,7 +1004,8 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => Brands(brandName: brand, brandLogo: imagePath),
+            builder:
+                (context) => Brands(brandName: brand, brandLogo: imagePath),
           ),
         );
       },

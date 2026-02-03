@@ -48,6 +48,8 @@ class _CheckOutState extends State<CheckOut> {
   int deliveryCharge = 0;
   double _total = 0;
   bool needupdate = false;
+  String? _paymentNumber;
+  bool _paymentNumberLoading = false;
 
   final Auth _auth = Auth();
   final ImageService _imageService = ImageService();
@@ -56,6 +58,7 @@ class _CheckOutState extends State<CheckOut> {
   void initState() {
     super.initState();
     _loadUserAddress();
+    _loadPaymentNumber();
   }
 
   Future<void> _loadUserAddress() async {
@@ -83,6 +86,24 @@ class _CheckOutState extends State<CheckOut> {
       }
     } catch (e) {
       print("Error loading user address: $e");
+    }
+  }
+
+  Future<void> _loadPaymentNumber() async {
+    setState(() => _paymentNumberLoading = true);
+    try {
+      final number = await db.getPaymentNumber();
+      if (!mounted) return;
+      setState(() {
+        _paymentNumber = number;
+        _paymentNumberLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _paymentNumber = null;
+        _paymentNumberLoading = false;
+      });
     }
   }
 
@@ -640,23 +661,30 @@ class _CheckOutState extends State<CheckOut> {
                 ),
                 subtitle: Row(
                   children: [
-                    const SelectableText(
-                      "01793011106",
-                      style: TextStyle(
+                    SelectableText(
+                      _paymentNumberLoading
+                          ? "Loading..."
+                          : (_paymentNumber ?? "Not available"),
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.copy, size: 20),
-                      onPressed: () {
-                        Clipboard.setData(
-                          const ClipboardData(text: "01793011106"),
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Number copied')),
-                        );
-                      },
+                      onPressed:
+                          (_paymentNumberLoading || _paymentNumber == null)
+                              ? null
+                              : () {
+                                Clipboard.setData(
+                                  ClipboardData(text: _paymentNumber!),
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Number copied'),
+                                  ),
+                                );
+                              },
                     ),
                   ],
                 ),
