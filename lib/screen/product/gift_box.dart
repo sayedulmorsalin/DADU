@@ -36,10 +36,7 @@ class _GiftBoxState extends State<GiftBox> {
   }
 
   Future<void> _initializePage() async {
-    await Future.wait([
-      _loadFreeGiftProducts(),
-      _checkGiftStatus(),
-    ]);
+    await Future.wait([_loadFreeGiftProducts(), _checkGiftStatus()]);
   }
 
   Future<void> _loadFreeGiftProducts() async {
@@ -49,15 +46,16 @@ class _GiftBoxState extends State<GiftBox> {
       if (!mounted) return;
 
       setState(() {
-        _products = productData
-            .map(
-              (data) => Product(
-            name: data['name'] ?? 'No Name',
-            description: data['details'] ?? 'No Description',
-            imageUrl: data['image5'] ?? '',
-          ),
-        )
-            .toList();
+        _products =
+            productData
+                .map(
+                  (data) => Product(
+                    name: data['name'] ?? 'No Name',
+                    description: data['details'] ?? 'No Description',
+                    imageUrl: data['image5'] ?? '',
+                  ),
+                )
+                .toList();
 
         _isLoadingProducts = false;
       });
@@ -89,9 +87,9 @@ class _GiftBoxState extends State<GiftBox> {
       _checkingGift = false;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Gift claimed successfully")),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Gift claimed successfully")));
   }
 
   @override
@@ -109,90 +107,108 @@ class _GiftBoxState extends State<GiftBox> {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: _isLoadingProducts
-          ? const Center(child: CircularProgressIndicator())
-          : _products.isEmpty
-          ? const Center(
-        child: Text(
-          'No free gifts available at the moment.',
-          style: TextStyle(fontSize: 18, color: Colors.grey),
-        ),
-      )
-          : Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              itemCount: _products.length,
-              itemBuilder: (context, index) {
-                final product = _products[index];
+      body:
+          _isLoadingProducts
+              ? const Center(child: CircularProgressIndicator())
+              : _products.isEmpty
+              ? const Center(
+                child: Text(
+                  'No free gifts available at the moment.',
+                  style: TextStyle(fontSize: 18, color: Colors.grey),
+                ),
+              )
+              : Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: _products.length,
+                      itemBuilder: (context, index) {
+                        final product = _products[index];
 
-                return Card(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 80,
-                          height: 80,
-                          child: Image.network(
-                            product.imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.image_not_supported),
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.name,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 300,
+                                      height: 300,
+                                      child: Image.network(
+                                        product.imageUrl,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (_, __, ___) => const Icon(
+                                              Icons.image_not_supported,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(product.description),
-                            ],
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            product.name,
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(product.description),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: disableButton ? null : _handleTryGift,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: disableButton
-                      ? Colors.grey
-                      : Theme.of(context).primaryColor,
-                ),
-                child: Text(
-                  _checkingGift
-                      ? "Checking..."
-                      : _alreadyTried
-                      ? "You already tried"
-                      : "Try to Get",
-                  style: const TextStyle(fontSize: 18),
-                ),
+                  Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: disableButton ? null : _handleTryGift,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor:
+                              disableButton
+                                  ? Colors.grey
+                                  : Theme.of(context).primaryColor,
+                          foregroundColor: Colors.white,
+                          disabledForegroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.grey,
+                        ),
+                        child: Text(
+                          _checkingGift
+                              ? "Checking..."
+                              : _alreadyTried
+                              ? "You already tried"
+                              : "Try to Get",
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
