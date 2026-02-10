@@ -446,6 +446,16 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 ],
               ),
 
+              InkWell(
+                onTap: () {
+                  print("Clicked");
+                },
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Image.asset("assets/gif/bundle.gif"),
+                ),
+              ),
+
 
               SizedBox(height: 10),
 
