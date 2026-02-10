@@ -79,7 +79,7 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
               width: double.infinity,
               decoration: const BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage("assets/icon/gift.jpeg"),
+                  image: AssetImage("assets/banar/freeproduct.jpeg"),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -106,7 +106,7 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                             width: 65,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: Colors.purple,
+                              color: Colors.redAccent,
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),

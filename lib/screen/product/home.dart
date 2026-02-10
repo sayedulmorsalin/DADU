@@ -133,6 +133,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       }
     });
   }
+
   void showNotificationDialog() {
     showDialog(
       context: context,
@@ -154,10 +155,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
             width: double.maxFinite,
             height: 350,
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection("notifications")
-                  .orderBy("createdAt", descending: true)
-                  .snapshots(),
+              stream:
+                  FirebaseFirestore.instance
+                      .collection("notifications")
+                      .orderBy("createdAt", descending: true)
+                      .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -172,13 +174,15 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
-                    final data =
-                    docs[index].data() as Map<String, dynamic>;
+                    final data = docs[index].data() as Map<String, dynamic>;
 
                     final ts = data['createdAt'] as Timestamp?;
-                    final time = ts != null
-                        ? TimeOfDay.fromDateTime(ts.toDate()).format(context)
-                        : "";
+                    final time =
+                        ts != null
+                            ? TimeOfDay.fromDateTime(
+                              ts.toDate(),
+                            ).format(context)
+                            : "";
 
                     return Card(
                       elevation: 2,
@@ -188,16 +192,15 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                           data['highPriority'] == true
                               ? Icons.priority_high
                               : Icons.notifications,
-                          color: data['highPriority'] == true
-                              ? Colors.red
-                              : Colors.blue,
+                          color:
+                              data['highPriority'] == true
+                                  ? Colors.red
+                                  : Colors.blue,
                         ),
 
                         title: Text(
                           data['title'] ?? '',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
 
                         subtitle: Text(data['body'] ?? ''),
@@ -224,7 +227,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       },
     );
   }
-
 
   Widget _buildHomeContent() {
     return Stack(
@@ -269,10 +271,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
                     IconButton(
                       icon: const Icon(Icons.notifications),
-                      onPressed:
-                        showNotificationDialog
-                      ,
-
+                      onPressed: showNotificationDialog,
                     ),
                   ],
                 ),
@@ -380,6 +379,8 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                           },
                         ),
 
+
+
                         if (banners.length > 1)
                           Positioned(
                             bottom: 10,
@@ -429,6 +430,25 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   ),
                 ),
 
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 4,
+                children: [
+                  _buildBrandItem("Adidas", "assets/icon/adidas.png"),
+                  _buildBrandItem("Nike", "assets/icon/Nike.png"),
+                  _buildBrandItem("Puma", "assets/icon/puma.png"),
+                  _buildBrandItem("Gloves", "assets/icon/gloves.png"),
+                  _buildBrandItem("Jersey", "assets/icon/jersey.png"),
+                  _buildBrandItem("Pant", "assets/icon/pant.png"),
+                  _buildBrandItem("Dadu", "assets/logo/black_logo.png"),
+                  _buildBrandItem("Others", "assets/icon/other.png"),
+                ],
+              ),
+
+
+              SizedBox(height: 10),
+
               AnimatedSlide(
                 offset: giftBannerVisible ? Offset.zero : const Offset(0, 0.2),
                 duration: const Duration(milliseconds: 500),
@@ -465,21 +485,9 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 ),
               ),
 
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 4,
-                children: [
-                  _buildBrandItem("Adidas", "assets/icon/adidas.png"),
-                  _buildBrandItem("Nike", "assets/icon/Nike.png"),
-                  _buildBrandItem("Puma", "assets/icon/puma.png"),
-                  _buildBrandItem("Gloves", "assets/icon/gloves.png"),
-                  _buildBrandItem("Jersey", "assets/icon/jersey.png"),
-                  _buildBrandItem("Pant", "assets/icon/pant.png"),
-                  _buildBrandItem("Dadu", "assets/logo/black_logo.png"),
-                  _buildBrandItem("Others", "assets/icon/other.png"),
-                ],
-              ),
+
+
+
 
               if (flashProducts.isNotEmpty)
                 Padding(
@@ -487,7 +495,15 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   child: Container(
                     padding: EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 241, 62, 22),
+                      // gradient: LinearGradient(
+                      //   begin: Alignment.topCenter,
+                      //   end: Alignment.bottomCenter,
+                      //   colors: [
+                      //     Colors.blue.shade400,
+                      //     Colors.deepPurple.shade200,
+                      //   ],
+                      // ),
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -506,7 +522,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: Colors.red,
                             ),
                           ),
                         ),
@@ -514,7 +530,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                         SizedBox(height: 10),
 
                         SizedBox(
-                          height: 270,
+                          height: 200,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             itemCount: flashProducts.length,
@@ -541,7 +557,8 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   child: Container(
                     padding: EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.deepPurple.shade200,
+
+                      color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -560,7 +577,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                             style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: Colors.black,
                             ),
                           ),
                         ),
@@ -654,7 +671,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                     crossAxisCount: 2,
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
-                    childAspectRatio: 0.8,
+                    childAspectRatio: 0.79,
                   ),
                   itemBuilder: (context, index) {
                     final product = filteredProducts[index];
@@ -698,7 +715,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                       sigmaX: blurSigma,
                       sigmaY: blurSigma,
                     ),
-                    child: Container(color: Colors.white.withOpacity(0.4)),
+                    child: Container(color: Colors.orange),
                   ),
                   Center(
                     child: Column(
@@ -708,7 +725,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                           opacity: splashOpacity > 0.5 ? 1.0 : 0.0,
                           duration: const Duration(milliseconds: 400),
                           child: Image.asset(
-                            'assets/icon/user_icon.png',
+                            'assets/logo/black_logo.png',
                             width: 250,
                           ),
                         ),
@@ -825,11 +842,9 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-        ],
+
       ),
       child: GestureDetector(
         onTap: () {
@@ -1043,26 +1058,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     });
   }
 
-  void _navigateToProfile() async {
-    if (loggedin) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => Profile()),
-      );
-      if (_auth.currentUser?.email != null) {
-        _loadProfileImage(_auth.currentUser!.email!);
-      }
-    } else {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SignUpScreen()),
-      );
-      if (_auth.currentUser != null && !_auth.currentUser!.isAnonymous) {
-        setState(() => loggedin = true);
-        _loadProfileImage(_auth.currentUser!.email!);
-      }
-    }
-  }
 
   void sendMessageToWhatsApp() async {
     final message = Uri.encodeComponent(
@@ -1073,7 +1068,9 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       'whatsapp://send?phone=8801782124891&text=$message',
     );
 
-    final whatsappWebUrl = Uri.parse('whatsapp://send?phone=8801782124891&text=$message');
+    final whatsappWebUrl = Uri.parse(
+      'whatsapp://send?phone=8801782124891&text=$message',
+    );
 
     try {
       if (await canLaunchUrl(whatsappAppUrl)) {
@@ -1118,25 +1115,21 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
           });
         },
 
-
-          items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: "Home",
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.shopping_cart),
-              label: "Cart",
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.message),
-              label: "Message",
-            ),
-            BottomNavigationBarItem(
-              icon: _buildProfileNavIcon(),
-              label: "Profile",
-            ),
-          ],
+        items: [
+          const BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart),
+            label: "Cart",
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.message),
+            label: "Message",
+          ),
+          BottomNavigationBarItem(
+            icon: _buildProfileNavIcon(),
+            label: "Profile",
+          ),
+        ],
       ),
     );
   }
@@ -1159,7 +1152,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
     return const Icon(Icons.person);
   }
-
 
   Widget _buildBrandItem(String brand, String imagePath) {
     return GestureDetector(

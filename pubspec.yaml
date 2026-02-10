@@ -101,6 +101,8 @@ flutter:
     - assets/icon/pant.png
     - assets/logo/black_logo.png
     - assets/icon/gift.jpeg
+    - assets/banar/freeproduct.jpeg
+    - assets/gif/bundle.gif
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
