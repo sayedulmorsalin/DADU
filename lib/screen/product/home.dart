@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:dadu/screen/product/bundle_deals.dart';
 import 'package:dadu/screen/product/product_details.dart';
 import 'package:dadu/screen/user/cart.dart';
 import 'package:dadu/screen/user/profile.dart';
@@ -448,7 +449,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
               InkWell(
                 onTap: () {
-                  print("Clicked");
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (_)=>BundleDeals() ));
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
