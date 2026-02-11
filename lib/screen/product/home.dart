@@ -1103,7 +1103,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       backgroundColor: const Color(0xFFf2f2ce),
       body: IndexedStack(
         index: _selectedIndex,
-        children: [_buildHomeContent(), Cart(), Profile()],
+          children: [
+            _buildHomeContent(),
+            loggedin ? Cart() : SignUpScreen(),
+            loggedin ? Profile() : SignUpScreen(),
+          ],
       ),
 
       bottomNavigationBar: BottomNavigationBar(

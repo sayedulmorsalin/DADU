@@ -74,13 +74,7 @@ class _ProfileState extends State<Profile> {
 
       if (currentUser.isAnonymous) {
         if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You do not have an account please create one'),
-              duration: Duration(seconds: 2),
-            ),
-          );
+          
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => SignUpScreen()),
@@ -133,9 +127,6 @@ class _ProfileState extends State<Profile> {
           _error = "Failed to load profile: $e";
           _isLoading = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error loading profile: $e")));
       }
     }
   }

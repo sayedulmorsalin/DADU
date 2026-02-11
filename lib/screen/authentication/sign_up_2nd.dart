@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:dadu/data/district_upozila.dart';
-import 'package:dadu/screen/user/profile.dart';
+import 'package:dadu/screen/product/home.dart';
 import 'package:dadu/services/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -62,7 +62,7 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => Profile()),
+          MaterialPageRoute(builder: (context) => Home()),
         );
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(

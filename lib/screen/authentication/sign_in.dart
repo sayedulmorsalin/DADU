@@ -1,6 +1,6 @@
 
 import 'package:dadu/screen/authentication/forgot_password.dart';
-import 'package:dadu/screen/user/profile.dart';
+import 'package:dadu/screen/product/home.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +38,7 @@ class _SignInScreenState extends State<SignInScreen> {
         if (error == null) {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => Profile()),
+            MaterialPageRoute(builder: (context) => Home()),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
