@@ -1026,13 +1026,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       splashOpacity = 1.0;
     });
 
-    await Future.delayed(const Duration(milliseconds: 500));
     for (int i = 0; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 80));
+      await Future.delayed(const Duration(milliseconds: 10));
       setState(() {
         blurSigma = 20.0 - (i * 2);
         splashOpacity = 1.0 - (i / 10.0);
-        if (i > 7) showFab = true;
       });
     }
     setState(() => showSplash = false);
