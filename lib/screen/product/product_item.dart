@@ -48,7 +48,7 @@ class ProductItem extends StatelessWidget {
         );
       },
       child: Card(
-        elevation: 5,
+        elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,7 +88,7 @@ class ProductItem extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 15,
+                      fontSize: 20,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -98,8 +98,8 @@ class ProductItem extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
-                      color: Colors.green,
-                      fontSize: 13,
+                      color: Colors.black,
+                      fontSize: 15,
                     ),
                   ),
                 ],

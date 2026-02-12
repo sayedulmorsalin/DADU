@@ -105,7 +105,7 @@ Widget build(BuildContext context) {
               crossAxisCount: 2,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
-              childAspectRatio: 0.70,
+              childAspectRatio: 0.79,
             ),
             itemBuilder: (context, index) {
               final product = brandProducts[index];

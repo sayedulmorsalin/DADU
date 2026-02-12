@@ -449,7 +449,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
               InkWell(
                 onTap: () {
-                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (_)=>BundleDeals() ));
+                  Navigator.push(context, MaterialPageRoute(builder: (_)=>BundleDeals() ));
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
