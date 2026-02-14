@@ -1114,10 +1114,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
         items: [
           const BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_cart),
-            label: "Cart",
-          ),
+          BottomNavigationBarItem(icon: _buildCartNavIcon(), label: "Cart"),
           const BottomNavigationBarItem(
             icon: Icon(Icons.message),
             label: "Message",
@@ -1164,6 +1161,68 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     }
 
     return const Icon(Icons.person);
+  }
+
+  Widget _buildCartNavIcon() {
+    final user = _auth.currentUser;
+
+    if (user == null || user.email == null) {
+      return const Icon(Icons.shopping_cart);
+    }
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: db.getUserStream(user.email!),
+      builder: (context, snapshot) {
+        int totalItems = 0;
+
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final data = snapshot.data!.data();
+          final cartData = data?['cart_item'] as Map<String, dynamic>? ?? {};
+
+          for (var value in cartData.values) {
+            if (value is int) {
+              totalItems += value;
+            } else if (value is Map<String, dynamic>) {
+              for (var qty in value.values) {
+                totalItems += (qty as int);
+              }
+            }
+          }
+        }
+
+        return Stack(
+          clipBehavior: Clip.none,
+          children: [
+            const Icon(Icons.shopping_cart),
+            if (totalItems > 0)
+              Positioned(
+                right: -6,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    totalItems > 99 ? "99+" : totalItems.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildBrandItem(String brand, String imagePath) {
