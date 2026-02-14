@@ -183,6 +183,15 @@ class dataBase {
     }
   }
 
+  Stream<DocumentSnapshot<Map<String, dynamic>>> getUserStream(String email) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .where('email', isEqualTo: email)
+        .limit(1)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.first);
+  }
+
   Future<bool> updateUserDetails(
     String email,
     Map<String, dynamic> updatedData,

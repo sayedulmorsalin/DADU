@@ -380,8 +380,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                           },
                         ),
 
-
-
                         if (banners.length > 1)
                           Positioned(
                             bottom: 10,
@@ -449,14 +447,16 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
               InkWell(
                 onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_)=>BundleDeals() ));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => BundleDeals()),
+                  );
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Image.asset("assets/gif/bundle.gif"),
                 ),
               ),
-
 
               SizedBox(height: 10),
 
@@ -495,10 +495,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   ),
                 ),
               ),
-
-
-
-
 
               if (flashProducts.isNotEmpty)
                 Padding(
@@ -568,7 +564,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   child: Container(
                     padding: EdgeInsets.all(20),
                     decoration: BoxDecoration(
-
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -855,7 +850,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(10),
-
       ),
       child: GestureDetector(
         onTap: () {
@@ -1067,7 +1061,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     });
   }
 
-
   void sendMessageToWhatsApp() async {
     final message = Uri.encodeComponent(
       'Hey I want to order something from your Apps',
@@ -1100,20 +1093,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFf2f2ce),
-      body: IndexedStack(
-        index: _selectedIndex,
-          children: [
-            _buildHomeContent(),
-            loggedin ? Cart() : SignUpScreen(),
-            loggedin ? Profile() : SignUpScreen(),
-          ],
-      ),
+      body: _buildCurrentPage(),
 
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-
         currentIndex: _selectedIndex >= 2 ? _selectedIndex + 1 : _selectedIndex,
-
         selectedItemColor: Colors.orange,
         unselectedItemColor: Colors.black54,
 
@@ -1145,6 +1129,22 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
         ],
       ),
     );
+  }
+
+  Widget _buildCurrentPage() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildHomeContent();
+
+      case 1:
+        return loggedin ? const Cart() : SignUpScreen();
+
+      case 2:
+        return loggedin ? Profile() : SignUpScreen();
+
+      default:
+        return _buildHomeContent();
+    }
   }
 
   Widget _buildProfileNavIcon() {
