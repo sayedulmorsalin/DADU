@@ -454,7 +454,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 },
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Image.asset("assets/gif/bundle.gif"),
+                  child: Image.asset(
+                    "assets/gif/bundle.gif",
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
 
@@ -510,7 +514,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                       //     Colors.deepPurple.shade200,
                       //   ],
                       // ),
-                      color: Colors.white,
+                      color: const Color.fromARGB(255, 234, 206, 206),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(

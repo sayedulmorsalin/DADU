@@ -165,7 +165,6 @@ class ProductItem extends StatelessWidget {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -182,7 +181,7 @@ class ProductItem extends StatelessWidget {
                       IconButton(
                         onPressed: () => _addToCart(context),
                         icon: Icon(Icons.add_shopping_cart,
-                            color: Theme.of(context).primaryColor),
+                            color: Theme.of(context).primaryColor),iconSize: 20,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       )
