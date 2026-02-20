@@ -506,14 +506,7 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                   child: Container(
                     padding: EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      // gradient: LinearGradient(
-                      //   begin: Alignment.topCenter,
-                      //   end: Alignment.bottomCenter,
-                      //   colors: [
-                      //     Colors.blue.shade400,
-                      //     Colors.deepPurple.shade200,
-                      //   ],
-                      // ),
+
                       color: const Color.fromARGB(255, 234, 206, 206),
                       borderRadius: BorderRadius.circular(12),
                     ),

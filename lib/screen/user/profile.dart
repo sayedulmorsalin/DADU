@@ -1397,27 +1397,27 @@ class _ProfileState extends State<Profile> {
       {
         'title': 'How to place an order?',
         'icon': Icons.shopping_cart,
-        'url': 'https://yourwebsite.com/help/place-order',
+        'url': 'https://sites.google.com/view/dadu-help-center/home/how-to-place-order',
       },
       {
         'title': 'Payment methods',
         'icon': Icons.payment,
-        'url': 'https://yourwebsite.com/help/payment-methods',
+        'url': 'https://sites.google.com/view/dadu-help-center/home/payment-methods',
       },
       {
         'title': 'Delivery information',
         'icon': Icons.local_shipping,
-        'url': 'https://yourwebsite.com/help/delivery-info',
+        'url': 'https://sites.google.com/view/dadu-help-center/home/delivery-information',
       },
       {
         'title': 'Return policy',
         'icon': Icons.assignment_return,
-        'url': 'https://yourwebsite.com/help/return-policy',
+        'url': 'https://sites.google.com/view/dadu-help-center/home/return-policy',
       },
       {
         'title': 'Contact support',
         'icon': Icons.support_agent,
-        'url': 'https://yourwebsite.com/help/contact-support',
+        'url': 'https://sites.google.com/view/dadu-help-center/home/contact-support',
       },
     ];
 
