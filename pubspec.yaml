@@ -54,6 +54,7 @@ dependencies:
   dio: ^5.9.0
   flutter_file_downloader: ^2.1.0
   firebase_messaging: ^16.1.1
+  google_mobile_ads: ^7.0.0
 
 
 

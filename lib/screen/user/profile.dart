@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dadu/data/district_upozila.dart';
 import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:dadu/screen/product/home.dart';
+import 'package:dadu/screen/user/reword_ad.dart';
 import 'package:dadu/services/auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1117,6 +1118,15 @@ class _ProfileState extends State<Profile> {
                       : '${(130 - freeDeliveryInfo).toStringAsFixed(1)} point need to get next free delivery',
                   style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
+                const SizedBox(height: 8),
+                ElevatedButton(onPressed: (){
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RewordAd(),
+                    ),
+                  );
+                }, child: Text('Watch Ad to earn more points'))
               ],
             ),
           ),
