@@ -94,6 +94,45 @@ class Auth {
     }
   }
 
+Future<String?> deleteAccount() async {
+  try {
+
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      return "User not logged in";
+    }
+
+    final uid = user.uid;
+
+    await user.delete();
+
+    final collectionName =
+        user.isAnonymous ? 'anonymous_users' : 'users';
+
+    await _firestore
+        .collection(collectionName)
+        .doc(uid)
+        .delete();
+
+    return null;
+
+  } on FirebaseAuthException catch (e) {
+
+    if (e.code == 'requires-recent-login') {
+      return "Please login again before deleting account.";
+    }
+
+    return _handleAuthError(e.code);
+
+  } catch (e) {
+
+    return "Account deletion failed: $e";
+
+  }
+}
+
+
   
   Future<void> anonymousLogin() async {
     try {
@@ -136,7 +175,7 @@ class Auth {
       case 'weak-password':
         return 'Password is too weak (min 6 characters)';
       case 'requires-recent-login':
-        return 'Reauthenticate before changing password';
+        return 'Reauthenticate before sensitive account changes';
       default:
         return 'Authentication failed: $code';
     }

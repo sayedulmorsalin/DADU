@@ -4,6 +4,7 @@ import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:dadu/screen/product/home.dart';
 import 'package:dadu/services/auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api.dart';
@@ -74,7 +75,6 @@ class _ProfileState extends State<Profile> {
 
       if (currentUser.isAnonymous) {
         if (mounted) {
-          
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (context) => SignUpScreen()),
@@ -86,7 +86,6 @@ class _ProfileState extends State<Profile> {
         currentUser.email.toString(),
       );
 
-      
       Address = userDetails?['address'] ?? '';
       if (Address.isEmpty || Address == '') {
         if (mounted) {
@@ -98,7 +97,6 @@ class _ProfileState extends State<Profile> {
         return;
       }
 
-      
       if (mounted) {
         setState(() {
           Name = userDetails?['name'] ?? '';
@@ -138,7 +136,7 @@ class _ProfileState extends State<Profile> {
       if (pickedFile == null) return null;
 
       File imageFile = File(pickedFile.path);
-      return await imageService.uploadProfileImage(imageFile); 
+      return await imageService.uploadProfileImage(imageFile);
     } catch (e) {
       print("Error updating profile picture: $e");
       return null;
@@ -156,7 +154,6 @@ class _ProfileState extends State<Profile> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            
             bool _isSaving = false;
 
             return AlertDialog(
@@ -168,7 +165,6 @@ class _ProfileState extends State<Profile> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    
                     GestureDetector(
                       onTap: () async {
                         setDialogState(() => _isUpdatingProfilePic = true);
@@ -230,7 +226,6 @@ class _ProfileState extends State<Profile> {
                     ),
                     const SizedBox(height: 20),
 
-                    
                     TextFormField(
                       initialValue: tempName,
                       onChanged: (value) => tempName = value,
@@ -245,7 +240,6 @@ class _ProfileState extends State<Profile> {
                     ),
                     const SizedBox(height: 20),
 
-                    
                     TextFormField(
                       initialValue: tempPhone,
                       onChanged: (value) => tempPhone = value,
@@ -261,7 +255,6 @@ class _ProfileState extends State<Profile> {
                     ),
                     const SizedBox(height: 20),
 
-                    
                     TextFormField(
                       initialValue: Email,
                       enabled: false,
@@ -293,22 +286,18 @@ class _ProfileState extends State<Profile> {
                             setDialogState(() => _isSaving = true);
 
                             try {
-                              
                               Map<String, dynamic> updatedData = {
                                 'name': tempName,
                                 'phone': tempPhone,
-                                'profile_pic':
-                                    tempProfilePic, 
+                                'profile_pic': tempProfilePic,
                               };
 
-                              
                               bool success = await db.updateUserDetails(
                                 Email,
                                 updatedData,
                               );
 
                               if (success) {
-                                
                                 setState(() {
                                   Name = tempName;
                                   Phone = tempPhone;
@@ -393,7 +382,6 @@ class _ProfileState extends State<Profile> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    
                     DropdownButtonFormField<String>(
                       value: tempDistrict,
                       items:
@@ -426,7 +414,6 @@ class _ProfileState extends State<Profile> {
                     ),
                     const SizedBox(height: 20),
 
-                    
                     DropdownButtonFormField<String>(
                       value: thanaList.isNotEmpty ? tempThana : null,
                       items:
@@ -458,7 +445,6 @@ class _ProfileState extends State<Profile> {
                     ),
                     const SizedBox(height: 20),
 
-                    
                     TextFormField(
                       initialValue: tempAddress,
                       onChanged: (value) => tempAddress = value,
@@ -492,21 +478,18 @@ class _ProfileState extends State<Profile> {
                             setDialogState(() => _isSaving = true);
 
                             try {
-                              
                               Map<String, dynamic> updatedData = {
                                 'district': tempDistrict,
                                 'thana': tempThana,
                                 'address': tempAddress,
                               };
 
-                              
                               bool success = await db.updateUserDetails(
                                 Email,
                                 updatedData,
                               );
 
                               if (success) {
-                                
                                 setState(() {
                                   District = tempDistrict;
                                   Thana = tempThana;
@@ -566,29 +549,26 @@ class _ProfileState extends State<Profile> {
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder: (context) => GestureDetector(
-        onTap: () => Navigator.of(context).pop(),
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.zero,
-          child: Container(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            child: InteractiveViewer(
-              panEnabled: true,
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: Image.network(
-                profilePic,
-                fit: BoxFit.contain,
+      builder:
+          (context) => GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: EdgeInsets.zero,
+              child: Container(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.network(profilePic, fit: BoxFit.contain),
+                ),
               ),
             ),
           ),
-        ),
-      ),
     );
   }
-
 
   void _changePassword() {
     final TextEditingController currentPasswordController =
@@ -665,7 +645,6 @@ class _ProfileState extends State<Profile> {
                             final confirmPassword =
                                 confirmPasswordController.text;
 
-                            
                             if (currentPassword.isEmpty ||
                                 newPassword.isEmpty ||
                                 confirmPassword.isEmpty) {
@@ -700,7 +679,6 @@ class _ProfileState extends State<Profile> {
                               );
 
                               if (result == null) {
-                                
                                 if (mounted) {
                                   Navigator.pop(context);
                                   ScaffoldMessenger.of(context).showSnackBar(
@@ -739,7 +717,6 @@ class _ProfileState extends State<Profile> {
 
   @override
   Widget build(BuildContext context) {
-    
     if (_isLoading) {
       return Scaffold(
         backgroundColor: const Color(0xFFf2f2ce),
@@ -765,7 +742,6 @@ class _ProfileState extends State<Profile> {
       );
     }
 
-    
     if (_error.isNotEmpty) {
       return Scaffold(
         backgroundColor: const Color(0xFFf2f2ce),
@@ -800,7 +776,6 @@ class _ProfileState extends State<Profile> {
       );
     }
 
-    
     return Scaffold(
       backgroundColor: const Color(0xFFf2f2ce),
       appBar: AppBar(
@@ -837,7 +812,6 @@ class _ProfileState extends State<Profile> {
       children: [
         GestureDetector(
           onTap: () async {
-            
             if (!_isUpdatingProfilePic) {
               _showFullScreenProfilePicture();
             }
@@ -849,10 +823,11 @@ class _ProfileState extends State<Profile> {
                 radius: 40,
                 backgroundColor: Colors.grey[200],
                 backgroundImage:
-                profilePic.isNotEmpty ? NetworkImage(profilePic) : null,
-                child: profilePic.isEmpty
-                    ? const Icon(Icons.person, size: 40)
-                    : null,
+                    profilePic.isNotEmpty ? NetworkImage(profilePic) : null,
+                child:
+                    profilePic.isEmpty
+                        ? const Icon(Icons.person, size: 40)
+                        : null,
               ),
               if (_isUpdatingProfilePic)
                 const Padding(
@@ -908,7 +883,6 @@ class _ProfileState extends State<Profile> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            
             GestureDetector(
               onTap: () => _navigateToOrderPage(context, 'To Verify', toVerify),
               child: _buildOrderStatus(
@@ -950,8 +924,6 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  
-  
   void _navigateToOrderPage(
     BuildContext context,
     String status,
@@ -1154,9 +1126,27 @@ class _ProfileState extends State<Profile> {
   }
 
   Widget _buildSettingsSection() {
-    final List<Map<String, dynamic>> settings = [
+    final List<Map<String, dynamic>> accountSettings = [
       {'icon': Icons.password, 'title': 'Change password'},
+
       {'icon': Icons.help_outline, 'title': 'Help Center'},
+    ];
+
+    final List<Map<String, dynamic>> legalSettings = [
+      {'icon': Icons.privacy_tip, 'title': 'Privacy Policy'},
+
+      {'icon': Icons.description, 'title': 'Terms & Conditions'},
+
+      {'icon': Icons.person_outline, 'title': 'Developer Info'},
+    ];
+
+    final List<Map<String, dynamic>> dangerSettings = [
+      {
+        'icon': Icons.delete_forever,
+        'title': 'Delete Account',
+        'color': Colors.red,
+      },
+
       {'icon': Icons.logout, 'title': 'Logout', 'color': Colors.red},
     ];
 
@@ -1167,35 +1157,63 @@ class _ProfileState extends State<Profile> {
           'Account Settings',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
+
         const SizedBox(height: 12),
-        ...settings.map(
-          (item) => ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              item['icon'] as IconData,
-              color:
-                  (item['color'] != null)
-                      ? item['color'] as Color
-                      : Colors.blue[700],
-            ),
-            title: Text(
-              item['title'] as String,
-              style: TextStyle(
-                color:
-                    (item['color'] != null)
-                        ? item['color'] as Color
-                        : Colors.black,
-                fontWeight:
-                    (item['color'] != null)
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-              ),
-            ),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => _handleSettingsTap(item['title'] as String),
+
+        ...accountSettings.map((item) => _buildSettingTile(item)),
+
+        const SizedBox(height: 20),
+
+        const Text(
+          'Legal',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
           ),
         ),
+
+        const Divider(),
+
+        ...legalSettings.map((item) => _buildSettingTile(item)),
+
+        const SizedBox(height: 20),
+
+        const Text(
+          'Danger Zone',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.red,
+          ),
+        ),
+
+        const Divider(),
+
+        ...dangerSettings.map((item) => _buildSettingTile(item)),
       ],
+    );
+  }
+
+  Widget _buildSettingTile(Map<String, dynamic> item) {
+    final Color? customColor = item['color'];
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+
+      leading: Icon(item['icon'], color: customColor ?? Colors.blue[700]),
+
+      title: Text(
+        item['title'],
+        style: TextStyle(
+          color: customColor ?? Colors.black,
+          fontWeight: customColor != null ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+
+      onTap: () => _handleSettingsTap(item['title']),
     );
   }
 
@@ -1204,13 +1222,174 @@ class _ProfileState extends State<Profile> {
       case 'Change password':
         _changePassword();
         break;
+
       case 'Help Center':
-        _showHelpCenter(); 
+        _showHelpCenter();
         break;
+
+      case 'Privacy Policy':
+        _launchUrl(
+          "https://sites.google.com/view/dadu-app/privacy-policy-page",
+        );
+        break;
+
+      case 'Terms & Conditions':
+        _launchUrl("https://sites.google.com/view/dadu-app/terms-conditions");
+        break;
+
+      case 'Delete Account':
+        _deleteAccount();
+        break;
+
       case 'Logout':
         _logout();
         break;
+      case 'Developer Info':
+        _showDeveloperInfo();
+        break;
     }
+  }
+
+  void _showDeveloperInfo() {
+    const String phoneDisplay = "+880 1775-876544";
+    const String phoneRaw = "+8801775876544";
+    const String email = "sayadulmorsalin123@gmail.com";
+
+    showDialog(
+      context: context,
+
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Developer Information"),
+
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+
+            crossAxisAlignment: CrossAxisAlignment.start,
+
+            children: [
+              const Text(
+                "App Name : DADU",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 10),
+
+              const Text("Developer : Md. Sayedul Marsalin"),
+
+              const SizedBox(height: 14),
+
+              const Text(
+                "Phone",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              Row(
+                children: [
+                  Expanded(child: Text(phoneDisplay)),
+
+                  IconButton(
+                    tooltip: "Copy",
+
+                    icon: const Icon(Icons.copy, size: 20),
+
+                    onPressed: () {
+                      Clipboard.setData(const ClipboardData(text: phoneRaw));
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Phone copied"),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                  ),
+
+                  IconButton(
+                    tooltip: "Call",
+
+                    icon: const Icon(Icons.call, color: Colors.green),
+
+                    onPressed: () async {
+                      final Uri uri = Uri.parse("tel:$phoneRaw");
+
+                      await launchUrl(uri);
+                    },
+                  ),
+
+                  IconButton(
+                    tooltip: "WhatsApp",
+
+                    icon: const Icon(Icons.chat, color: Colors.green),
+
+                    onPressed: () async {
+                      final Uri uri = Uri.parse(
+                        "https://wa.me/${phoneRaw.replaceAll('+', '')}",
+                      );
+
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    },
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              const Text(
+                "Email",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              Row(
+                children: [
+                  const Expanded(child: Text(email)),
+
+                  IconButton(
+                    tooltip: "Copy",
+
+                    icon: const Icon(Icons.copy, size: 20),
+
+                    onPressed: () {
+                      Clipboard.setData(const ClipboardData(text: email));
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Email copied"),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    },
+                  ),
+
+                  IconButton(
+                    tooltip: "Send Email",
+
+                    icon: const Icon(Icons.email, color: Colors.blue),
+
+                    onPressed: () async {
+                      final Uri uri = Uri.parse("mailto:$email");
+
+                      await launchUrl(uri);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+
+              child: const Text("Close"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showHelpCenter() {
@@ -1284,6 +1463,103 @@ class _ProfileState extends State<Profile> {
     }
   }
 
+  void _deleteAccount() {
+    bool isDeleting = false;
+    String? errorMessage;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            return AlertDialog(
+              title: const Text('Delete Account'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'This action will permanently delete your account and cannot be undone.',
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      errorMessage!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isDeleting ? null : () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed:
+                      isDeleting
+                          ? null
+                          : () async {
+                            setDialogState(() {
+                              isDeleting = true;
+                              errorMessage = null;
+                            });
+
+                            try {
+                              final result = await _auth.deleteAccount();
+
+                              if (result == null) {
+                                if (!mounted) return;
+                                Navigator.pop(dialogContext);
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => Home(),
+                                  ),
+                                  (route) => false,
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Account deleted successfully',
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                setDialogState(() {
+                                  errorMessage = result;
+                                  isDeleting = false;
+                                });
+                              }
+                            } catch (e) {
+                              setDialogState(() {
+                                errorMessage = 'Account deletion failed: $e';
+                                isDeleting = false;
+                              });
+                            }
+                          },
+                  child:
+                      isDeleting
+                          ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Text(
+                            'Delete',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _logout() {
     showDialog(
       context: context,
@@ -1298,25 +1574,20 @@ class _ProfileState extends State<Profile> {
               ),
               TextButton(
                 onPressed: () async {
-                  
                   Navigator.pop(context);
 
                   try {
-                    
                     await _auth.signOut();
 
-                    
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) => Home()),
                     );
 
-                    
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Logged out successfully')),
                     );
                   } catch (e) {
-                    
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Logout failed: $e")),
                     );

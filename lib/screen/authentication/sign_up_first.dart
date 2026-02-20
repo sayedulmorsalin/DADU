@@ -1,10 +1,9 @@
-
 import 'package:dadu/screen/authentication/sign_in.dart';
 import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../services/auth.dart'; 
+import '../../services/auth.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -14,14 +13,16 @@ class SignUpScreen extends StatefulWidget {
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _acceptTerms = false;
+  bool _acceptPrivacyPolicy = false;
   bool _isLoading = false;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  final Auth _auth = Auth(); 
+  final Auth _auth = Auth();
 
   @override
   void dispose() {
@@ -40,6 +41,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
         return;
       }
 
+      if (!_acceptPrivacyPolicy) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Please accept privacy policy")));
+        return;
+      }
+
       setState(() => _isLoading = true);
 
       final String email = _emailController.text.trim();
@@ -47,9 +55,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       try {
         final error = await _auth.registerWithEmailAndPassword(
-            email,
-            password,
-            "User" 
+          email,
+          password,
+          "User",
         );
 
         if (error == null) {
@@ -76,6 +84,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         backgroundColor: Color(0xFFf2f2ce),
         elevation: 0,
         title: Text("Create Account", style: TextStyle(color: Colors.black)),
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -92,7 +101,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    
                     Container(
                       margin: EdgeInsets.only(bottom: 24),
                       child: Text(
@@ -107,7 +115,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     SizedBox(height: 16),
 
-                    
                     TextFormField(
                       controller: _emailController,
                       decoration: InputDecoration(
@@ -128,7 +135,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     SizedBox(height: 16),
 
-                    
                     TextFormField(
                       obscureText: _obscurePassword,
                       controller: _passwordController,
@@ -162,7 +168,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     SizedBox(height: 16),
 
-                    
                     TextFormField(
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
@@ -172,7 +177,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         suffixIcon: GestureDetector(
                           onTap: () {
                             setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
                             });
                           },
                           child: Icon(
@@ -196,7 +202,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                     SizedBox(height: 16),
 
-                    
                     Row(
                       children: [
                         Checkbox(
@@ -218,7 +223,48 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               ),
                             ),
                             onTap: () async {
-                              const url = 'https://sites.google.com/view/dadu-app/home';
+                              const url =
+                                  'https://sites.google.com/view/dadu-app/terms-conditions';
+                              try {
+                                await launchUrl(
+                                  Uri.parse(url),
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Could not open link: $e'),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _acceptPrivacyPolicy,
+                          onChanged: (value) {
+                            setState(() {
+                              _acceptPrivacyPolicy = value!;
+                            });
+                          },
+                        ),
+                        Expanded(
+                          child: InkWell(
+                            child: Text(
+                              "I agree to the privacy policy",
+                              style: TextStyle(
+                                fontSize: 16,
+                                decoration: TextDecoration.underline,
+                                color: Colors.blue,
+                              ),
+                            ),
+                            onTap: () async {
+                              const url =
+                                  'https://sites.google.com/view/dadu-app/privacy-policy-page';
                               try {
                                 await launchUrl(
                                   Uri.parse(url),
@@ -253,22 +299,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               fontWeight: FontWeight.bold,
                               color: Colors.blue,
                             ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SignInScreen(),
-                                  ),
-                                );
-                              },
+                            recognizer:
+                                TapGestureRecognizer()
+                                  ..onTap = () {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => SignInScreen(),
+                                      ),
+                                    );
+                                  },
                           ),
                         ),
                       ],
                     ),
                     SizedBox(height: 24),
 
-                    
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -280,16 +326,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                         ),
                         onPressed: _isLoading ? null : _submitForm,
-                        child: _isLoading
-                            ? CircularProgressIndicator(color: Colors.white)
-                            : Text(
-                          "Next",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                        child:
+                            _isLoading
+                                ? CircularProgressIndicator(color: Colors.white)
+                                : Text(
+                                  "Next",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
                       ),
                     ),
                   ],
