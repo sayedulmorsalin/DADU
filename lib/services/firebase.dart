@@ -461,6 +461,78 @@ class dataBase {
     return doc.data()?['number']?.toString();
   }
 
+  Future<Map<String, dynamic>?> getLastGiftWinner() async {
+
+    final doc = await FirebaseFirestore.instance
+        .collection("free_gift")
+        .doc('winner')
+        .get();
+
+    if (!doc.exists) return null;
+
+    return doc.data();
+  }
+
+  Future<void> updateSilverCoin(
+      double silver) async {
+
+    final user =
+        FirebaseAuth.instance.currentUser;
+
+    if(user == null) return;
+
+    await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .set({
+
+      "silver_coin": silver,
+
+      "updatedAt":
+      FieldValue.serverTimestamp(),
+
+    },SetOptions(merge:true));
+  }
+
+  Future<void> updateGoldCoin(
+      double gold) async {
+
+    final user =
+        FirebaseAuth.instance.currentUser;
+
+    if(user == null) return;
+
+    await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .set({
+
+      "free_delivery_info": gold,
+
+      "updatedAt":
+      FieldValue.serverTimestamp(),
+
+    },SetOptions(merge:true));
+  }
+
+  Future<Map<String,dynamic>?> getUserCoins() async {
+
+    final user =
+        FirebaseAuth.instance.currentUser;
+
+    if(user == null) return null;
+
+    final doc =
+    await FirebaseFirestore.instance
+        .collection("users")
+        .doc(user.uid)
+        .get();
+
+    if(!doc.exists) return null;
+
+    return doc.data();
+  }
+
 
 
 }
