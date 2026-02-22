@@ -27,7 +27,7 @@ class _ProfileState extends State<Profile> {
   String Thana = '';
   String Address = '';
   String profilePic = '';
-  int freeDeliveryInfo = 0;
+  double freeDeliveryInfo = 0;
   List<dynamic>? toReceive = null;
   List<dynamic>? toShip = null;
   List<dynamic>? toVerify = null;
@@ -106,7 +106,7 @@ class _ProfileState extends State<Profile> {
           Thana = userDetails?['thana'] ?? '';
           Phone = userDetails?['phone'] ?? '';
           profilePic = userDetails?['profile_pic'] ?? '';
-          freeDeliveryInfo = userDetails?["free_delivery_info"] ?? 0;
+          freeDeliveryInfo = (userDetails?["free_delivery_info"] as num?)?.toDouble() ?? 0.0;
           toReceive = userDetails?["to_receive"];
           toShip = userDetails?["to_ship"];
           toVerify = userDetails?["to_verify"];
@@ -1114,19 +1114,20 @@ class _ProfileState extends State<Profile> {
                 const SizedBox(height: 4),
                 Text(
                   freeDeliveryInfo >= 130
-                      ? 'You can have free delivery! you have: $freeDeliveryInfo points '
-                      : '${(130 - freeDeliveryInfo).toStringAsFixed(1)} point need to get next free delivery',
+                      ? 'You can have free delivery! you have: $freeDeliveryInfo coins '
+                      : '${(130 - freeDeliveryInfo).toStringAsFixed(2)} coins need to get next free delivery',
                   style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
-                ElevatedButton(onPressed: (){
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RewordAd(),
-                    ),
-                  );
-                }, child: Text('Watch Ad to earn more points'))
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const RewordAd()),
+                    );
+                  },
+                  child: Text('Watch Ad to earn more coins'),
+                ),
               ],
             ),
           ),
@@ -1407,27 +1408,32 @@ class _ProfileState extends State<Profile> {
       {
         'title': 'How to place an order?',
         'icon': Icons.shopping_cart,
-        'url': 'https://sites.google.com/view/dadu-help-center/home/how-to-place-order',
+        'url':
+            'https://sites.google.com/view/dadu-help-center/home/how-to-place-order',
       },
       {
         'title': 'Payment methods',
         'icon': Icons.payment,
-        'url': 'https://sites.google.com/view/dadu-help-center/home/payment-methods',
+        'url':
+            'https://sites.google.com/view/dadu-help-center/home/payment-methods',
       },
       {
         'title': 'Delivery information',
         'icon': Icons.local_shipping,
-        'url': 'https://sites.google.com/view/dadu-help-center/home/delivery-information',
+        'url':
+            'https://sites.google.com/view/dadu-help-center/home/delivery-information',
       },
       {
         'title': 'Return policy',
         'icon': Icons.assignment_return,
-        'url': 'https://sites.google.com/view/dadu-help-center/home/return-policy',
+        'url':
+            'https://sites.google.com/view/dadu-help-center/home/return-policy',
       },
       {
         'title': 'Contact support',
         'icon': Icons.support_agent,
-        'url': 'https://sites.google.com/view/dadu-help-center/home/contact-support',
+        'url':
+            'https://sites.google.com/view/dadu-help-center/home/contact-support',
       },
     ];
 

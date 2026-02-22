@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-
 import '../../services/firebase.dart';
 
 class RewordAd extends StatefulWidget {
@@ -12,15 +12,10 @@ class RewordAd extends StatefulWidget {
 }
 
 class _RewordAdState extends State<RewordAd> {
-
-  /// ---------- Coins ----------
+  final dataBase db = dataBase();
 
   double silverCoins = 0;
   double goldCoins = 0;
-
-  final dataBase db = dataBase();
-
-  /// ---------- Ad Rules ----------
 
   int adsWatchedToday = 0;
   int adsInRow = 0;
@@ -30,96 +25,258 @@ class _RewordAdState extends State<RewordAd> {
 
   Timer? _countdownTimer;
 
+  /// ---------- STATUS ----------
+
   bool get isCooldownActive =>
-      cooldownEnd != null &&
-          DateTime.now().isBefore(cooldownEnd!);
+      cooldownEnd != null && DateTime.now().isBefore(cooldownEnd!);
 
-  String cooldownText() {
+  bool get isDailyLimitReached => adsWatchedToday >= 50;
 
-    if (!isCooldownActive) return "";
+  /// ⭐ NEW
+  int get adsLeftBeforeCooldown => (10 - adsInRow).clamp(0, 10);
 
-    final diff =
-    cooldownEnd!.difference(DateTime.now());
+  /// ---------- USER DATA ----------
 
-    final minutes =
-    diff.inMinutes.remainder(60)
-        .toString()
-        .padLeft(2, "0");
+  Future<void> loadUserData() async {
+    final coinData = await db.getUserCoins();
 
-    final seconds =
-    diff.inSeconds.remainder(60)
-        .toString()
-        .padLeft(2, "0");
+    if (coinData != null) {
+      silverCoins = (coinData["silver_coin"] ?? 0).toDouble();
 
-    return "Next ads available in : $minutes:$seconds";
+      goldCoins = (coinData["free_delivery_info"] ?? 0).toDouble();
+    }
+
+    final info = await db.getRewardAdInfo();
+
+    if (info != null) {
+      adsWatchedToday = info["ads_today"] ?? 0;
+
+      adsInRow = info["ads_in_row"] ?? 0;
+
+      if (info["cooldown_end"] is Timestamp) {
+        cooldownEnd = (info["cooldown_end"] as Timestamp).toDate();
+      }
+
+      if (info["last_watch_day"] is Timestamp) {
+        today = (info["last_watch_day"] as Timestamp).toDate();
+      }
+    }
+
+    _resetDailyIfNeeded();
+
+    if (mounted) setState(() {});
+
+    startCountdownTimer();
   }
 
-  Future<void> loadCoins() async {
+  Future<void> saveRewardInfo() async {
+    await db.updateRewardAdInfo({
+      "ads_today": adsWatchedToday,
 
-    final data =
-    await db.getUserCoins();
+      "ads_in_row": adsInRow,
 
-    if(data == null) return;
+      "cooldown_end": cooldownEnd,
 
-    setState(() {
-
-      silverCoins =
-          (data["silver_coin"] ?? 0)
-              .toDouble();
-
-      goldCoins =
-          (data["free_delivery_info"] ?? 0)
-              .toDouble();
+      "last_watch_day": today,
     });
   }
 
-  void startCountdownTimer() {
+  /// ---------- RESET ----------
 
-    _countdownTimer?.cancel();
+  void _resetDailyIfNeeded() {
+    final now = DateTime.now();
 
-    _countdownTimer =
-        Timer.periodic(
-            const Duration(seconds: 1),
-                (timer) {
+    if (now.year != today.year ||
+        now.month != today.month ||
+        now.day != today.day) {
+      adsWatchedToday = 0;
 
-              if (!mounted) return;
+      adsInRow = 0;
 
-              if (!isCooldownActive) {
+      cooldownEnd = null;
 
-                timer.cancel();
+      today = now;
 
-                setState(() {});
-                return;
-              }
-
-              setState(() {});
-            });
+      saveRewardInfo();
+    }
   }
 
-  /// ---------- Banner ----------
+  /// ---------- TIMER ----------
+
+  void startCountdownTimer() {
+    _countdownTimer?.cancel();
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+
+      if (!isCooldownActive) {
+        _countdownTimer?.cancel();
+      }
+
+      setState(() {});
+    });
+  }
+
+  String cooldownText() {
+    if (!isCooldownActive) return "";
+
+    final diff = cooldownEnd!.difference(DateTime.now());
+
+    final minutes = diff.inMinutes.remainder(60).toString().padLeft(2, "0");
+
+    final seconds = diff.inSeconds.remainder(60).toString().padLeft(2, "0");
+
+    return "$minutes:$seconds";
+  }
+
+  /// ---------- ADS ----------
+
+  RewardedAd? _rewardedAd;
+
+  void loadRewardedAd() {
+    RewardedAd.load(
+      adUnitId: 'ca-app-pub-3940256099942544/5224354917',
+
+      request: const AdRequest(),
+
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) {
+          _rewardedAd = ad;
+
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (ad) {
+              ad.dispose();
+
+              loadRewardedAd();
+            },
+
+            onAdFailedToShowFullScreenContent: (ad, error) {
+              ad.dispose();
+
+              loadRewardedAd();
+            },
+          );
+        },
+
+        onAdFailedToLoad: (error) {},
+      ),
+    );
+  }
+
+  void showRewardedAd() {
+    _resetDailyIfNeeded();
+
+    if (isDailyLimitReached) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Daily limit reached")));
+
+      return;
+    }
+
+    if (isCooldownActive) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(cooldownText())));
+
+      return;
+    }
+
+    /// ⭐ 10 ADS COOLDOWN
+
+    if (adsInRow >= 10) {
+      cooldownEnd = DateTime.now().add(const Duration(minutes: 30));
+
+      adsInRow = 0;
+
+      saveRewardInfo();
+
+      startCountdownTimer();
+
+      setState(() {});
+
+      return;
+    }
+
+    if (_rewardedAd == null) {
+      loadRewardedAd();
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Ad loading")));
+
+      return;
+    }
+
+    _rewardedAd!.show(
+      onUserEarnedReward: (ad, reward) async {
+        silverCoins += 5;
+
+        adsInRow++;
+
+        adsWatchedToday++;
+
+        await db.updateSilverCoin(silverCoins);
+
+        await saveRewardInfo();
+
+        if (mounted) setState(() {});
+      },
+    );
+
+    _rewardedAd = null;
+  }
+
+  /// ---------- CONVERT ----------
+
+  void convertCoins() async {
+    if (silverCoins <= 0) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("No Silver Coins")));
+
+      return;
+    }
+
+    final convertedGold = silverCoins / 100;
+
+    goldCoins += convertedGold;
+
+    silverCoins = 0;
+
+    await db.updateGoldCoin(goldCoins);
+
+    await db.updateSilverCoin(silverCoins);
+
+    if (mounted) setState(() {});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Converted +${convertedGold.toStringAsFixed(2)} Gold"),
+      ),
+    );
+  }
+
+  /// ---------- BANNER ----------
 
   BannerAd? _bannerAd;
-  bool _isBannerReady = false;
+
+  bool _bannerReady = false;
 
   void loadBannerAd() {
-
     _bannerAd = BannerAd(
-
       size: AdSize.banner,
 
-      adUnitId:
-      'ca-app-pub-3940256099942544/6300978111',
+      adUnitId: 'ca-app-pub-3940256099942544/6300978111',
 
       request: const AdRequest(),
 
       listener: BannerAdListener(
-
         onAdLoaded: (ad) {
-
           if (!mounted) return;
 
           setState(() {
-            _isBannerReady = true;
+            _bannerReady = true;
           });
         },
 
@@ -132,269 +289,32 @@ class _RewordAdState extends State<RewordAd> {
     _bannerAd!.load();
   }
 
-  /// ---------- Rewarded ----------
+  /// ---------- COIN CARD ----------
 
-  RewardedAd? _rewardedAd;
-
-  void loadRewardedAd() {
-
-    RewardedAd.load(
-
-      adUnitId:
-      'ca-app-pub-3940256099942544/5224354917',
-
-      request: const AdRequest(),
-
-      rewardedAdLoadCallback:
-
-      RewardedAdLoadCallback(
-
-        onAdLoaded: (ad) {
-
-          _rewardedAd = ad;
-
-          ad.fullScreenContentCallback =
-
-              FullScreenContentCallback(
-
-                onAdDismissedFullScreenContent: (ad) {
-
-                  ad.dispose();
-                  loadRewardedAd();
-                },
-
-                onAdFailedToShowFullScreenContent:
-                    (ad, error) {
-
-                  ad.dispose();
-                  loadRewardedAd();
-                },
-              );
-        },
-
-        onAdFailedToLoad: (error) {},
-      ),
-    );
-  }
-
-  void _resetDailyIfNeeded() {
-
-    final now = DateTime.now();
-
-    if (now.day != today.day ||
-        now.month != today.month ||
-        now.year != today.year) {
-
-      adsWatchedToday = 0;
-      adsInRow = 0;
-      cooldownEnd = null;
-
-      today = now;
-    }
-  }
-
-  void showRewardedAd() {
-
-    _resetDailyIfNeeded();
-
-    if (adsWatchedToday >= 50) {
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content: Text("Daily limit reached"),
-        ),
-      );
-
-      return;
-    }
-
-    if (isCooldownActive) {
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content: Text("Cooldown active"),
-        ),
-      );
-
-      return;
-    }
-
-    if (adsInRow >= 5) {
-
-      cooldownEnd =
-          DateTime.now()
-              .add(const Duration(minutes: 30));
-
-      adsInRow = 0;
-
-      startCountdownTimer();
-
-      setState(() {});
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content:
-          Text("Cooldown Started 30 minutes"),
-        ),
-      );
-
-      return;
-    }
-
-    if (_rewardedAd == null) {
-
-      loadRewardedAd();
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-        const SnackBar(
-          content: Text("Ad loading..."),
-        ),
-      );
-
-      return;
-    }
-
-    _rewardedAd!.show(
-
-      onUserEarnedReward:
-          (AdWithoutView ad,
-          RewardItem reward) async {
-
-        setState(() {
-
-          silverCoins += 5;
-
-          adsInRow++;
-          adsWatchedToday++;
-        });
-
-        await db.updateSilverCoin(
-            silverCoins);
-
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
-
-          const SnackBar(
-            content:
-            Text("+5 Silver Coins"),
-          ),
-        );
-      },
-    );
-
-    _rewardedAd = null;
-  }
-
-  /// ---------- Convert Coins ----------
-
-  void convertCoins() async {
-
-    if (silverCoins <= 0) {
-
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-
-        const SnackBar(
-          content:
-          Text("No Silver Coins to convert"),
-        ),
-      );
-
-      return;
-    }
-
-    setState(() {
-
-      goldCoins +=
-          silverCoins / 100;
-
-      silverCoins = 0;
-    });
-
-    /// Firebase Update
-
-    await db.updateGoldCoin(
-        goldCoins);
-
-    await db.updateSilverCoin(
-        silverCoins);
-
-    ScaffoldMessenger.of(context)
-        .showSnackBar(
-
-      const SnackBar(
-        content:
-        Text("Coins Converted Successfully"),
-      ),
-    );
-  }
-
-  /// ---------- Init ----------
-
-  @override
-  void initState(){
-
-    super.initState();
-
-    loadCoins();
-
-    loadBannerAd();
-
-    loadRewardedAd();
-  }
-
-  /// ---------- Dispose ----------
-
-  @override
-  void dispose() {
-
-    _countdownTimer?.cancel();
-
-    _bannerAd?.dispose();
-
-    _rewardedAd?.dispose();
-
-    super.dispose();
-  }
-
-  /// ---------- Coin Card ----------
-
-  Widget coinCard(
-      String title,
-      double value,
-      IconData icon,
-      Color color) {
-
+  Widget coinCard(String title, double value, IconData icon, Color color) {
     return Expanded(
-
       child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+
+        elevation: 6,
 
         child: Padding(
-
-          padding:
-          const EdgeInsets.all(15),
+          padding: const EdgeInsets.all(18),
 
           child: Column(
-
             children: [
+              Icon(icon, size: 42, color: color),
 
-              Icon(icon,
-                  size: 40,
-                  color: color),
+              const SizedBox(height: 8),
 
               Text(title),
 
               Text(
-
                 value.toStringAsFixed(2),
 
-                style:
-                const TextStyle(
-                  fontSize: 20,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
@@ -404,38 +324,62 @@ class _RewordAdState extends State<RewordAd> {
     );
   }
 
+  /// ---------- INIT ----------
+
+  @override
+  void initState() {
+    super.initState();
+
+    loadUserData();
+
+    loadRewardedAd();
+
+    loadBannerAd();
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+
+    _rewardedAd?.dispose();
+
+    _bannerAd?.dispose();
+
+    super.dispose();
+  }
+
   /// ---------- UI ----------
 
   @override
   Widget build(BuildContext context) {
+    final disableButton = isCooldownActive || isDailyLimitReached;
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          "Earn Coins",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
 
-      appBar:
-      AppBar(
-        title:
-        const Text("Earn Coins"),
+        centerTitle: true,
+
+        backgroundColor: Colors.deepPurple,
       ),
 
       body: Column(
-
         children: [
-
           Expanded(
-
-            child: Padding(
-
-              padding:
-              const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
 
               child: Column(
-
                 children: [
-
                   Row(
-
                     children: [
-
                       coinCard(
                         "Silver",
                         silverCoins,
@@ -443,7 +387,13 @@ class _RewordAdState extends State<RewordAd> {
                         Colors.grey,
                       ),
 
-                      const SizedBox(width: 10),
+                      IconButton(
+                        iconSize: 45,
+
+                        onPressed: convertCoins,
+
+                        icon: const Icon(Icons.swap_horiz),
+                      ),
 
                       coinCard(
                         "Gold",
@@ -456,60 +406,100 @@ class _RewordAdState extends State<RewordAd> {
 
                   const SizedBox(height: 30),
 
-                  ElevatedButton.icon(
+                  SizedBox(
+                    width: double.infinity,
 
-                    onPressed:
-                    isCooldownActive
-                        ? null
-                        : showRewardedAd,
+                    height: 60,
 
-                    icon:
-                    const Icon(Icons.play_arrow),
+                    child: ElevatedButton.icon(
+                      onPressed: disableButton ? null : showRewardedAd,
 
-                    label:
-                    const Text("Watch Ad"),
+                      icon: const Icon(Icons.play_arrow, color: Colors.white,),
+
+                      label: const Text("Watch Ad",style: TextStyle(color: Colors.white),),
+
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            disableButton ? Colors.grey : Colors.deepPurple,
+
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 25),
 
-                  ElevatedButton(
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(15),
 
-                    onPressed:
-                    convertCoins,
+                      child: Column(
+                        children: [
+                          Text("Daily Ads $adsWatchedToday / 50"),
 
-                    child:
-                    const Text(
-                        "Convert Silver → Gold"),
+                          LinearProgressIndicator(
+                            value: (adsWatchedToday / 50).clamp(0.0, 1.0),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          Text("Continuous Ads $adsInRow / 10"),
+
+                          LinearProgressIndicator(
+                            value: (adsInRow / 10).clamp(0.0, 1.0),
+                          ),
+
+                          const SizedBox(height: 8),
+
+                          /// ⭐ NEW TEXT
+                          Text(
+                            "$adsLeftBeforeCooldown ads left before cooldown",
+
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+
+                          if (isCooldownActive)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 15),
+
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+
+                                child: Text(
+                                  "Next ads in : ${cooldownText()}",
+
+                                  style: const TextStyle(
+                                    color: Colors.red,
+
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
-
-                  const SizedBox(height: 20),
-
-                  Text(
-                      "Daily Ads : $adsWatchedToday / 50"),
-
-                  Text(
-                      "Row Ads : $adsInRow / 5"),
                 ],
               ),
             ),
           ),
 
-          if (_isBannerReady)
-
+          if (_bannerReady)
             SizedBox(
+              width: _bannerAd!.size.width.toDouble(),
 
-              width:
-              _bannerAd!.size.width
-                  .toDouble(),
+              height: _bannerAd!.size.height.toDouble(),
 
-              height:
-              _bannerAd!.size.height
-                  .toDouble(),
-
-              child:
-              AdWidget(
-                  ad:
-                  _bannerAd!),
+              child: AdWidget(ad: _bannerAd!),
             ),
         ],
       ),

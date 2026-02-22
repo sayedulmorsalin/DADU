@@ -533,6 +533,47 @@ class dataBase {
     return doc.data();
   }
 
+Future<Map<String, dynamic>?> getRewardAdInfo() async {
+
+  final user =
+      FirebaseAuth.instance.currentUser;
+
+  if (user == null) return null;
+
+  final doc =
+  await FirebaseFirestore.instance
+      .collection("users")
+      .doc(user.uid)
+      .get();
+
+  if (!doc.exists) return null;
+
+  final data = doc.data();
+
+  return data?["reward_ad_info"];
+}
+
+Future<void> updateRewardAdInfo(
+Map<String, dynamic> data) async {
+
+  final user =
+      FirebaseAuth.instance.currentUser;
+
+  if (user == null) return;
+
+  await FirebaseFirestore.instance
+      .collection("users")
+      .doc(user.uid)
+      .set({
+
+    "reward_ad_info": data,
+
+    "updatedAt":
+    FieldValue.serverTimestamp(),
+
+  }, SetOptions(merge: true));
+}
+
 
 
 }
