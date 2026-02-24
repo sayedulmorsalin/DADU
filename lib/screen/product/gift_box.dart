@@ -43,7 +43,7 @@ class _GiftBoxState extends State<GiftBox> {
   void _loadBannerAd() {
     _bannerAd = BannerAd(
       size: AdSize.banner,
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111',
+      adUnitId: 'ca-app-pub-3831772617470767/9497704030',
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (_) {
@@ -63,7 +63,7 @@ class _GiftBoxState extends State<GiftBox> {
 
   void _loadInterstitialAd() {
     InterstitialAd.load(
-      adUnitId: 'ca-app-pub-3940256099942544/1033173712',
+      adUnitId: 'ca-app-pub-3831772617470767/8328092598',
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {

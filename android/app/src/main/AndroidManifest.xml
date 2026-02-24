@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <application
-        android:label="dadu"
+        android:label="Dadu"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
@@ -52,7 +52,7 @@
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="ca-app-pub-3831772617470767~8151928817"/>
         
 
     </application>

@@ -135,7 +135,7 @@ class _RewordAdState extends State<RewordAd> {
 
   void loadRewardedAd() {
     RewardedAd.load(
-      adUnitId: 'ca-app-pub-3940256099942544/5224354917',
+      adUnitId: 'ca-app-pub-3831772617470767/2123803980',
 
       request: const AdRequest(),
 
@@ -267,7 +267,7 @@ class _RewordAdState extends State<RewordAd> {
     _bannerAd = BannerAd(
       size: AdSize.banner,
 
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111',
+      adUnitId: 'ca-app-pub-3831772617470767/9497704030',
 
       request: const AdRequest(),
 
