@@ -14,12 +14,10 @@ class NotificationService {
     final token = await _messaging.getToken();
 
     if (token != null) {
-      print("🔥 FCM TOKEN: $token");
       await db.updateFCMToken(token);
     }
 
     _messaging.onTokenRefresh.listen((newToken) {
-      print("🔄 NEW FCM TOKEN: $newToken");
       db.updateFCMToken(newToken);
     });
   }
@@ -29,8 +27,6 @@ class NotificationService {
     await _messaging.requestPermission();
 
     String? token = await _messaging.getToken();
-
-    print("FCM TOKEN: $token");
 
     return token;
   }

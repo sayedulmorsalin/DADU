@@ -52,7 +52,6 @@ class _GiftBoxState extends State<GiftBox> {
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
-          debugPrint("Banner Error : $error");
         },
       ),
     );
@@ -71,7 +70,6 @@ class _GiftBoxState extends State<GiftBox> {
           _showInterstitialAd();
         },
         onAdFailedToLoad: (error) {
-          debugPrint(error.toString());
           _initializePage();
         },
       ),
@@ -135,7 +133,6 @@ class _GiftBoxState extends State<GiftBox> {
         _isLoadingProducts = false;
       });
     } catch (e) {
-      debugPrint(e.toString());
 
       if (!mounted) return;
 
@@ -191,7 +188,6 @@ class _GiftBoxState extends State<GiftBox> {
         _loadingWinner = false;
       });
     } catch (e) {
-      debugPrint(e.toString());
       _loadingWinner = false;
     }
   }

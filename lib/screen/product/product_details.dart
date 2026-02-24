@@ -229,11 +229,9 @@ class _ProductDetailsState extends State<ProductDetails> {
       if (await canLaunchUrl(whatsappAppUrl)) {
         await launchUrl(whatsappAppUrl);
       } else {
-        debugPrint("WhatsApp app not installed, using web fallback");
         await launchUrl(whatsappWebUrl);
       }
     } catch (e) {
-      debugPrint('Could not launch WhatsApp: $e');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Failed to open WhatsApp')));

@@ -39,7 +39,6 @@ class dataBase {
           .whereType<Map<String, dynamic>>()
           .toList();
     } catch (e) {
-      print("Failed to load products: $e");
       return [];
     }
   }
@@ -83,7 +82,6 @@ class dataBase {
           .whereType<Map<String, dynamic>>()
           .toList();
     } catch (e) {
-      print("Failed to load brand products: $e");
       return [];
     }
   }
@@ -102,7 +100,6 @@ class dataBase {
       }
       return []; 
     } catch (e) {
-      print("Error getting product names: $e");
       return [];
     }
   }
@@ -125,7 +122,6 @@ class dataBase {
           .doc(productId)
           .update({'clicked': FieldValue.increment(1)});
     } catch (e) {
-      print("Error incrementing click count: $e");
     }
   }
 
@@ -178,7 +174,6 @@ class dataBase {
 
       return null; 
     } catch (e) {
-      print("Error getting user details: $e");
       return null;
     }
   }
@@ -214,7 +209,6 @@ class dataBase {
       }
       return false;
     } catch (e) {
-      print("Error updating user details: $e");
       return false;
     }
   }
@@ -232,11 +226,9 @@ class dataBase {
       if (snapshot.exists) {
         return snapshot.data(); 
       } else {
-        print('No product found with ID: $productId');
         return null;
       }
     } catch (e) {
-      print('Error fetching product: $e');
       return null;
     }
   }
@@ -253,7 +245,6 @@ class dataBase {
       
       await updateUserDetails(userEmail, {'cart_item': {}});
     } catch (e) {
-      print("Order submission error: $e");
       rethrow;
     }
   }
@@ -277,7 +268,6 @@ class dataBase {
       }
       return false;
     } catch (e) {
-      print("Error updating user details: $e");
       return false;
     }
   }
@@ -297,7 +287,6 @@ class dataBase {
         };
       }).toList();
     } catch (e) {
-      print("Error fetching active banners: $e");
       return [];
     }
   }

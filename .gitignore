@@ -66,12 +66,6 @@ GoogleService-Info.plist
 *.tmp
 *.bak
 =======
-*.lock
-*.log
-*.pyc
-*.swp
-.buildlog/
-.history
 
 
 
@@ -98,15 +92,11 @@ analysis_benchmark.json
 .packages.generated
 
 # Flutter/Dart/Pub related
-**/doc/api/
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
+
 **/generated_plugin_registrant.dart
-.packages
+
 .pub-preload-cache/
-.pub/
-build/
+
 flutter_*.png
 linked_*.ds
 unlinked.ds
@@ -140,7 +130,6 @@ unlinked_spec.ds
 **/ios/**/profile
 **/ios/**/xcuserdata
 **/ios/.generated/
-**/ios/Flutter/.last_build_id
 **/ios/Flutter/App.framework
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Flutter.podspec
@@ -174,7 +163,11 @@ unlinked_spec.ds
 coverage/
 
 # Symbols
-app.*.symbols
+
+# Android signing
+android/key.properties
+android/upload-keystore.jks
+*.keystore
 
 # Exceptions to above rules.
 !**/ios/**/default.mode1v3

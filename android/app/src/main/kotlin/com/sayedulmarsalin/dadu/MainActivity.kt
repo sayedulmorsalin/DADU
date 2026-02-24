@@ -1,4 +1,4 @@
-package com.example.dadu
+package com.sayedulmarsalin.dadu
 
 import io.flutter.embedding.android.FlutterActivity
 

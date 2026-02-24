@@ -85,7 +85,6 @@ class _CheckOutState extends State<CheckOut> {
         });
       }
     } catch (e) {
-      print("Error loading user address: $e");
     }
   }
 
@@ -258,7 +257,6 @@ class _CheckOutState extends State<CheckOut> {
 
       _showConfirmationDialog();
     } catch (e) {
-      print("Error submitting order: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Order failed: ${e.toString().split(':').last}"),

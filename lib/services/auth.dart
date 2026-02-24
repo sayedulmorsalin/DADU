@@ -149,10 +149,8 @@ Future<String?> deleteAccount() async {
           'lastLogin': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
-        print("Anonymous user: ${user.uid}");
       }
     } catch (e) {
-      print("Anonymous login failed: $e");
     }
   }
 
