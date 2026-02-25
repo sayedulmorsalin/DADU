@@ -1,5 +1,25 @@
 import java.util.Properties
 import java.io.FileInputStream
+import org.gradle.api.GradleException
+
+// Load properties at the top level
+val keystoreProperties = Properties()
+val keystorePropertiesFile = project.file("key.properties")
+
+if (!keystorePropertiesFile.exists()) {
+    throw GradleException("Signing properties file not found at: ${keystorePropertiesFile.absolutePath}. Please ensure 'key.properties' is located in the 'android/app' directory and contains the required signing information.")
+}
+keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+
+// Validate properties
+val keyAliasValue = keystoreProperties.getProperty("keyAlias")
+val keyPasswordValue = keystoreProperties.getProperty("keyPassword")
+val storeFileValue = keystoreProperties.getProperty("storeFile")
+val storePasswordValue = keystoreProperties.getProperty("storePassword")
+
+if (keyAliasValue == null || keyPasswordValue == null || storeFileValue == null || storePasswordValue == null) {
+    throw GradleException("One or more signing properties are missing from key.properties. Make sure keyAlias, keyPassword, storeFile, and storePassword are all present in android/app/key.properties.")
+}
 
 plugins {
     id("com.android.application")
@@ -8,15 +28,6 @@ plugins {
     id("com.google.gms.google-services")
 }
 
-val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-}
-
-
-
-
 android {
     namespace = "com.sayedulmarsalin.dadu"
     compileSdk = flutter.compileSdkVersion
@@ -24,10 +35,10 @@ android {
 
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties["keyAlias"]?.toString()
-            keyPassword = keystoreProperties["keyPassword"]?.toString()
-            storeFile = keystoreProperties["storeFile"]?.let { file(it.toString()) }
-            storePassword = keystoreProperties["storePassword"]?.toString()
+            keyAlias = keyAliasValue
+            keyPassword = keyPasswordValue
+            storeFile = file(storeFileValue)
+            storePassword = storePasswordValue
         }
     }
 
@@ -41,10 +52,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.sayedulmarsalin.dadu"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -53,22 +61,11 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now,
-            // so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("release")
         }
     }
 }
 
-
-
 dependencies {
-    // Import the Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
-
-
-    // TODO: Add the dependencies for Firebase products you want to use
-    // When using the BoM, don't specify versions in Firebase dependencies
-    // https://firebase.google.com/docs/android/setup#available-libraries
 }
