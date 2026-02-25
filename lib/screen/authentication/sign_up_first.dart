@@ -12,16 +12,21 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
+
   bool _acceptTerms = false;
   bool _acceptPrivacyPolicy = false;
   bool _isLoading = false;
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+
+  final TextEditingController _emailController =
+  TextEditingController();
+  final TextEditingController _passwordController =
+  TextEditingController();
   final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+
   final Auth _auth = Auth();
 
   @override
@@ -32,19 +37,25 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
+  // ================= SUBMIT =================
+
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       if (!_acceptTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Please accept terms and conditions")),
+          const SnackBar(
+            content: Text("Please accept terms and conditions"),
+          ),
         );
         return;
       }
 
       if (!_acceptPrivacyPolicy) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Please accept privacy policy")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Please accept privacy policy"),
+          ),
+        );
         return;
       }
 
@@ -63,11 +74,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
         if (error == null) {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => SignUpScreen2()),
+            MaterialPageRoute(
+              builder: (context) => SignUpScreen2(),
+            ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text(error),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       } finally {
@@ -76,270 +92,363 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
+  // ================= BUILD =================
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFFf2f2ce),
-      appBar: AppBar(
-        backgroundColor: Color(0xFFf2f2ce),
-        elevation: 0,
-        title: Text("Create Account", style: TextStyle(color: Colors.black)),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Center(
-          child: Card(
-            elevation: 10,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      margin: EdgeInsets.only(bottom: 24),
-                      child: Text(
-                        "DADU",
-                        style: TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.yellow[800],
-                        ),
-                      ),
-                    ),
+    return GestureDetector(
+      // dismiss keyboard when tapping outside
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        backgroundColor: const Color(0xFFf2f2ce),
 
-                    SizedBox(height: 16),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFf2f2ce),
+          elevation: 0,
+          centerTitle: true,
+          title: const Text(
+            "Create Account",
+            style: TextStyle(color: Colors.black),
+          ),
+        ),
 
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: "Email",
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value!.isEmpty || !value.contains("@")) {
-                          return "Please enter a valid email";
-                        }
-                        return null;
-                      },
-                      keyboardType: TextInputType.emailAddress,
-                    ),
+        // ================= SCROLL FIX =================
 
-                    SizedBox(height: 16),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 450),
+                child: Card(
+                  elevation: 10,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
 
-                    TextFormField(
-                      obscureText: _obscurePassword,
-                      controller: _passwordController,
-                      decoration: InputDecoration(
-                        labelText: "Password",
-                        prefixIcon: Icon(Icons.lock),
-                        suffixIcon: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                          child: Icon(
-                            _obscurePassword
-                                ? Icons.remove_red_eye_outlined
-                                : Icons.visibility_off_outlined,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value!.length < 8) {
-                          return "Password must be at least 8 characters";
-                        }
-                        return null;
-                      },
-                    ),
+                    // ================= FORM =================
 
-                    SizedBox(height: 16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment:
+                        MainAxisAlignment.start,
+                        crossAxisAlignment:
+                        CrossAxisAlignment.stretch,
+                        children: [
 
-                    TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: _obscureConfirmPassword,
-                      decoration: InputDecoration(
-                        labelText: "Confirm Password",
-                        prefixIcon: Icon(Icons.lock),
-                        suffixIcon: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _obscureConfirmPassword =
-                                  !_obscureConfirmPassword;
-                            });
-                          },
-                          child: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.remove_red_eye_outlined
-                                : Icons.visibility_off_outlined,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value != _passwordController.text) {
-                          return "Passwords don't match";
-                        }
-                        return null;
-                      },
-                    ),
-
-                    SizedBox(height: 16),
-
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _acceptTerms,
-                          onChanged: (value) {
-                            setState(() {
-                              _acceptTerms = value!;
-                            });
-                          },
-                        ),
-                        Expanded(
-                          child: InkWell(
+                          /// Logo / Title
+                          Center(
                             child: Text(
-                              "I agree to the terms and conditions",
+                              "DADU",
                               style: TextStyle(
-                                fontSize: 16,
-                                decoration: TextDecoration.underline,
-                                color: Colors.blue,
+                                fontSize: 30,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.yellow[800],
                               ),
                             ),
-                            onTap: () async {
-                              const url =
-                                  'https://sites.google.com/view/dadu-app/terms-conditions';
-                              try {
-                                await launchUrl(
-                                  Uri.parse(url),
-                                  mode: LaunchMode.externalApplication,
-                                );
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Could not open link: $e'),
-                                  ),
-                                );
-                              }
-                            },
                           ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _acceptPrivacyPolicy,
-                          onChanged: (value) {
-                            setState(() {
-                              _acceptPrivacyPolicy = value!;
-                            });
-                          },
-                        ),
-                        Expanded(
-                          child: InkWell(
-                            child: Text(
-                              "I agree to the privacy policy",
-                              style: TextStyle(
-                                fontSize: 16,
-                                decoration: TextDecoration.underline,
-                                color: Colors.blue,
+
+                          const SizedBox(height: 24),
+
+                          /// EMAIL
+                          TextFormField(
+                            controller: _emailController,
+                            keyboardType:
+                            TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: "Email",
+                              prefixIcon:
+                              const Icon(Icons.email),
+                              border:
+                              OutlineInputBorder(
+                                borderRadius:
+                                BorderRadius.circular(10),
                               ),
                             ),
-                            onTap: () async {
-                              const url =
-                                  'https://sites.google.com/view/dadu-app/privacy-policy-page';
-                              try {
-                                await launchUrl(
-                                  Uri.parse(url),
-                                  mode: LaunchMode.externalApplication,
-                                );
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Could not open link: $e'),
-                                  ),
-                                );
+                            validator: (value) {
+                              if (value == null ||
+                                  value.isEmpty ||
+                                  !value.contains("@")) {
+                                return "Please enter a valid email";
                               }
+                              return null;
                             },
                           ),
-                        ),
-                      ],
-                    ),
 
-                    SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          "Already have an account",
-                          style: TextStyle(fontSize: 16, color: Colors.black),
-                        ),
-                        Text.rich(
-                          TextSpan(
-                            text: " Sign In",
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
+                          const SizedBox(height: 16),
+
+                          /// PASSWORD
+                          TextFormField(
+                            controller:
+                            _passwordController,
+                            obscureText:
+                            _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: "Password",
+                              prefixIcon:
+                              const Icon(Icons.lock),
+                              suffixIcon: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _obscurePassword =
+                                    !_obscurePassword;
+                                  });
+                                },
+                                child: Icon(
+                                  _obscurePassword
+                                      ? Icons
+                                      .remove_red_eye_outlined
+                                      : Icons
+                                      .visibility_off_outlined,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              border:
+                              OutlineInputBorder(
+                                borderRadius:
+                                BorderRadius.circular(10),
+                              ),
                             ),
-                            recognizer:
-                                TapGestureRecognizer()
-                                  ..onTap = () {
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => SignInScreen(),
-                                      ),
+                            validator: (value) {
+                              if (value == null ||
+                                  value.length < 8) {
+                                return "Password must be at least 8 characters";
+                              }
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          /// CONFIRM PASSWORD
+                          TextFormField(
+                            controller:
+                            _confirmPasswordController,
+                            obscureText:
+                            _obscureConfirmPassword,
+                            decoration: InputDecoration(
+                              labelText:
+                              "Confirm Password",
+                              prefixIcon:
+                              const Icon(Icons.lock),
+                              suffixIcon: GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _obscureConfirmPassword =
+                                    !_obscureConfirmPassword;
+                                  });
+                                },
+                                child: Icon(
+                                  _obscureConfirmPassword
+                                      ? Icons
+                                      .remove_red_eye_outlined
+                                      : Icons
+                                      .visibility_off_outlined,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              border:
+                              OutlineInputBorder(
+                                borderRadius:
+                                BorderRadius.circular(10),
+                              ),
+                            ),
+                            validator: (value) {
+                              if (value !=
+                                  _passwordController
+                                      .text) {
+                                return "Passwords don't match";
+                              }
+                              return null;
+                            },
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          /// TERMS
+                          Row(
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                            children: [
+                              Checkbox(
+                                value: _acceptTerms,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _acceptTerms =
+                                        value ?? false;
+                                  });
+                                },
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () async {
+                                    const url =
+                                        'https://sites.google.com/view/dadu-app/terms-conditions';
+
+                                    await launchUrl(
+                                      Uri.parse(url),
+                                      mode: LaunchMode
+                                          .externalApplication,
                                     );
                                   },
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 24),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: Colors.yellow[800],
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        onPressed: _isLoading ? null : _submitForm,
-                        child:
-                            _isLoading
-                                ? CircularProgressIndicator(color: Colors.white)
-                                : Text(
-                                  "Next",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                  child: const Text(
+                                    "I agree to the terms and conditions",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      decoration:
+                                      TextDecoration
+                                          .underline,
+                                      color:
+                                      Colors.blue,
+                                    ),
                                   ),
                                 ),
+                              ),
+                            ],
+                          ),
+
+                          /// PRIVACY POLICY
+                          Row(
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                            children: [
+                              Checkbox(
+                                value:
+                                _acceptPrivacyPolicy,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _acceptPrivacyPolicy =
+                                        value ?? false;
+                                  });
+                                },
+                              ),
+                              Expanded(
+                                child: InkWell(
+                                  onTap: () async {
+                                    const url =
+                                        'https://sites.google.com/view/dadu-app/privacy-policy-page';
+
+                                    await launchUrl(
+                                      Uri.parse(url),
+                                      mode: LaunchMode
+                                          .externalApplication,
+                                    );
+                                  },
+                                  child: const Text(
+                                    "I agree to the privacy policy",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      decoration:
+                                      TextDecoration
+                                          .underline,
+                                      color:
+                                      Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          /// SIGN IN
+                          Row(
+                            mainAxisAlignment:
+                            MainAxisAlignment.end,
+                            children: [
+                              const Text(
+                                "Already have an account",
+                                style: TextStyle(
+                                    fontSize: 16),
+                              ),
+                              Text.rich(
+                                TextSpan(
+                                  text: " Sign In",
+                                  style:
+                                  const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight:
+                                    FontWeight
+                                        .bold,
+                                    color:
+                                    Colors.blue,
+                                  ),
+                                  recognizer:
+                                  TapGestureRecognizer()
+                                    ..onTap = () {
+                                      Navigator
+                                          .pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder:
+                                              (context) =>
+                                              SignInScreen(),
+                                        ),
+                                      );
+                                    },
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          /// BUTTON
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _isLoading
+                                  ? null
+                                  : _submitForm,
+                              style:
+                              ElevatedButton
+                                  .styleFrom(
+                                padding:
+                                const EdgeInsets
+                                    .symmetric(
+                                  vertical: 14,
+                                ),
+                                backgroundColor:
+                                Colors
+                                    .yellow[800],
+                                shape:
+                                RoundedRectangleBorder(
+                                  borderRadius:
+                                  BorderRadius
+                                      .circular(
+                                      10),
+                                ),
+                              ),
+                              child: _isLoading
+                                  ? const CircularProgressIndicator(
+                                color:
+                                Colors.white,
+                              )
+                                  : const Text(
+                                "Next",
+                                style:
+                                TextStyle(
+                                  fontSize:
+                                  16,
+                                  fontWeight:
+                                  FontWeight
+                                      .bold,
+                                  color: Colors
+                                      .white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

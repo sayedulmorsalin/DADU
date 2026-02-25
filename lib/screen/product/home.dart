@@ -240,9 +240,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
+                    const SizedBox(width: 10),
                     const Padding(
                       padding: EdgeInsets.only(right: 12),
-                      child: Text(
+                      child:
+                      Text(
                         'DADU',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
@@ -252,21 +254,27 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 10),
                     Expanded(
-                      child: TextField(
-                        controller: searchController,
-                        onChanged: handleSearch,
-                        onSubmitted: handleSearch,
-                        decoration: InputDecoration(
-                          hintText: 'Search (e.g., nike 11)',
-                          prefixIcon: const Icon(Icons.search),
-                          filled: true,
-                          fillColor: Colors.grey[300],
-                          border: const OutlineInputBorder(
-                            borderRadius: BorderRadius.all(Radius.circular(10)),
-                            borderSide: BorderSide.none,
+                      child: SizedBox(
+                        height: 40,
+                        child:
+                          TextField(
+                            controller: searchController,
+                            onChanged: handleSearch,
+                            onSubmitted: handleSearch,
+                            decoration: InputDecoration(
+                              hintText: 'Search (e.g., nike 11)',
+                              prefixIcon: const Icon(Icons.search),
+                              filled: true,
+                              isDense: true,
+                              fillColor: Colors.grey[300],
+                              border: const OutlineInputBorder(
+                                borderRadius: BorderRadius.all(Radius.circular(30)),
+                                borderSide: BorderSide.none,
+                              ),
+                            ),
                           ),
-                        ),
                       ),
                     ),
 
