@@ -24,6 +24,17 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
   final ImageService _imageService = ImageService();
   final Auth auth = Auth();
 
+  void _handleBack() {
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+      return;
+    }
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => Home()),
+    );
+  }
+
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -92,6 +103,10 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
       appBar: AppBar(
         backgroundColor: Color(0xFFf2f2ce),
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: _handleBack,
+        ),
         title: Text("Create Account", style: TextStyle(color: Colors.black)),
       ),
       body: Padding(

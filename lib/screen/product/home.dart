@@ -82,14 +82,12 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
     final User? currentUser = _auth.currentUser;
     if (currentUser != null) {
       if (currentUser.isAnonymous) {
-        print("User logged in anonymously ");
+        loggedin = false;
       } else {
-        print("Logged in user email ${currentUser.email}");
         loggedin = true;
         _loadProfileImage(currentUser.email!);
       }
     } else {
-      print("Not logged in");
       _auth.anonymousLogin();
     }
 

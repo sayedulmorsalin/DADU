@@ -46,6 +46,7 @@ class _ProfileState extends State<Profile> {
   bool _isLoading = true;
   String _error = '';
   bool _isUpdatingProfilePic = false;
+  bool _isRedirecting = false;
 
   @override
   void initState() {
@@ -58,29 +59,12 @@ class _ProfileState extends State<Profile> {
       final currentUser = _auth.currentUser;
 
       if (currentUser == null) {
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You do not have an account please create one'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => SignUpScreen()),
-          );
-        }
+        await _redirectToAuth(SignUpScreen(), showNoAccountMessage: true);
         return;
       }
 
       if (currentUser.isAnonymous) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => SignUpScreen()),
-          );
-        }
+        await _redirectToAuth(SignUpScreen());
         return;
       }
       Map<String, dynamic>? userDetails = await db.getUserDetails(
@@ -89,12 +73,7 @@ class _ProfileState extends State<Profile> {
 
       Address = userDetails?['address'] ?? '';
       if (Address.isEmpty || Address == '') {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => SignUpScreen2()),
-          );
-        }
+        await _redirectToAuth(SignUpScreen2());
         return;
       }
 
@@ -127,6 +106,32 @@ class _ProfileState extends State<Profile> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _redirectToAuth(
+    Widget page, {
+    bool showNoAccountMessage = false,
+  }) async {
+    if (!mounted || _isRedirecting) return;
+    _isRedirecting = true;
+
+    if (showNoAccountMessage) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You do not have an account please create one'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => page),
+    );
+
+    if (mounted) {
+      _isRedirecting = false;
     }
   }
 
