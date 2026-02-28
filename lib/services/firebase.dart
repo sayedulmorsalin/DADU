@@ -564,5 +564,23 @@ Map<String, dynamic> data) async {
 }
 
 
+  Future<void> increaseGlobalMonthlyRewardAdCount() async {
+
+    final now = DateTime.now();
+
+    final monthKey =
+        "${now.year}-${now.month.toString().padLeft(2, '0')}";
+
+    await FirebaseFirestore.instance
+        .collection("ad_analytics")
+        .doc("monthly_reward_ads")
+        .set({
+
+      monthKey: FieldValue.increment(1),
+
+    }, SetOptions(merge: true));
+  }
+
+
 
 }

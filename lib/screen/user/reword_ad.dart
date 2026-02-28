@@ -215,6 +215,7 @@ class _RewordAdState extends State<RewordAd> {
         adsInRow++;
 
         adsWatchedToday++;
+        await db.increaseGlobalMonthlyRewardAdCount();
 
         await db.updateSilverCoin(silverCoins);
 

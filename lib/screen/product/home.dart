@@ -262,7 +262,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
                             onChanged: handleSearch,
                             onSubmitted: handleSearch,
                             decoration: InputDecoration(
-                              hintText: 'Search (e.g., nike 11)',
                               prefixIcon: const Icon(Icons.search),
                               filled: true,
                               isDense: true,
