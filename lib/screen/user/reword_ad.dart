@@ -16,6 +16,7 @@ class _RewordAdState extends State<RewordAd> {
 
   double silverCoins = 0;
   double goldCoins = 0;
+  double silverRewardRate = 5;
 
   int adsWatchedToday = 0;
   int adsInRow = 0;
@@ -25,20 +26,18 @@ class _RewordAdState extends State<RewordAd> {
 
   Timer? _countdownTimer;
 
-  /// ---------- STATUS ----------
 
   bool get isCooldownActive =>
       cooldownEnd != null && DateTime.now().isBefore(cooldownEnd!);
 
   bool get isDailyLimitReached => adsWatchedToday >= 50;
 
-  /// ⭐ NEW
   int get adsLeftBeforeCooldown => (10 - adsInRow).clamp(0, 10);
 
-  /// ---------- USER DATA ----------
 
   Future<void> loadUserData() async {
     final coinData = await db.getUserCoins();
+    silverRewardRate = await db.getRewardAdSilverRate();
 
     if (coinData != null) {
       silverCoins = (coinData["silver_coin"] ?? 0).toDouble();
@@ -81,7 +80,6 @@ class _RewordAdState extends State<RewordAd> {
     });
   }
 
-  /// ---------- RESET ----------
 
   void _resetDailyIfNeeded() {
     final now = DateTime.now();
@@ -100,8 +98,6 @@ class _RewordAdState extends State<RewordAd> {
       saveRewardInfo();
     }
   }
-
-  /// ---------- TIMER ----------
 
   void startCountdownTimer() {
     _countdownTimer?.cancel();
@@ -129,7 +125,6 @@ class _RewordAdState extends State<RewordAd> {
     return "$minutes:$seconds";
   }
 
-  /// ---------- ADS ----------
 
   RewardedAd? _rewardedAd;
 
@@ -182,7 +177,6 @@ class _RewordAdState extends State<RewordAd> {
       return;
     }
 
-    /// ⭐ 10 ADS COOLDOWN
 
     if (adsInRow >= 10) {
       cooldownEnd = DateTime.now().add(const Duration(minutes: 30));
@@ -210,7 +204,7 @@ class _RewordAdState extends State<RewordAd> {
 
     _rewardedAd!.show(
       onUserEarnedReward: (ad, reward) async {
-        silverCoins += 5;
+        silverCoins += silverRewardRate;
 
         adsInRow++;
 
@@ -228,7 +222,6 @@ class _RewordAdState extends State<RewordAd> {
     _rewardedAd = null;
   }
 
-  /// ---------- CONVERT ----------
 
   void convertCoins() async {
     if (silverCoins <= 0) {
@@ -258,7 +251,6 @@ class _RewordAdState extends State<RewordAd> {
     );
   }
 
-  /// ---------- BANNER ----------
 
   BannerAd? _bannerAd;
 
@@ -290,7 +282,6 @@ class _RewordAdState extends State<RewordAd> {
     _bannerAd!.load();
   }
 
-  /// ---------- COIN CARD ----------
 
   Widget coinCard(String title, double value, IconData icon, Color color) {
     return Expanded(
@@ -325,7 +316,7 @@ class _RewordAdState extends State<RewordAd> {
     );
   }
 
-  /// ---------- INIT ----------
+
 
   @override
   void initState() {
@@ -349,7 +340,6 @@ class _RewordAdState extends State<RewordAd> {
     super.dispose();
   }
 
-  /// ---------- UI ----------
 
   @override
   Widget build(BuildContext context) {
@@ -430,6 +420,13 @@ class _RewordAdState extends State<RewordAd> {
                     ),
                   ),
 
+                  const SizedBox(height: 12),
+
+                  Text(
+                    "Per ad reward: +${silverRewardRate.toStringAsFixed(2)} Silver",
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+
                   const SizedBox(height: 25),
 
                   Card(
@@ -454,7 +451,6 @@ class _RewordAdState extends State<RewordAd> {
 
                           const SizedBox(height: 8),
 
-                          /// ⭐ NEW TEXT
                           Text(
                             "$adsLeftBeforeCooldown ads left before cooldown",
 

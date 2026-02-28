@@ -563,6 +563,23 @@ Map<String, dynamic> data) async {
   }, SetOptions(merge: true));
 }
 
+Future<double> getRewardAdSilverRate() async {
+  final doc =
+      await FirebaseFirestore.instance
+          .collection("ad_analytics")
+          .doc("reword_ad_pricing")
+          .get();
+
+  final data = doc.data();
+  final value = data?["silver"];
+
+  if (value is num) {
+    return value.toDouble();
+  }
+
+  return 5;
+}
+
 
   Future<void> increaseGlobalMonthlyRewardAdCount() async {
 
@@ -580,6 +597,8 @@ Map<String, dynamic> data) async {
 
     }, SetOptions(merge: true));
   }
+
+
 
 
 
