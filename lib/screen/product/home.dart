@@ -1,1153 +1,574 @@
-import 'dart:async';
-import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dadu/component/gitf_box_banner.dart';
+import 'package:dadu/controller/home_controller.dart';
+import 'package:dadu/screen/authentication/sign_up_first.dart';
+import 'package:dadu/screen/product/brands.dart';
 import 'package:dadu/screen/product/bundle_deals.dart';
+import 'package:dadu/screen/product/gift_box.dart';
+import 'package:dadu/screen/product/info_banner.dart';
 import 'package:dadu/screen/product/product_details.dart';
+import 'package:dadu/screen/product/product_item.dart';
 import 'package:dadu/screen/user/cart.dart';
 import 'package:dadu/screen/user/profile.dart';
-import 'package:dadu/screen/authentication/sign_up_first.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fuzzy/fuzzy.dart';
+import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../component/gitf_box_banner.dart';
-import '../../services/notification_service.dart';
-import 'brands.dart';
-import 'gift_box.dart';
-import 'info_banner.dart';
-import 'product_item.dart';
-import '../../services/auth.dart';
-import '../../services/firebase.dart';
 
-class Home extends StatefulWidget {
-  const Home({super.key});
+class Home extends StatelessWidget {
+  Home({super.key});
 
-  @override
-  State<Home> createState() => _HomeState();
-}
-
-class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
-  List<Map<String, dynamic>> flashProducts = [];
-
-  Future<void> loadFlashSaleProducts() async {
-    flashProducts = await db.getFlashSaleProducts();
-    setState(() {});
-  }
-
-  List<Map<String, dynamic>> newArrivalProducts = [];
-
-  Future<void> loadNewArrivalProducts() async {
-    newArrivalProducts = await db.getNewArrivalProducts();
-    setState(() {});
-  }
-
-  final dataBase db = new dataBase();
-  final Auth _auth = Auth();
-  late Fuzzy fuzzy;
-  List<Map<String, dynamic>> allProducts = [];
-  List<Map<String, dynamic>> filteredProducts = [];
-  TextEditingController searchController = TextEditingController();
-  bool isLoading = true;
-  bool isLoadingMore = false;
-  bool showSplash = true;
-  DocumentSnapshot? lastDocument;
-  ScrollController scrollController = ScrollController();
-  double splashOpacity = 1.0;
-  double blurSigma = 30.0;
-  bool showFab = false;
-  bool loggedin = false;
-  String? profileImageUrl;
-  bool profileImageLoading = false;
-  bool giftBannerVisible = false;
-  List<Map<String, dynamic>> banners = [];
-  int currentBannerIndex = 0;
-  PageController bannerPageController = PageController();
-  Timer? bannerAutoScrollTimer;
-  Timer? flashTimer;
-  late AnimationController flashAnimController;
-  late Animation<double> flashBounce;
-
-  bool showSearchResults = false;
-
-  List<String> productNames = [];
-  List<String> searchResults = [];
-
-  late NotificationService notificationService;
-
-  int _selectedIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    final User? currentUser = _auth.currentUser;
-    if (currentUser != null) {
-      if (currentUser.isAnonymous) {
-        loggedin = false;
-      } else {
-        loggedin = true;
-        _loadProfileImage(currentUser.email!);
-      }
-    } else {
-      _auth.anonymousLogin();
-    }
-
-    notificationService = NotificationService(db);
-    notificationService.init();
-
-    initializeData();
-    _loadBanners();
-    flashTimer = Timer.periodic(Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
-
-    flashAnimController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 700),
-    );
-
-    flashBounce = Tween<double>(
-      begin: 0.0,
-      end: 8.0,
-    ).chain(CurveTween(curve: Curves.elasticOut)).animate(flashAnimController);
-
-    flashAnimController.repeat(reverse: true);
-
-    loadFlashSaleProducts();
-    loadNewArrivalProducts();
-
-    scrollController.addListener(() {
-      if (scrollController.position.pixels >=
-              scrollController.position.maxScrollExtent - 200 &&
-          !isLoadingMore &&
-          !isLoading &&
-          searchController.text.isEmpty) {
-        loadMoreProducts();
-      }
-    });
-    _recordLoginTime();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() => giftBannerVisible = true);
-      }
-    });
-  }
-
-  void showNotificationDialog() {
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-
-          title: const Row(
-            children: [
-              Icon(Icons.notifications, color: Colors.orange),
-              SizedBox(width: 8),
-              Text("Notifications"),
-            ],
-          ),
-
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 350,
-            child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance
-                      .collection("notifications")
-                      .orderBy("createdAt", descending: true)
-                      .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final docs = snapshot.data!.docs;
-
-                if (docs.isEmpty) {
-                  return const Center(child: Text("No notifications yet"));
-                }
-
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-
-                    final ts = data['createdAt'] as Timestamp?;
-                    final time =
-                        ts != null
-                            ? TimeOfDay.fromDateTime(
-                              ts.toDate(),
-                            ).format(context)
-                            : "";
-
-                    return Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: Icon(
-                          data['highPriority'] == true
-                              ? Icons.priority_high
-                              : Icons.notifications,
-                          color:
-                              data['highPriority'] == true
-                                  ? Colors.red
-                                  : Colors.blue,
-                        ),
-
-                        title: Text(
-                          data['title'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-
-                        subtitle: Text(data['body'] ?? ''),
-
-                        trailing: Text(
-                          time,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Close"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildHomeContent() {
-    return Stack(
-      children: [
-        SafeArea(
-          child: ListView(
-            controller: scrollController,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 10),
-                    const Padding(
-                      padding: EdgeInsets.only(right: 12),
-                      child:
-                      Text(
-                        'DADU',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 25,
-                          color: Colors.black,
-                          fontFamily: 'Times New Roman',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: SizedBox(
-                        height: 40,
-                        child:
-                          TextField(
-                            controller: searchController,
-                            onChanged: handleSearch,
-                            onSubmitted: handleSearch,
-                            decoration: InputDecoration(
-                              prefixIcon: const Icon(Icons.search),
-                              filled: true,
-                              isDense: true,
-                              fillColor: Colors.grey[300],
-                              border: const OutlineInputBorder(
-                                borderRadius: BorderRadius.all(Radius.circular(30)),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                          ),
-                      ),
-                    ),
-
-                    IconButton(
-                      icon: const Icon(Icons.notifications),
-                      onPressed: showNotificationDialog,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-
-              if (showSearchResults)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black12, blurRadius: 6),
-                    ],
-                  ),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: searchResults.length,
-                    itemBuilder: (context, index) {
-                      final productName = searchResults[index];
-
-                      return ListTile(
-                        title: Text(productName),
-                        onTap: () async {
-                          final product = await db.getProductByName(
-                            productName,
-                          );
-
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder:
-                                  (_) => ProductDetails(
-                                    productid: product['id'],
-                                    title: product['name'],
-                                    price: product["price"],
-                                    image20: product['image20'],
-                                    description: product['details'],
-                                    videoLink: product['videoLink'],
-                                    brand: product['brand'],
-                                    image5: product['image5'],
-                                  ),
-                            ),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-
-              const SizedBox(height: 10),
-
-              if (banners.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  child: Container(
-                    height: MediaQuery.of(context).size.width / 2.16,
-                    child: Stack(
-                      children: [
-                        PageView.builder(
-                          controller: bannerPageController,
-                          itemCount: banners.length,
-                          onPageChanged: (index) {
-                            setState(() {
-                              currentBannerIndex = index;
-                            });
-                          },
-                          itemBuilder: (context, index) {
-                            final banner = banners[index];
-                            return Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 4),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                color: Colors.grey[300],
-                                image:
-                                    banner['imageUrl'] != null
-                                        ? DecorationImage(
-                                          image: NetworkImage(
-                                            banner['imageUrl'],
-                                          ),
-                                          fit: BoxFit.cover,
-                                        )
-                                        : const DecorationImage(
-                                          image: AssetImage(
-                                            'assets/icon/banner.jpg',
-                                          ),
-                                          fit: BoxFit.cover,
-                                        ),
-                              ),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap: () {},
-                                  child: Container(),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-
-                        if (banners.length > 1)
-                          Positioned(
-                            bottom: 10,
-                            left: 0,
-                            right: 0,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: List.generate(banners.length, (index) {
-                                return Container(
-                                  width: 8,
-                                  height: 8,
-                                  margin: const EdgeInsets.symmetric(
-                                    horizontal: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color:
-                                        currentBannerIndex == index
-                                            ? Colors.white
-                                            : Colors.white.withOpacity(0.5),
-                                  ),
-                                );
-                              }),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  child: Container(
-                    width: double.infinity,
-                    height: MediaQuery.of(context).size.width / 2.16,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: Colors.grey[300],
-                      image: const DecorationImage(
-                        image: AssetImage('assets/icon/banner.jpg'),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 4,
-                children: [
-                  _buildBrandItem("Adidas", "assets/icon/adidas.png"),
-                  _buildBrandItem("Nike", "assets/icon/Nike.png"),
-                  _buildBrandItem("Puma", "assets/icon/puma.png"),
-                  _buildBrandItem("Gloves", "assets/icon/gloves.png"),
-                  _buildBrandItem("Jersey", "assets/icon/jersey.png"),
-                  _buildBrandItem("Pant", "assets/icon/pant.png"),
-                  _buildBrandItem("Dadu", "assets/logo/black_logo.png"),
-                  _buildBrandItem("Others", "assets/icon/other.png"),
-                ],
-              ),
-
-              InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => BundleDeals()),
-                  );
-                },
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Image.asset(
-                    "assets/gif/bundle.gif",
-                    width: double.infinity,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 10),
-
-              AnimatedSlide(
-                offset: giftBannerVisible ? Offset.zero : const Offset(0, 0.2),
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.easeOutCubic,
-                child: AnimatedOpacity(
-                  opacity: giftBannerVisible ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 500),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: GiftBoxBanner(
-                      onOpen: () {
-                        final currentUser = _auth.currentUser;
-                        if (currentUser?.isAnonymous == true) {
-                          if (mounted) {
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => SignUpScreen(),
-                                ),
-                              );
-                            });
-                          }
-                          return;
-                        } else {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => GiftBox()),
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ),
-              ),
-
-              if (flashProducts.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Container(
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-
-                      color: const Color.fromARGB(255, 234, 206, 206),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AnimatedBuilder(
-                          animation: flashAnimController,
-                          builder: (context, child) {
-                            return Transform.translate(
-                              offset: Offset(0, -flashBounce.value),
-                              child: child,
-                            );
-                          },
-                          child: Text(
-                            "Flash Sell 🔥",
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.red,
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: 10),
-
-                        SizedBox(
-                          height: 200,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: flashProducts.length,
-                            itemBuilder: (context, index) {
-                              final product = flashProducts[index];
-                              return Container(
-                                width: 180,
-                                margin: EdgeInsets.only(right: 10),
-                                child: flashSaleItem(product),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                SizedBox(),
-
-              if (newArrivalProducts.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Container(
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AnimatedBuilder(
-                          animation: flashAnimController,
-                          builder: (context, child) {
-                            return Transform.translate(
-                              offset: Offset(0, -flashBounce.value),
-                              child: child,
-                            );
-                          },
-                          child: Text(
-                            "New Arrivals 🔥",
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ),
-
-                        SizedBox(height: 10),
-
-                        SizedBox(
-                          height: 270,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: newArrivalProducts.length,
-                            itemBuilder: (context, index) {
-                              final product = newArrivalProducts[index];
-                              return Container(
-                                width: 180,
-                                margin: EdgeInsets.only(right: 10),
-                                child: newArrivalItem(product),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                SizedBox(),
-
-              StreamBuilder<String?>(
-                stream: db.getVersionStream(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasData && snapshot.data != null) {
-                    final version = int.tryParse(snapshot.data!);
-                    if (version != null && version > 1) {
-                      return Container(
-                        color: Colors.amberAccent,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: const [
-                                Icon(Icons.update),
-                                SizedBox(width: 8),
-                                Text("New update is available!"),
-                              ],
-                            ),
-                            TextButton(
-                              onPressed: () async {
-                                const url = 'https://appnest-seven.vercel.app/';
-                                if (await canLaunchUrl(Uri.parse(url))) {
-                                  await launchUrl(Uri.parse(url));
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Could not launch $url'),
-                                    ),
-                                  );
-                                }
-                              },
-                              child: const Text("UPDATE"),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: InfoBanner(),
-              ),
-
-              if (isLoading)
-                const Center(child: CircularProgressIndicator())
-              else if (filteredProducts.isEmpty)
-                const Center(child: Text("No products found"))
-              else
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: filteredProducts.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 0.79,
-                  ),
-                  itemBuilder: (context, index) {
-                    final product = filteredProducts[index];
-                    return ProductItem(
-                      productId: product['id'],
-                      title: product['name'] ?? 'No Title',
-                      price: '৳${product['price']?.toString() ?? '0'}',
-                      imagePath:
-                          product['image5'] ?? 'assets/demo_item_image/d1.jpg',
-                      image20:
-                          product['image20'] ?? 'assets/demo_item_image/d1.jpg',
-                      description: product['details'] ?? 'No details available',
-                      videoLink:
-                          product['videoLink'] ?? 'No videoLink available',
-                      brand: product['brand'] ?? 'No brand available',
-                      image5:
-                          product['image5'] ?? 'assets/demo_item_image/d1.jpg',
-                    );
-                  },
-                ),
-              if (isLoadingMore)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-            ],
-          ),
-        ),
-        if (showSplash)
-          AnimatedOpacity(
-            opacity: splashOpacity,
-            duration: const Duration(milliseconds: 300),
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  BackdropFilter(
-                    filter: ImageFilter.blur(
-                      sigmaX: blurSigma,
-                      sigmaY: blurSigma,
-                    ),
-                    child: Container(color: Colors.orange),
-                  ),
-                  Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedOpacity(
-                          opacity: splashOpacity > 0.5 ? 1.0 : 0.0,
-                          duration: const Duration(milliseconds: 400),
-                          child: Image.asset(
-                            'assets/logo/black_logo.png',
-                            width: 250,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget flashSaleItem(Map<String, dynamic> product) {
-    final String title = product['name'] ?? 'No Name';
-    final String image =
-        product['image5'] ??
-        product['image20'] ??
-        'assets/demo_item_image/d1.jpg';
-    final dynamic expire = product['flash-expire'];
-    final String remaining = formatRemainingTime(expire);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-        ],
-      ),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => ProductDetails(
-                    productid: product['id'],
-                    title: product['name'],
-                    price: product["price"],
-                    image20: product['image20'],
-                    description: product['details'],
-                    videoLink: product['videoLink'],
-                    brand: product['brand'],
-                    image5: product['image5'],
-                  ),
-            ),
-          );
-        },
-        child: Padding(
-          padding: EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    image,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder:
-                        (_, __, ___) =>
-                            Image.asset('assets/demo_item_image/d1.jpg'),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 4),
-
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
-
-              SizedBox(height: 2),
-
-              Text(
-                remaining == "Expired" ? "Expired" : "⏳ $remaining",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: remaining == "Expired" ? Colors.red : Colors.green,
-                ),
-              ),
-
-              SizedBox(height: 2),
-
-              Text(
-                "Price: ৳${product['price']}",
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.orange,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget newArrivalItem(Map<String, dynamic> product) {
-    final String title = product['name'] ?? 'No Name';
-    final String image =
-        product['image5'] ??
-        product['image20'] ??
-        'assets/demo_item_image/d1.jpg';
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => ProductDetails(
-                    productid: product['id'],
-                    title: product['name'],
-                    price: product["price"],
-                    image20: product['image20'],
-                    description: product['details'],
-                    videoLink: product['videoLink'],
-                    brand: product['brand'],
-                    image5: product['image5'],
-                  ),
-            ),
-          );
-        },
-        child: Padding(
-          padding: EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    image,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder:
-                        (_, __, ___) =>
-                            Image.asset('assets/demo_item_image/d1.jpg'),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 4),
-
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
-
-              SizedBox(height: 2),
-
-              SizedBox(height: 2),
-
-              Text(
-                "Price: ৳${product['price']}",
-                style: TextStyle(
-                  fontSize: 18,
-                  color: Colors.orange,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String formatRemainingTime(dynamic ts) {
-    if (ts == null) return "Expired";
-
-    DateTime end;
-
-    if (ts is Timestamp) {
-      end = ts.toDate();
-    } else if (ts is String) {
-      end = DateTime.tryParse(ts) ?? DateTime.now();
-    } else if (ts is DateTime) {
-      end = ts;
-    } else {
-      return "Expired";
-    }
-
-    Duration diff = end.difference(DateTime.now());
-
-    if (diff.isNegative) return "Expired";
-
-    String two(int n) => n.toString().padLeft(2, "0");
-
-    return "${two(diff.inHours)}:${two(diff.inMinutes % 60)}:${two(diff.inSeconds % 60)}";
-  }
-
-  @override
-  void dispose() {
-    flashTimer?.cancel();
-    bannerAutoScrollTimer?.cancel();
-    flashAnimController.dispose();
-    bannerPageController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadBanners() async {
-    try {
-      final bannerData = await db.getBanners();
-      if (mounted) {
-        setState(() {
-          banners = bannerData;
-        });
-
-        if (banners.length > 1) {
-          _startAutoScroll();
-        }
-      }
-    } catch (e) {
-      print("Error loading banners: $e");
-    }
-  }
-
-  void _startAutoScroll() {
-    bannerAutoScrollTimer = Timer.periodic(Duration(seconds: 2), (timer) {
-      if (bannerPageController.hasClients && banners.length > 1) {
-        final nextPage = (currentBannerIndex + 1) % banners.length;
-        bannerPageController.animateToPage(
-          nextPage,
-          duration: Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
-  }
-
-  void _loadProfileImage(String email) async {
-    if (!mounted) return;
-
-    setState(() => profileImageLoading = true);
-    try {
-      Map<String, dynamic>? userDetails = await db.getUserDetails(email);
-      if (mounted) {
-        setState(() => profileImageUrl = userDetails?['profile_pic']);
-      }
-    } catch (e) {
-      print("Error loading profile image: $e");
-    } finally {
-      if (mounted) setState(() => profileImageLoading = false);
-    }
-  }
-
-  Future<void> _recordLoginTime() async {
-    await Future.delayed(const Duration(seconds: 1));
-    await Auth().updateLastLogin();
-  }
-
-  Future<void> initializeData() async {
-    productNames = await db.getProductNames();
-
-    fuzzy = Fuzzy(productNames, options: FuzzyOptions(threshold: 0.3));
-
-    final initialProducts = await db.getProduct();
-    allProducts = initialProducts;
-    filteredProducts = initialProducts;
-
-    if (initialProducts.isNotEmpty) {
-      lastDocument = initialProducts.last['docSnapshot'];
-    }
-
-    setState(() {
-      isLoading = false;
-      blurSigma = 20.0;
-      splashOpacity = 1.0;
-    });
-
-    for (int i = 0; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 10));
-      setState(() {
-        blurSigma = 20.0 - (i * 2);
-        splashOpacity = 1.0 - (i / 10.0);
-      });
-    }
-    setState(() => showSplash = false);
-  }
-
-  Future<void> loadMoreProducts() async {
-    if (lastDocument == null) return;
-    setState(() => isLoadingMore = true);
-    final newProducts = await db.getProduct(startAfterDoc: lastDocument);
-    if (newProducts.isNotEmpty) {
-      lastDocument = newProducts.last['docSnapshot'];
-      allProducts.addAll(newProducts);
-      filteredProducts = allProducts;
-    }
-    setState(() => isLoadingMore = false);
-  }
-
-  void handleSearch(String query) {
-    query = query.trim();
-
-    if (query.length < 2) {
-      setState(() {
-        searchResults.clear();
-        showSearchResults = false;
-      });
-      return;
-    }
-
-    final results = fuzzy.search(query);
-
-    setState(() {
-      searchResults = results.map((r) => r.item.toString()).take(6).toList();
-      showSearchResults = true;
-    });
-  }
-
-  void sendMessageToWhatsApp() async {
-    final message = Uri.encodeComponent(
-      'Hey I want to order something from your Apps',
-    );
-
-    final whatsappAppUrl = Uri.parse(
-      'whatsapp://send?phone=8801782124891&text=$message',
-    );
-
-    final whatsappWebUrl = Uri.parse(
-      'whatsapp://send?phone=8801782124891&text=$message',
-    );
-
-    try {
-      if (await canLaunchUrl(whatsappAppUrl)) {
-        await launchUrl(whatsappAppUrl);
-      } else {
-        debugPrint("WhatsApp app not installed, using web fallback");
-        await launchUrl(whatsappWebUrl);
-      }
-    } catch (e) {
-      debugPrint('Could not launch WhatsApp: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to open WhatsApp')));
-    }
-  }
+  final HomeController controller = Get.put(HomeController());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFf2f2ce),
-      body: _buildCurrentPage(),
-
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex >= 2 ? _selectedIndex + 1 : _selectedIndex,
-        selectedItemColor: Colors.orange,
-        unselectedItemColor: Colors.black54,
-
-        onTap: (i) {
-          if (i == 2) {
-            sendMessageToWhatsApp();
-            return;
-          }
-
-          setState(() {
-            _selectedIndex = i > 2 ? i - 1 : i;
-          });
-        },
-
-        items: [
-          const BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-          BottomNavigationBarItem(icon: _buildCartNavIcon(), label: "Cart"),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.message),
-            label: "Message",
+      body: Obx(() => _buildCurrentPage(context)),
+      bottomNavigationBar: Obx(
+        () => BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
+          currentIndex: controller.selectedIndex.value >= 2
+              ? controller.selectedIndex.value + 1
+              : controller.selectedIndex.value,
+          selectedItemColor: Colors.orange,
+          unselectedItemColor: Colors.black54,
+          onTap: (index) => controller.onBottomNavTap(
+            index,
+            onMessageTap: _sendMessageToWhatsApp,
           ),
-          BottomNavigationBarItem(
-            icon: _buildProfileNavIcon(),
-            label: "Profile",
+          items: [
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: _buildCartNavIcon(),
+              label: 'Cart',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.message),
+              label: 'Message',
+            ),
+            BottomNavigationBarItem(
+              icon: _buildProfileNavIcon(),
+              label: 'Profile',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCurrentPage(BuildContext context) {
+    switch (controller.selectedIndex.value) {
+      case 0:
+        return _buildHomeContent(context);
+      case 1:
+        return controller.loggedIn.value ? const Cart() : SignUpScreen();
+      case 2:
+        return controller.loggedIn.value ? const Profile() : SignUpScreen();
+      default:
+        return _buildHomeContent(context);
+    }
+  }
+
+  Widget _buildHomeContent(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        controller: controller.scrollController,
+        children: [
+          _buildTopBar(context),
+          _buildSearchResults(context),
+          _buildBannerSection(context),
+          _buildBrandGrid(context),
+          _buildBundleBanner(context),
+          _buildGiftBanner(context),
+          _buildFlashSaleSection(context),
+          _buildNewArrivalSection(context),
+          _buildVersionUpdateBanner(context),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: InfoBanner(),
+          ),
+          _buildProductGrid(),
+          Obx(
+            () => controller.isLoadingMore.value
+                ? const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopBar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          const SizedBox(width: 10),
+          const Padding(
+            padding: EdgeInsets.only(right: 12),
+            child: Text(
+              'DADU',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 25,
+                color: Colors.black,
+                fontFamily: 'Times New Roman',
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SizedBox(
+              height: 40,
+              child: TextField(
+                controller: controller.searchController,
+                onChanged: controller.onSearchChanged,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: Obx(
+                    () => controller.searchQuery.value.trim().isNotEmpty
+                        ? IconButton(
+                            onPressed: controller.clearSearch,
+                            icon: const Icon(Icons.close),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                  filled: true,
+                  isDense: true,
+                  fillColor: Colors.grey[300],
+                  border: const OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(30)),
+                    borderSide: BorderSide.none,
+                  ),
+                  hintText: 'Search products',
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () => _showNotificationDialog(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCurrentPage() {
-    switch (_selectedIndex) {
-      case 0:
-        return _buildHomeContent();
+  Widget _buildSearchResults(BuildContext context) {
+    return Obx(() {
+      if (!controller.showSearchResults.value) {
+        return const SizedBox(height: 8);
+      }
 
-      case 1:
-        return loggedin ? const Cart() : SignUpScreen();
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
+        ),
+        child: ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: controller.searchResults.length,
+          itemBuilder: (context, index) {
+            final productName = controller.searchResults[index];
 
-      case 2:
-        return loggedin ? Profile() : SignUpScreen();
+            return ListTile(
+              title: Text(productName),
+              onTap: () async {
+                final product = await controller.getProductByName(productName);
+                if (!context.mounted) return;
 
-      default:
-        return _buildHomeContent();
-    }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProductDetails(
+                      productid: product['id'] as String,
+                      title: product['name']?.toString() ?? '',
+                      price: product['price']?.toString() ?? '0',
+                      image20: product['image20']?.toString() ?? '',
+                      description: product['details']?.toString() ?? '',
+                      videoLink: product['videoLink']?.toString() ?? '',
+                      brand: product['brand']?.toString() ?? 'Others',
+                      image5: product['image5']?.toString() ?? '',
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      );
+    });
+  }
+
+  Widget _buildBannerSection(BuildContext context) {
+    return Obx(() {
+      final banners = controller.banners;
+
+      if (banners.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Container(
+            width: double.infinity,
+            height: MediaQuery.of(context).size.width / 2.16,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.grey[300],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Image.asset('assets/icon/banner.jpg', fit: BoxFit.cover),
+          ),
+        );
+      }
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.width / 2.16,
+          child: Stack(
+            children: [
+              PageView.builder(
+                controller: controller.bannerPageController,
+                itemCount: banners.length,
+                onPageChanged: controller.onBannerChanged,
+                itemBuilder: (context, index) {
+                  final banner = banners[index];
+                  final imageUrl = banner['imageUrl']?.toString();
+
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.grey[300],
+                    ),
+                    child: imageUrl == null || imageUrl.isEmpty
+                        ? Image.asset('assets/icon/banner.jpg', fit: BoxFit.cover)
+                        : CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => Container(
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                            errorWidget: (_, __, ___) => Image.asset(
+                              'assets/icon/banner.jpg',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                  );
+                },
+              ),
+              if (banners.length > 1)
+                Positioned(
+                  bottom: 10,
+                  left: 0,
+                  right: 0,
+                  child: Obx(
+                    () => Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        banners.length,
+                        (index) => Container(
+                          width: 8,
+                          height: 8,
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: controller.currentBannerIndex.value == index
+                                ? Colors.white
+                                : Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildBrandGrid(BuildContext context) {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 4,
+      children: [
+        _buildBrandItem(context, 'Adidas', 'assets/icon/adidas.png'),
+        _buildBrandItem(context, 'Nike', 'assets/icon/Nike.png'),
+        _buildBrandItem(context, 'Puma', 'assets/icon/puma.png'),
+        _buildBrandItem(context, 'Gloves', 'assets/icon/gloves.png'),
+        _buildBrandItem(context, 'Jersey', 'assets/icon/jersey.png'),
+        _buildBrandItem(context, 'Pant', 'assets/icon/pant.png'),
+        _buildBrandItem(context, 'Dadu', 'assets/logo/black_logo.png'),
+        _buildBrandItem(context, 'Others', 'assets/icon/other.png'),
+      ],
+    );
+  }
+
+  Widget _buildBundleBanner(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BundleDeals()),
+        );
+      },
+      child: const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Image(
+          image: AssetImage('assets/gif/bundle.gif'),
+          width: double.infinity,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGiftBanner(BuildContext context) {
+    return Obx(
+      () => AnimatedSlide(
+        offset: controller.giftBannerVisible.value
+            ? Offset.zero
+            : const Offset(0, 0.2),
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOut,
+        child: AnimatedOpacity(
+          opacity: controller.giftBannerVisible.value ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 350),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: GiftBoxBanner(
+              onOpen: () {
+                if (!controller.loggedIn.value) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => SignUpScreen()),
+                  );
+                  return;
+                }
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GiftBox()),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFlashSaleSection(BuildContext context) {
+    return Obx(() {
+      if (controller.flashProducts.isEmpty) return const SizedBox.shrink();
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEACECE),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Flash Sale',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 265,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: controller.flashProducts.length,
+                  itemBuilder: (context, index) {
+                    final product = controller.flashProducts[index];
+                    return Container(
+                      width: 180,
+                      margin: const EdgeInsets.only(right: 10),
+                      child: _FlashItem(
+                        product: product,
+                        remaining: controller.formatFlashRemaining(
+                          product['flash-expire'],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildNewArrivalSection(BuildContext context) {
+    return Obx(() {
+      if (controller.newArrivalProducts.isEmpty) return const SizedBox.shrink();
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'New Arrivals',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 250,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: controller.newArrivalProducts.length,
+                  itemBuilder: (context, index) {
+                    final product = controller.newArrivalProducts[index];
+                    return Container(
+                      width: 180,
+                      margin: const EdgeInsets.only(right: 10),
+                      child: _ArrivalItem(product: product),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+
+  Widget _buildVersionUpdateBanner(BuildContext context) {
+    return StreamBuilder<String?>(
+      stream: controller.db.getVersionStream(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const SizedBox.shrink();
+        }
+
+        final version = int.tryParse(snapshot.data!);
+        if (version == null || version <= 1) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          color: Colors.amberAccent,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.update),
+                  SizedBox(width: 8),
+                  Text('New update is available!'),
+                ],
+              ),
+              TextButton(
+                onPressed: () async {
+                  const url = 'https://appnest-seven.vercel.app/';
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not open update URL')),
+                    );
+                  }
+                },
+                child: const Text('UPDATE'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProductGrid() {
+    return Obx(() {
+      if (controller.isInitialLoading.value) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 22),
+          child: Center(child: CircularProgressIndicator()),
+        );
+      }
+
+      if (controller.products.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 22),
+          child: Center(child: Text('No products found')),
+        );
+      }
+
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: controller.products.length,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.79,
+        ),
+        itemBuilder: (context, index) {
+          final product = controller.products[index];
+
+          return ProductItem(
+            productId: product['id']?.toString() ?? '',
+            title: product['name']?.toString() ?? 'No Title',
+            price: '৳${product['price']?.toString() ?? '0'}',
+            imagePath: product['image5']?.toString() ?? '',
+            image20: product['image20']?.toString() ?? '',
+            description: product['details']?.toString() ?? 'No details available',
+            videoLink:
+                product['videoLink']?.toString() ?? 'No videoLink available',
+            brand: product['brand']?.toString() ?? 'Others',
+            image5: product['image5']?.toString() ?? '',
+          );
+        },
+      );
+    });
   }
 
   Widget _buildProfileNavIcon() {
-    if (profileImageLoading) {
+    if (controller.profileImageLoading.value) {
       return const SizedBox(
         width: 20,
         height: 20,
@@ -1155,10 +576,11 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       );
     }
 
-    if (loggedin && profileImageUrl != null) {
+    final imageUrl = controller.profileImageUrl.value;
+    if (controller.loggedIn.value && imageUrl != null && imageUrl.isNotEmpty) {
       return CircleAvatar(
         radius: 12,
-        backgroundImage: NetworkImage(profileImageUrl!),
+        backgroundImage: CachedNetworkImageProvider(imageUrl),
       );
     }
 
@@ -1166,76 +588,46 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   }
 
   Widget _buildCartNavIcon() {
-    final user = _auth.currentUser;
+    final totalItems = controller.cartCount.value;
 
-    if (user == null || user.email == null) {
-      return const Icon(Icons.shopping_cart);
-    }
-
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: db.getUserStream(user.email!),
-      builder: (context, snapshot) {
-        int totalItems = 0;
-
-        if (snapshot.hasData && snapshot.data!.exists) {
-          final data = snapshot.data!.data();
-          final cartData = data?['cart_item'] as Map<String, dynamic>? ?? {};
-
-          for (var value in cartData.values) {
-            if (value is int) {
-              totalItems += value;
-            } else if (value is Map<String, dynamic>) {
-              for (var qty in value.values) {
-                totalItems += (qty as int);
-              }
-            }
-          }
-        }
-
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            const Icon(Icons.shopping_cart),
-            if (totalItems > 0)
-              Positioned(
-                right: -6,
-                top: -4,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
-                  child: Text(
-                    totalItems > 99 ? "99+" : totalItems.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.shopping_cart),
+        if (totalItems > 0)
+          Positioned(
+            right: -6,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(12),
               ),
-          ],
-        );
-      },
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              child: Text(
+                totalItems > 99 ? '99+' : totalItems.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
     );
   }
 
-  Widget _buildBrandItem(String brand, String imagePath) {
+  Widget _buildBrandItem(BuildContext context, String brand, String imagePath) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => Brands(brandName: brand, brandLogo: imagePath),
+            builder: (_) => Brands(brandName: brand, brandLogo: imagePath),
           ),
         );
       },
@@ -1257,4 +649,286 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
       ),
     );
   }
+
+  Future<void> _sendMessageToWhatsApp() async {
+    final message = Uri.encodeComponent(
+      'Hey I want to order something from your Apps',
+    );
+
+    final appUri = Uri.parse('whatsapp://send?phone=8801782124891&text=$message');
+    final webUri = Uri.parse('https://wa.me/8801782124891?text=$message');
+
+    if (await canLaunchUrl(appUri)) {
+      await launchUrl(appUri);
+      return;
+    }
+
+    await launchUrl(webUri, mode: LaunchMode.externalApplication);
+  }
+
+  void _showNotificationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: const Row(
+            children: [
+              Icon(Icons.notifications, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Notifications'),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 350,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('notifications')
+                  .orderBy('createdAt', descending: true)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final docs = snapshot.data!.docs;
+                if (docs.isEmpty) {
+                  return const Center(child: Text('No notifications yet'));
+                }
+
+                return ListView.builder(
+                  itemCount: docs.length,
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final ts = data['createdAt'] as Timestamp?;
+                    final time = ts != null
+                        ? TimeOfDay.fromDateTime(ts.toDate()).format(context)
+                        : '';
+
+                    return Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: Icon(
+                          data['highPriority'] == true
+                              ? Icons.priority_high
+                              : Icons.notifications,
+                          color: data['highPriority'] == true
+                              ? Colors.red
+                              : Colors.blue,
+                        ),
+                        title: Text(
+                          data['title']?.toString() ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(data['body']?.toString() ?? ''),
+                        trailing: Text(time, style: const TextStyle(fontSize: 12)),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
+
+class _FlashItem extends StatelessWidget {
+  const _FlashItem({required this.product, required this.remaining});
+
+  final Map<String, dynamic> product;
+  final String remaining;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = product['image5']?.toString().isNotEmpty == true
+        ? product['image5'].toString()
+        : product['image20']?.toString() ?? '';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        ],
+      ),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProductDetails(
+                productid: product['id']?.toString() ?? '',
+                title: product['name']?.toString() ?? '',
+                price: product['price']?.toString() ?? '0',
+                image20: product['image20']?.toString() ?? '',
+                description: product['details']?.toString() ?? '',
+                videoLink: product['videoLink']?.toString() ?? '',
+                brand: product['brand']?.toString() ?? 'Others',
+                image5: product['image5']?.toString() ?? '',
+              ),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: image.isEmpty
+                      ? Container(
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.image_not_supported),
+                        )
+                      : CachedNetworkImage(
+                          imageUrl: image,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(
+                            color: Colors.grey[300],
+                            child: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.broken_image),
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                product['name']?.toString() ?? 'No Name',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                remaining == 'Expired' ? 'Expired' : '⏳ $remaining',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: remaining == 'Expired' ? Colors.red : Colors.green,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Price: ৳${product['price']?.toString() ?? '0'}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ArrivalItem extends StatelessWidget {
+  const _ArrivalItem({required this.product});
+
+  final Map<String, dynamic> product;
+
+  @override
+  Widget build(BuildContext context) {
+    final image = product['image5']?.toString().isNotEmpty == true
+        ? product['image5'].toString()
+        : product['image20']?.toString() ?? '';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProductDetails(
+                productid: product['id']?.toString() ?? '',
+                title: product['name']?.toString() ?? '',
+                price: product['price']?.toString() ?? '0',
+                image20: product['image20']?.toString() ?? '',
+                description: product['details']?.toString() ?? '',
+                videoLink: product['videoLink']?.toString() ?? '',
+                brand: product['brand']?.toString() ?? 'Others',
+                image5: product['image5']?.toString() ?? '',
+              ),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: image.isEmpty
+                      ? Container(
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.image_not_supported),
+                        )
+                      : CachedNetworkImage(
+                          imageUrl: image,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          placeholder: (_, __) => Container(
+                            color: Colors.grey[300],
+                            child: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          errorWidget: (_, __, ___) => Container(
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.broken_image),
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                product['name']?.toString() ?? 'No Name',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                'Price: ৳${product['price']?.toString() ?? '0'}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

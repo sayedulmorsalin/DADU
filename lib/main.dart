@@ -7,11 +7,13 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-   WidgetsFlutterBinding.ensureInitialized();
-  await MobileAds.instance.initialize();
+
   await Firebase.initializeApp();
   await dotenv.load(fileName: ".env");
+
   runApp(const MyApp());
+
+  MobileAds.instance.initialize();
 }
 
 class MyApp extends StatelessWidget {

@@ -55,6 +55,7 @@ dependencies:
   flutter_file_downloader: ^2.1.0
   firebase_messaging: ^16.1.1
   google_mobile_ads: ^7.0.0
+  get: ^4.7.3
 
 
 
@@ -104,10 +105,7 @@ flutter:
     - assets/icon/gift.jpeg
     - assets/banar/freeproduct.jpeg
     - assets/gif/bundle.gif
-    - assets/info_banner/support.gif
-    - assets/info_banner/delivery.gif
-    - assets/info_banner/hasel.gif
-    - assets/info_banner/authentic.gif
+    - assets/info_banner/infobanner.gif
 
 
 

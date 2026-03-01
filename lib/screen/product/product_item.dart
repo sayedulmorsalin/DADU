@@ -1,8 +1,10 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:dadu/screen/product/product_details.dart';
 import 'package:dadu/services/auth.dart';
 import 'package:flutter/material.dart';
+
 import '../../services/firebase.dart';
 
 class ProductItem extends StatelessWidget {
@@ -31,8 +33,8 @@ class ProductItem extends StatelessWidget {
   });
 
   void _addToCart(BuildContext context) async {
-    final Auth _auth = Auth();
-    final currentUser = _auth.currentUser;
+    final Auth auth = Auth();
+    final currentUser = auth.currentUser;
 
     if (currentUser == null || currentUser.isAnonymous) {
       Navigator.push(
@@ -48,8 +50,8 @@ class ProductItem extends StatelessWidget {
       return;
     }
 
-    Map<String, dynamic>? userDetails = await db.getUserDetails(currentUser.email!);
-    String address = userDetails?['address'] ?? '';
+    final userDetails = await db.getUserDetails(currentUser.email!);
+    final address = userDetails?['address']?.toString() ?? '';
 
     if (address.isEmpty) {
       Navigator.push(
@@ -66,23 +68,22 @@ class ProductItem extends StatelessWidget {
     }
 
     try {
-      Map<String, dynamic> cartItems =
-          Map<String, dynamic>.from(userDetails?['cart_item'] ?? {});
-      const String size = "default"; 
+      final cartItems = Map<String, dynamic>.from(userDetails?['cart_item'] ?? {});
+      const size = 'default';
 
       if (cartItems.containsKey(productId)) {
-        var productEntry = cartItems[productId];
+        final productEntry = cartItems[productId];
         if (productEntry is int) {
           cartItems[productId] = {'default': productEntry + 1};
         } else if (productEntry is Map) {
-          int currentQty = (productEntry[size] as int?) ?? 0;
+          final currentQty = (productEntry[size] as int?) ?? 0;
           cartItems[productId][size] = currentQty + 1;
         }
       } else {
         cartItems[productId] = {size: 1};
       }
 
-      await db.updateUserDetails(currentUser.email!, {"cart_item": cartItems});
+      await db.updateUserDetails(currentUser.email!, {'cart_item': cartItems});
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -128,31 +129,27 @@ class ProductItem extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(10),
-              ),
-              child: Image.network(
-                imagePath,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+              child: CachedNetworkImage(
+                imageUrl: imagePath,
                 height: 135,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 140,
+                placeholder: (_, __) => Container(
+                  height: 135,
+                  alignment: Alignment.center,
+                  color: Colors.grey[300],
+                  child: const CircularProgressIndicator(),
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  height: 135,
                   color: Colors.grey[300],
                   child: const Icon(Icons.broken_image),
                 ),
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 140,
-                    alignment: Alignment.center,
-                    child: const CircularProgressIndicator(),
-                  );
-                },
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -180,11 +177,14 @@ class ProductItem extends StatelessWidget {
                       ),
                       IconButton(
                         onPressed: () => _addToCart(context),
-                        icon: Icon(Icons.add_shopping_cart,
-                            color: Theme.of(context).primaryColor),iconSize: 20,
+                        icon: Icon(
+                          Icons.add_shopping_cart,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        iconSize: 20,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
-                      )
+                      ),
                     ],
                   ),
                 ],

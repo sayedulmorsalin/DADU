@@ -1,39 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
-class InfoBanner extends StatefulWidget {
+class InfoBanner extends StatelessWidget {
   const InfoBanner({super.key});
-
-  @override
-  State<InfoBanner> createState() => _InfoBannerState();
-}
-
-class _InfoBannerState extends State<InfoBanner> {
-  Timer? _timer;
-  int _currentIndex = 0;
-
-  final List<Map<String, String>> _infoItems = [
-    {'image': 'assets/info_banner/delivery.gif', 'label': 'Whole Bangladesh delivery'},
-    {'image': 'assets/info_banner/hasel.gif', 'label': 'Hassle-free Returns'},
-    {'image': 'assets/info_banner/support.gif', 'label': '24/7 Support'},
-    {'image': 'assets/info_banner/authentic.gif', 'label': 'Authentic Product'},
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      setState(() {
-        _currentIndex = (_currentIndex + 1) % _infoItems.length;
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,38 +21,12 @@ class _InfoBannerState extends State<InfoBanner> {
           ),
         ],
       ),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 500),
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        child: _buildInfoRow(
-          key: ValueKey<int>(_currentIndex),
-          imagePath: _infoItems[_currentIndex]['image']!,
-          imageHeight: imageHeight,
-        ),
+      child: Image.asset(
+        'assets/info_banner/infobanner.gif',
+        height: imageHeight,
+        width: double.infinity,
+        fit: BoxFit.contain,
       ),
-    );
-  }
-
-  Widget _buildInfoRow({
-    Key? key,
-    required String imagePath,
-    required double imageHeight,
-  }) {
-    return Row(
-      key: key,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Flexible(
-          child: Image.asset(
-            imagePath,
-            height: imageHeight,
-            width: double.infinity,
-            fit: BoxFit.contain,
-          ),
-        ),
-      ],
     );
   }
 }
