@@ -13,10 +13,8 @@ import '../../services/firebase.dart';
 import '../authentication/sign_up_2nd.dart';
 import '../authentication/sign_up_first.dart';
 import 'dart:typed_data';
-import 'package:flutter/services.dart';   
+import 'package:flutter/services.dart';
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
-
-
 
 class ProductDetails extends StatefulWidget {
   final String title;
@@ -55,7 +53,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   @override
   void initState() {
     super.initState();
-    
+
     if (widget.brand == "Puma" ||
         widget.brand == "Nike" ||
         widget.brand == "Others_boot" ||
@@ -63,6 +61,8 @@ class _ProductDetailsState extends State<ProductDetails> {
       selectedSize = "40";
     } else if (widget.brand == "Gloves") {
       selectedSize = "9";
+    } else if (widget.brand == "Jersey") {
+      selectedSize = "L";
     } else {
       selectedSize = null;
     }
@@ -76,35 +76,29 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   Future<bool> requestImagePermission() async {
-    
     final photosPermission = await Permission.photos.request();
     if (photosPermission.isGranted) return true;
 
-    
     final storagePermission = await Permission.storage.request();
     if (storagePermission.isGranted) return true;
 
     return false;
   }
 
-
   Future<void> saveImageToDevice(String url) async {
     FileDownloader.downloadFile(
       url: url,
       name: "dadu_${DateTime.now().millisecondsSinceEpoch}.jpg",
-      
-      downloadDestination: DownloadDestinations.publicDownloads,
-      subPath: "Dadu", 
 
-      onProgress: (String? fileName, double progress) {
-        
-        
-      },
+      downloadDestination: DownloadDestinations.publicDownloads,
+      subPath: "Dadu",
+
+      onProgress: (String? fileName, double progress) {},
 
       onDownloadCompleted: (String path) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Saved to: $path")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Saved to: $path")));
       },
 
       onDownloadError: (String errorMessage) {
@@ -114,9 +108,6 @@ class _ProductDetailsState extends State<ProductDetails> {
       },
     );
   }
-
-
-
 
   Widget method1() {
     return Row(
@@ -201,6 +192,50 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   Widget method3() {
+    List<String> sizes = ["M", "L", "XL", "XXL"];
+
+    return Row(
+      children: [
+        const Text(
+          "Size: ",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        ...List.generate(sizes.length, (index) {
+          final size = sizes[index];
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  selectedSize = size;
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: selectedSize == size ? Colors.green : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  size,
+                  style: TextStyle(
+                    color: selectedSize == size ? Colors.white : Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget method4() {
     return const SizedBox.shrink();
   }
 
@@ -211,18 +246,16 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   void sendMessageToWhatsApp(String number) async {
-    
     final cleanedNumber = number.replaceAll(RegExp(r'[+\s]'), '');
     final sizeInfo = selectedSize != null ? " Size $selectedSize" : "";
     final message = Uri.encodeComponent(
       'Hey I want to order ${widget.title} Price ${widget.price}$sizeInfo Image URL ${widget.image20}',
     );
 
-    
     final whatsappAppUrl = Uri.parse(
       'whatsapp://send?phone=$cleanedNumber&text=$message',
     );
-    
+
     final whatsappWebUrl = Uri.parse('https://wa.me/$number?text=$message');
 
     try {
@@ -238,7 +271,6 @@ class _ProductDetailsState extends State<ProductDetails> {
     }
   }
 
-  
   void _addToCart() async {
     final currentUser = _auth.currentUser;
     if (currentUser != null) {
@@ -272,38 +304,27 @@ class _ProductDetailsState extends State<ProductDetails> {
           );
 
           String productId = widget.productid;
-          String size =
-              selectedSize ?? "no size"; 
+          String size = selectedSize ?? "no size";
 
-          
           if (cartItems.containsKey(productId)) {
             if (cartItems[productId] is int) {
-              
               cartItems[productId] = {"default": cartItems[productId]};
             }
           }
 
-          
           if (cartItems.containsKey(productId)) {
-            
             Map<String, dynamic> sizeMap = cartItems[productId];
 
-            
             if (sizeMap.containsKey(size)) {
               int currentQty = (sizeMap[size] is int) ? sizeMap[size] : 0;
               sizeMap[size] = currentQty + 1;
-            }
-            
-            else {
+            } else {
               sizeMap[size] = 1;
             }
-          }
-          
-          else {
+          } else {
             cartItems[productId] = {size: 1};
           }
 
-          
           await db.updateUserDetails(currentUser.email!, {
             "cart_item": cartItems,
           });
@@ -332,12 +353,10 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   double _parsePrice(String priceStr) {
-    
     String cleaned = priceStr.replaceAll(RegExp(r'[^\d.]'), '');
     return double.tryParse(cleaned) ?? 0.0;
   }
 
-  
   void _buyNow() async {
     final currentUser = _auth.currentUser;
     if (currentUser != null) {
@@ -424,7 +443,6 @@ class _ProductDetailsState extends State<ProductDetails> {
       ),
       body: Stack(
         children: [
-          
           Padding(
             padding: const EdgeInsets.only(bottom: 80.0),
             child: ListView(
@@ -557,8 +575,10 @@ class _ProductDetailsState extends State<ProductDetails> {
                         method1()
                       else if (widget.brand == "Gloves")
                         method2()
+                      else if (widget.brand == "Jersey")
+                        method3()
                       else
-                        method3(),
+                        method4(),
                       SizedBox(height: 180),
                     ],
                   ),
@@ -567,7 +587,6 @@ class _ProductDetailsState extends State<ProductDetails> {
             ),
           ),
 
-          
           Positioned(
             bottom: 0,
             left: 0,
@@ -586,7 +605,6 @@ class _ProductDetailsState extends State<ProductDetails> {
               ),
               child: Row(
                 children: [
-                  
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
@@ -634,7 +652,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  
+
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _buyNow,
@@ -660,9 +678,8 @@ class _ProductDetailsState extends State<ProductDetails> {
             ),
           ),
 
-          
           Positioned(
-            bottom: 90, 
+            bottom: 90,
             right: 16,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
