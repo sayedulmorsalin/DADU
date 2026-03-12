@@ -77,7 +77,7 @@ class _SignInScreenState extends State<SignInScreen> {
         backgroundColor: AppColors.scaffoldBackground,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: _handleBack,
         ),
       ),
@@ -139,7 +139,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             _obscurePassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: Colors.grey,
+                            color: AppColors.textSecondary,
                           ),
                           onPressed: _togglePasswordVisibility,
                         ),
@@ -165,7 +165,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                              color: AppColors.textPrimary,
                             ),
                             recognizer:
                                 TapGestureRecognizer()
@@ -197,7 +197,9 @@ class _SignInScreenState extends State<SignInScreen> {
                         onPressed: _isLoading ? null : _submitForm,
                         child:
                             _isLoading
-                                ? CircularProgressIndicator(color: Colors.white)
+                                ? CircularProgressIndicator(
+                                  color: AppColors.textOnPrimary,
+                                )
                                 : Text(
                                   "Sign In",
                                   style: TextStyle(fontSize: 16),
@@ -212,7 +214,10 @@ class _SignInScreenState extends State<SignInScreen> {
                       children: [
                         Text(
                           "Do not have an account",
-                          style: TextStyle(fontSize: 16, color: Colors.black),
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: AppColors.textPrimary,
+                          ),
                         ),
                         Text.rich(
                           TextSpan(
@@ -220,7 +225,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue,
+                              color: AppColors.textLink,
                             ),
                             recognizer:
                                 TapGestureRecognizer()

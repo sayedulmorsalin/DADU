@@ -416,7 +416,7 @@ class _CheckOutState extends State<CheckOut> {
           style: ElevatedButton.styleFrom(
             backgroundColor:
                 _freeDeliverySelected
-                    ? Colors.green
+                    ? AppColors.success
                     : Theme.of(context).primaryColor,
             minimumSize: const Size(double.infinity, 50),
           ),
@@ -427,7 +427,7 @@ class _CheckOutState extends State<CheckOut> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: AppColors.textOnPrimary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -481,7 +481,7 @@ class _CheckOutState extends State<CheckOut> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey),
+                    border: Border.all(color: AppColors.textSecondary),
                   ),
                   child: Image.file(_paymentProofImage!, fit: BoxFit.contain),
                 ),
@@ -495,7 +495,7 @@ class _CheckOutState extends State<CheckOut> {
                       icon: const Icon(
                         Icons.close,
                         size: 16,
-                        color: Colors.white,
+                        color: AppColors.textOnPrimary,
                       ),
                       onPressed: _removePaymentProof,
                     ),
@@ -511,7 +511,7 @@ class _CheckOutState extends State<CheckOut> {
               ),
               child: const Text(
                 'Upload Screenshot',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(color: AppColors.textOnPrimary),
               ),
             ),
         const SizedBox(height: 16),
@@ -544,11 +544,11 @@ class _CheckOutState extends State<CheckOut> {
                 ),
                 Text(
                   'Qty: ${item.quantity}',
-                  style: const TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
                 Text(
                   'Size: ${item.size}',
-                  style: const TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ],
             ),
@@ -580,7 +580,10 @@ class _CheckOutState extends State<CheckOut> {
             style: TextStyle(
               fontSize: isTotal ? 18 : 14,
               fontWeight: FontWeight.bold,
-              color: isTotal ? Theme.of(context).primaryColor : Colors.black,
+              color:
+                  isTotal
+                      ? Theme.of(context).primaryColor
+                      : AppColors.textPrimary,
             ),
           ),
         ],
@@ -612,7 +615,9 @@ class _CheckOutState extends State<CheckOut> {
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color:
-                          _freeDeliverySelected ? Colors.green : Colors.black,
+                          _freeDeliverySelected
+                              ? AppColors.success
+                              : AppColors.textPrimary,
                     ),
                   ),
                 ],
@@ -769,10 +774,15 @@ class _CheckOutState extends State<CheckOut> {
                 ),
                 child:
                     _isProcessing
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const CircularProgressIndicator(
+                          color: AppColors.textOnPrimary,
+                        )
                         : const Text(
                           'PLACE ORDER',
-                          style: TextStyle(fontSize: 18, color: Colors.white),
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: AppColors.textOnPrimary,
+                          ),
                         ),
               ),
             ),

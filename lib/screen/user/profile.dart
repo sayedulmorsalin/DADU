@@ -184,7 +184,7 @@ class _ProfileState extends State<Profile> {
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.grey[100],
+                          color: AppColors.surfaceLight,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Column(
@@ -194,7 +194,7 @@ class _ProfileState extends State<Profile> {
                               children: [
                                 CircleAvatar(
                                   radius: 50,
-                                  backgroundColor: Colors.grey[200],
+                                  backgroundColor: AppColors.surfaceGrey,
                                   backgroundImage:
                                       tempProfilePic.isNotEmpty
                                           ? NetworkImage(tempProfilePic)
@@ -222,7 +222,7 @@ class _ProfileState extends State<Profile> {
                               },
                               child: const Text(
                                 'Change Profile Picture',
-                                style: TextStyle(color: Colors.blue),
+                                style: TextStyle(color: AppColors.textLink),
                               ),
                             ),
                           ],
@@ -280,7 +280,7 @@ class _ProfileState extends State<Profile> {
                   onPressed: _isSaving ? null : () => Navigator.pop(context),
                   child: const Text(
                     'CANCEL',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ),
                 ElevatedButton(
@@ -338,13 +338,13 @@ class _ProfileState extends State<Profile> {
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: AppColors.textOnPrimary,
                               strokeWidth: 2,
                             ),
                           )
                           : const Text(
                             'SAVE',
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(color: AppColors.textOnPrimary),
                           ),
                 ),
               ],
@@ -472,7 +472,7 @@ class _ProfileState extends State<Profile> {
                   onPressed: _isSaving ? null : () => Navigator.pop(context),
                   child: const Text(
                     'CANCEL',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ),
                 ElevatedButton(
@@ -531,13 +531,13 @@ class _ProfileState extends State<Profile> {
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                              color: Colors.white,
+                              color: AppColors.textOnPrimary,
                               strokeWidth: 2,
                             ),
                           )
                           : const Text(
                             'SAVE',
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(color: AppColors.textOnPrimary),
                           ),
                 ),
               ],
@@ -600,7 +600,7 @@ class _ProfileState extends State<Profile> {
                       padding: const EdgeInsets.only(bottom: 16),
                       child: Text(
                         _errorMessage!,
-                        style: const TextStyle(color: Colors.red),
+                        style: const TextStyle(color: AppColors.error),
                       ),
                     ),
                   TextField(
@@ -739,7 +739,7 @@ class _ProfileState extends State<Profile> {
               const SizedBox(height: 16),
               Text(
                 'Loading profile...',
-                style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                style: TextStyle(color: AppColors.textMuted, fontSize: 16),
               ),
             ],
           ),
@@ -767,7 +767,7 @@ class _ProfileState extends State<Profile> {
                 child: Text(
                   _error,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 16),
                 ),
               ),
               const SizedBox(height: 24),
@@ -826,7 +826,7 @@ class _ProfileState extends State<Profile> {
             children: [
               CircleAvatar(
                 radius: 40,
-                backgroundColor: Colors.grey[200],
+                backgroundColor: AppColors.surfaceGrey,
                 backgroundImage:
                     profilePic.isNotEmpty ? NetworkImage(profilePic) : null,
                 child:
@@ -852,18 +852,24 @@ class _ProfileState extends State<Profile> {
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 Email,
-                style: const TextStyle(fontSize: 16, color: Colors.grey),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 Phone,
-                style: const TextStyle(fontSize: 14, color: Colors.grey),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -955,12 +961,15 @@ class _ProfileState extends State<Profile> {
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: const BoxDecoration(
-                    color: Colors.red,
+                    color: AppColors.error,
                     shape: BoxShape.circle,
                   ),
                   child: Text(
                     count.toString(),
-                    style: const TextStyle(color: Colors.white, fontSize: 10),
+                    style: const TextStyle(
+                      color: AppColors.textOnPrimary,
+                      fontSize: 10,
+                    ),
                   ),
                 ),
               ),
@@ -988,7 +997,7 @@ class _ProfileState extends State<Profile> {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
+                color: AppColors.textSecondary.withOpacity(0.1),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -999,7 +1008,7 @@ class _ProfileState extends State<Profile> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.home, size: 20, color: Colors.blue),
+                  const Icon(Icons.home, size: 20, color: AppColors.iconAccent),
                   const SizedBox(width: 8),
                   const Text(
                     'Home',
@@ -1017,7 +1026,7 @@ class _ProfileState extends State<Profile> {
                     ),
                     child: const Text(
                       'Default',
-                      style: TextStyle(color: Colors.green, fontSize: 12),
+                      style: TextStyle(color: AppColors.success, fontSize: 12),
                     ),
                   ),
                 ],
@@ -1048,10 +1057,14 @@ class _ProfileState extends State<Profile> {
                 children: [
                   TextButton.icon(
                     onPressed: _showEditAddressDialog,
-                    icon: const Icon(Icons.edit, size: 18, color: Colors.blue),
+                    icon: const Icon(
+                      Icons.edit,
+                      size: 18,
+                      color: AppColors.iconAccent,
+                    ),
                     label: const Text(
                       'Edit Address',
-                      style: TextStyle(color: Colors.blue),
+                      style: TextStyle(color: AppColors.textLink),
                     ),
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
@@ -1096,7 +1109,11 @@ class _ProfileState extends State<Profile> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.card_membership, color: Colors.white, size: 36),
+          const Icon(
+            Icons.card_membership,
+            color: AppColors.textOnPrimary,
+            size: 36,
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -1105,7 +1122,7 @@ class _ProfileState extends State<Profile> {
                 const Text(
                   'Premium Member',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppColors.textOnPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1113,7 +1130,7 @@ class _ProfileState extends State<Profile> {
                 const SizedBox(height: 8),
                 LinearProgressIndicator(
                   value: freeDelivery,
-                  backgroundColor: Colors.white.withOpacity(0.3),
+                  backgroundColor: AppColors.textOnPrimary.withOpacity(0.3),
                   color: AppColors.coinGold,
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(3),
@@ -1123,7 +1140,10 @@ class _ProfileState extends State<Profile> {
                   freeDeliveryInfo >= 130
                       ? 'You can have free delivery! you have: $freeDeliveryInfo coins '
                       : '${(130 - freeDeliveryInfo).toStringAsFixed(2)} coins need to get next free delivery',
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                  style: const TextStyle(
+                    color: AppColors.textOnPrimary,
+                    fontSize: 12,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 ElevatedButton(
@@ -1162,10 +1182,10 @@ class _ProfileState extends State<Profile> {
       {
         'icon': Icons.delete_forever,
         'title': 'Delete Account',
-        'color': Colors.red,
+        'color': AppColors.error,
       },
 
-      {'icon': Icons.logout, 'title': 'Logout', 'color': Colors.red},
+      {'icon': Icons.logout, 'title': 'Logout', 'color': AppColors.error},
     ];
 
     return Column(
@@ -1187,7 +1207,7 @@ class _ProfileState extends State<Profile> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.grey,
+            color: AppColors.textSecondary,
           ),
         ),
 
@@ -1202,7 +1222,7 @@ class _ProfileState extends State<Profile> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.red,
+            color: AppColors.error,
           ),
         ),
 
@@ -1227,7 +1247,7 @@ class _ProfileState extends State<Profile> {
       title: Text(
         item['title'],
         style: TextStyle(
-          color: customColor ?? Colors.black,
+          color: customColor ?? AppColors.textPrimary,
           fontWeight: customColor != null ? FontWeight.bold : FontWeight.normal,
         ),
       ),
@@ -1329,7 +1349,7 @@ class _ProfileState extends State<Profile> {
                   IconButton(
                     tooltip: "Call",
 
-                    icon: const Icon(Icons.call, color: Colors.green),
+                    icon: const Icon(Icons.call, color: AppColors.iconSuccess),
 
                     onPressed: () async {
                       final Uri uri = Uri.parse("tel:$phoneRaw");
@@ -1341,7 +1361,7 @@ class _ProfileState extends State<Profile> {
                   IconButton(
                     tooltip: "WhatsApp",
 
-                    icon: const Icon(Icons.chat, color: Colors.green),
+                    icon: const Icon(Icons.chat, color: AppColors.iconSuccess),
 
                     onPressed: () async {
                       final Uri uri = Uri.parse(
@@ -1388,7 +1408,7 @@ class _ProfileState extends State<Profile> {
                   IconButton(
                     tooltip: "Send Email",
 
-                    icon: const Icon(Icons.email, color: Colors.blue),
+                    icon: const Icon(Icons.email, color: AppColors.iconAccent),
 
                     onPressed: () async {
                       final Uri uri = Uri.parse("mailto:$email");
@@ -1473,7 +1493,7 @@ class _ProfileState extends State<Profile> {
 
   Widget _buildHelpItem(String title, IconData icon, String url) {
     return ListTile(
-      leading: Icon(icon, color: Colors.blue),
+      leading: Icon(icon, color: AppColors.iconAccent),
       title: Text(title),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
       onTap: () => _launchUrl(url),
@@ -1512,7 +1532,7 @@ class _ProfileState extends State<Profile> {
                     const SizedBox(height: 12),
                     Text(
                       errorMessage!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: AppColors.error),
                     ),
                   ],
                 ],
@@ -1575,7 +1595,7 @@ class _ProfileState extends State<Profile> {
                           )
                           : const Text(
                             'Delete',
-                            style: TextStyle(color: Colors.red),
+                            style: TextStyle(color: AppColors.error),
                           ),
                 ),
               ],

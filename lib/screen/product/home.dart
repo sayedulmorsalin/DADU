@@ -34,7 +34,7 @@ class Home extends StatelessWidget {
                   ? controller.selectedIndex.value + 1
                   : controller.selectedIndex.value,
           selectedItemColor: AppColors.selectedNavItem,
-          unselectedItemColor: Colors.black54,
+          unselectedItemColor: AppColors.unselectedNavItem,
           onTap:
               (index) => controller.onBottomNavTap(
                 index,
@@ -120,7 +120,7 @@ class Home extends StatelessWidget {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 25,
-                color: Colors.black,
+                color: AppColors.textPrimary,
                 fontFamily: 'Times New Roman',
               ),
             ),
@@ -176,7 +176,12 @@ class Home extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimary.withOpacity(0.12),
+              blurRadius: 6,
+            ),
+          ],
         ),
         child: ListView.builder(
           shrinkWrap: true,
@@ -227,7 +232,7 @@ class Home extends StatelessWidget {
             height: MediaQuery.of(context).size.width / 2.16,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              color: Colors.grey[300],
+              color: AppColors.placeholderBackground,
             ),
             clipBehavior: Clip.antiAlias,
             child: Image.asset('assets/icon/banner.jpg', fit: BoxFit.cover),
@@ -254,7 +259,7 @@ class Home extends StatelessWidget {
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
-                      color: Colors.grey[300],
+                      color: AppColors.placeholderBackground,
                     ),
                     child:
                         imageUrl == null || imageUrl.isEmpty
@@ -267,7 +272,7 @@ class Home extends StatelessWidget {
                               fit: BoxFit.cover,
                               placeholder:
                                   (_, __) => Container(
-                                    color: Colors.grey[300],
+                                    color: AppColors.placeholderBackground,
                                     child: const Center(
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
@@ -301,8 +306,10 @@ class Home extends StatelessWidget {
                             shape: BoxShape.circle,
                             color:
                                 controller.currentBannerIndex.value == index
-                                    ? Colors.white
-                                    : Colors.white.withValues(alpha: 0.5),
+                                    ? AppColors.textOnPrimary
+                                    : AppColors.textOnPrimary.withValues(
+                                      alpha: 0.5,
+                                    ),
                           ),
                         ),
                       ),
@@ -409,7 +416,7 @@ class Home extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 10),
@@ -460,7 +467,7 @@ class Home extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 10),
@@ -624,7 +631,7 @@ class Home extends StatelessWidget {
               child: Text(
                 totalItems > 99 ? '99+' : totalItems.toString(),
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textOnPrimary,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),
@@ -694,7 +701,7 @@ class Home extends StatelessWidget {
           ),
           title: const Row(
             children: [
-              Icon(Icons.notifications, color: Colors.orange),
+              Icon(Icons.notifications, color: AppColors.warning),
               SizedBox(width: 8),
               Text('Notifications'),
             ],
@@ -740,8 +747,8 @@ class Home extends StatelessWidget {
                               : Icons.notifications,
                           color:
                               data['highPriority'] == true
-                                  ? Colors.red
-                                  : Colors.blue,
+                                  ? AppColors.error
+                                  : AppColors.iconAccent,
                         ),
                         title: Text(
                           data['title']?.toString() ?? '',
@@ -788,8 +795,12 @@ class _FlashItem extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(10),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimary.withOpacity(0.12),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: GestureDetector(

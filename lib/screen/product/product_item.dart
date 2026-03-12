@@ -146,13 +146,13 @@ class ProductItem extends StatelessWidget {
                     (_, __) => Container(
                       height: 135,
                       alignment: Alignment.center,
-                      color: Colors.grey[300],
+                      color: AppColors.placeholderBackground,
                       child: const CircularProgressIndicator(),
                     ),
                 errorWidget:
                     (_, __, ___) => Container(
                       height: 135,
-                      color: Colors.grey[300],
+                      color: AppColors.placeholderBackground,
                       child: const Icon(Icons.broken_image),
                     ),
               ),
@@ -180,7 +180,7 @@ class ProductItem extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: AppColors.textPrimary,
                           fontSize: 14,
                         ),
                       ),

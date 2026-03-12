@@ -99,7 +99,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           centerTitle: true,
           title: const Text(
             "Create Account",
-            style: TextStyle(color: Colors.black),
+            style: TextStyle(color: AppColors.textPrimary),
           ),
         ),
 
@@ -180,7 +180,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   _obscurePassword
                                       ? Icons.remove_red_eye_outlined
                                       : Icons.visibility_off_outlined,
-                                  color: Colors.grey,
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
                               border: OutlineInputBorder(
@@ -215,7 +215,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   _obscureConfirmPassword
                                       ? Icons.remove_red_eye_outlined
                                       : Icons.visibility_off_outlined,
-                                  color: Colors.grey,
+                                  color: AppColors.textSecondary,
                                 ),
                               ),
                               border: OutlineInputBorder(
@@ -260,7 +260,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     style: TextStyle(
                                       fontSize: 16,
                                       decoration: TextDecoration.underline,
-                                      color: Colors.blue,
+                                      color: AppColors.textLink,
                                     ),
                                   ),
                                 ),
@@ -296,7 +296,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     style: TextStyle(
                                       fontSize: 16,
                                       decoration: TextDecoration.underline,
-                                      color: Colors.blue,
+                                      color: AppColors.textLink,
                                     ),
                                   ),
                                 ),
@@ -320,7 +320,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   style: const TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.blue,
+                                    color: AppColors.textLink,
                                   ),
                                   recognizer:
                                       TapGestureRecognizer()
@@ -357,14 +357,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               child:
                                   _isLoading
                                       ? const CircularProgressIndicator(
-                                        color: Colors.white,
+                                        color: AppColors.textOnPrimary,
                                       )
                                       : const Text(
                                         "Next",
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.white,
+                                          color: AppColors.textOnPrimary,
                                         ),
                                       ),
                             ),

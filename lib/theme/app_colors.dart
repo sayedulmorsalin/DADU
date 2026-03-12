@@ -27,13 +27,8 @@ class AppColors {
 
   // ─── Card / Surface Colors ───
   static const Color cardBackground = Colors.white;
-  static const Color surfaceLight = Color.fromARGB(
-    255,
-    255,
-    255,
-    255,
-  ); 
-  
+  static const Color surfaceLight = Color.fromARGB(255, 255, 255, 255);
+
   // Colors.grey[100]
   static Color inputFillColor = Colors.grey[300]!;
 
@@ -61,4 +56,22 @@ class AppColors {
   static const Color updateBanner = Colors.amberAccent;
   static const Color dividerColor = Colors.grey;
   static Color badgeBackground = Colors.red;
+
+  // ─── Icon Colors ───
+  static const Color iconDefault = Colors.black;
+  static const Color iconAccent = Colors.blue;
+  static const Color iconSuccess = Colors.green;
+
+  // ─── Surface / Background Shades ───
+  static Color surfaceGrey = Colors.grey[200]!;
+  static Color placeholderBackground = Colors.grey[300]!;
+
+  // ─── Text Shades ───
+  static Color textMuted = Colors.grey[600]!;
+
+  // ─── Nav ───
+  static const Color unselectedNavItem = Colors.black54;
+
+  // ─── Disabled ───
+  static const Color disabledColor = Colors.grey;
 }

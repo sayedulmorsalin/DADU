@@ -69,7 +69,10 @@ class OrderListScreen extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Price', style: TextStyle(color: Colors.grey)),
+                    const Text(
+                      'Price',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                     Text(
                       '৳${(order['price'] as num).toStringAsFixed(2)}',
                       style: const TextStyle(fontWeight: FontWeight.bold),
@@ -81,7 +84,7 @@ class OrderListScreen extends StatelessWidget {
                   children: [
                     const Text(
                       'Quantity',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: AppColors.textSecondary),
                     ),
                     Text(
                       '${order['quantity']}',
@@ -92,7 +95,10 @@ class OrderListScreen extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Total', style: TextStyle(color: Colors.grey)),
+                    const Text(
+                      'Total',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
                     Text(
                       '৳${((order['price'] as num) * (order['quantity'] as num)).toStringAsFixed(2)}',
                       style: const TextStyle(

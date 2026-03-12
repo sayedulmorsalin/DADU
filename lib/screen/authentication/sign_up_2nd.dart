@@ -107,10 +107,13 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
         backgroundColor: AppColors.scaffoldBackground,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: _handleBack,
         ),
-        title: Text("Create Account", style: TextStyle(color: Colors.black)),
+        title: Text(
+          "Create Account",
+          style: TextStyle(color: AppColors.textPrimary),
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -134,7 +137,7 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                           onTap: _pickImage,
                           child: CircleAvatar(
                             radius: 50,
-                            backgroundColor: Colors.grey[300],
+                            backgroundColor: AppColors.placeholderBackground,
                             child:
                                 _profileImage == null
                                     ? Icon(Icons.add_a_photo, size: 40)

@@ -222,12 +222,15 @@ class _CartState extends State<Cart> {
                           Icon(
                             Icons.shopping_cart_outlined,
                             size: 80,
-                            color: Colors.grey,
+                            color: AppColors.textSecondary,
                           ),
                           SizedBox(height: 16),
                           Text(
                             'Your cart is empty',
-                            style: TextStyle(fontSize: 20, color: Colors.grey),
+                            style: TextStyle(
+                              fontSize: 20,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ],
                       ),
@@ -239,12 +242,12 @@ class _CartState extends State<Cart> {
                         return Dismissible(
                           key: ValueKey('${item.id}_${item.size}'),
                           background: Container(
-                            color: Colors.red,
+                            color: AppColors.error,
                             alignment: Alignment.centerRight,
                             padding: const EdgeInsets.only(right: 20),
                             child: const Icon(
                               Icons.delete,
-                              color: Colors.white,
+                              color: AppColors.textOnPrimary,
                             ),
                           ),
                           direction: DismissDirection.endToStart,
@@ -287,7 +290,7 @@ class _CartState extends State<Cart> {
                                           Text(
                                             'Size: ${item.size}',
                                             style: TextStyle(
-                                              color: Colors.grey[600],
+                                              color: AppColors.textMuted,
                                               fontSize: 14,
                                             ),
                                           ),
@@ -388,7 +391,10 @@ class _CartState extends State<Cart> {
                 ),
                 child: const Text(
                   'CHECKOUT',
-                  style: TextStyle(fontSize: 18, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: AppColors.textOnPrimary,
+                  ),
                 ),
               ),
             ),

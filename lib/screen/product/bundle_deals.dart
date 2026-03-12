@@ -82,7 +82,7 @@ class _BundleDealsState extends State<BundleDeals> {
         children: [
           Container(
             padding: const EdgeInsets.all(24),
-            color: Colors.grey[200],
+            color: AppColors.surfaceGrey,
             child: Image.asset(
               "assets/gif/bundle.gif",
               width: double.infinity,

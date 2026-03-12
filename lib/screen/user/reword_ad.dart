@@ -340,7 +340,7 @@ class _RewordAdState extends State<RewordAd> {
         title: const Text(
           "Earn Coins",
           style: TextStyle(
-            color: Colors.white,
+            color: AppColors.textOnPrimary,
             fontSize: 30,
             fontWeight: FontWeight.bold,
           ),
@@ -395,17 +395,20 @@ class _RewordAdState extends State<RewordAd> {
                     child: ElevatedButton.icon(
                       onPressed: disableButton ? null : showRewardedAd,
 
-                      icon: const Icon(Icons.play_arrow, color: Colors.white),
+                      icon: const Icon(
+                        Icons.play_arrow,
+                        color: AppColors.textOnPrimary,
+                      ),
 
                       label: const Text(
                         "Watch Ad",
-                        style: TextStyle(color: Colors.white),
+                        style: TextStyle(color: AppColors.textOnPrimary),
                       ),
 
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
                             disableButton
-                                ? Colors.grey
+                                ? AppColors.disabledColor
                                 : AppColors.rewardPrimary,
 
                         shape: RoundedRectangleBorder(
@@ -460,7 +463,7 @@ class _RewordAdState extends State<RewordAd> {
                                 padding: const EdgeInsets.all(10),
 
                                 decoration: BoxDecoration(
-                                  color: Colors.red.shade50,
+                                  color: AppColors.error.withOpacity(0.1),
 
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -469,7 +472,7 @@ class _RewordAdState extends State<RewordAd> {
                                   "Next ads in : ${cooldownText()}",
 
                                   style: const TextStyle(
-                                    color: Colors.red,
+                                    color: AppColors.error,
 
                                     fontWeight: FontWeight.bold,
                                   ),
