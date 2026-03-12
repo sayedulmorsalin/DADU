@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/services/firebase.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -82,17 +83,16 @@ class _GiftBoxState extends State<GiftBox> {
       return;
     }
 
-    _interstitialAd!.fullScreenContentCallback =
-        FullScreenContentCallback(
-          onAdDismissedFullScreenContent: (ad) {
-            ad.dispose();
-            _initializePage();
-          },
-          onAdFailedToShowFullScreenContent: (ad, error) {
-            ad.dispose();
-            _initializePage();
-          },
-        );
+    _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        _initializePage();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        _initializePage();
+      },
+    );
 
     _interstitialAd!.show();
   }
@@ -119,21 +119,20 @@ class _GiftBoxState extends State<GiftBox> {
       if (!mounted) return;
 
       setState(() {
-        _products = productData
-            .map(
-              (data) => Product(
-            name: data['name'] ?? 'No Name',
-            description:
-            data['details'] ?? 'No Description',
-            imageUrl: data['image5'] ?? '',
-          ),
-        )
-            .toList();
+        _products =
+            productData
+                .map(
+                  (data) => Product(
+                    name: data['name'] ?? 'No Name',
+                    description: data['details'] ?? 'No Description',
+                    imageUrl: data['image5'] ?? '',
+                  ),
+                )
+                .toList();
 
         _isLoadingProducts = false;
       });
     } catch (e) {
-
       if (!mounted) return;
 
       setState(() => _isLoadingProducts = false);
@@ -155,8 +154,7 @@ class _GiftBoxState extends State<GiftBox> {
     try {
       final winner = await _db.getLastGiftWinner();
 
-      final currentUserId =
-          FirebaseAuth.instance.currentUser?.uid;
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
       String? formattedTime;
 
@@ -167,7 +165,7 @@ class _GiftBoxState extends State<GiftBox> {
           final dateTime = timeData.toDate();
 
           formattedTime =
-          "${dateTime.day}/${dateTime.month}/${dateTime.year} "
+              "${dateTime.day}/${dateTime.month}/${dateTime.year} "
               "${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}";
         } else if (timeData is String) {
           formattedTime = timeData;
@@ -182,8 +180,7 @@ class _GiftBoxState extends State<GiftBox> {
         _lastWinnerTime = formattedTime;
 
         _isCurrentUserWinner =
-            currentUserId != null &&
-                winner?['user_id'] == currentUserId;
+            currentUserId != null && winner?['user_id'] == currentUserId;
 
         _loadingWinner = false;
       });
@@ -204,11 +201,9 @@ class _GiftBoxState extends State<GiftBox> {
       _checkingGift = false;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Gift claimed successfully"),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Gift claimed successfully")));
   }
 
   @override
@@ -220,16 +215,14 @@ class _GiftBoxState extends State<GiftBox> {
 
   @override
   Widget build(BuildContext context) {
-    final disableButton =
-        _alreadyTried || _checkingGift;
+    final disableButton = _alreadyTried || _checkingGift;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
         title: const Text(
           'Free Gifts',
-          style:
-          TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
@@ -238,161 +231,117 @@ class _GiftBoxState extends State<GiftBox> {
       body: Column(
         children: [
           Expanded(
-            child: _isLoadingProducts
-                ? const Center(
-              child:
-              CircularProgressIndicator(),
-            )
-                : Column(
-              children: [
-                if (!_loadingWinner &&
-                    _lastWinnerName != null)
-                  Container(
-                    margin:
-                    const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8),
-                    padding:
-                    const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color:
-                      Colors.green.shade50,
-                      borderRadius:
-                      BorderRadius.circular(
-                          12),
-                      border: Border.all(
-                          color: Colors.green),
-                    ),
-                    child: Row(
+            child:
+                _isLoadingProducts
+                    ? const Center(child: CircularProgressIndicator())
+                    : Column(
                       children: [
-                        const Icon(
-                          Icons.emoji_events,
-                          color:
-                          Colors.orange,
-                        ),
-                        const SizedBox(
-                            width: 10),
+                        if (!_loadingWinner && _lastWinnerName != null)
+                          Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.emoji_events,
+                                  color: Colors.orange,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    _isCurrentUserWinner
+                                        ? "🎉 You are the Winner!"
+                                        : "🎉 Last Winner : $_lastWinnerName from $_lastWinnerLocation • $_lastWinnerTime",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         Expanded(
-                          child: Text(
-                            _isCurrentUserWinner
-                                ? "🎉 You are the Winner!"
-                                : "🎉 Last Winner : $_lastWinnerName from $_lastWinnerLocation • $_lastWinnerTime",
-                            style:
-                            const TextStyle(
-                              fontWeight:
-                              FontWeight.bold,
+                          child: ListView.builder(
+                            itemCount: _products.length,
+                            itemBuilder: (context, index) {
+                              final product = _products[index];
+
+                              return Card(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    children: [
+                                      SizedBox(
+                                        width: 300,
+                                        height: 300,
+                                        child: Image.network(
+                                          product.imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (_, __, ___) => const Icon(
+                                                Icons.image_not_supported,
+                                              ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        product.name,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(product.description),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: disableButton ? null : _handleTryGift,
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                              ),
+                              child: Text(
+                                _checkingGift
+                                    ? "Checking..."
+                                    : _alreadyTried
+                                    ? "You already tried"
+                                    : "Try to Get",
+                                style: const TextStyle(fontSize: 18),
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount:
-                    _products.length,
-                    itemBuilder:
-                        (context, index) {
-                      final product =
-                      _products[index];
-
-                      return Card(
-                        margin:
-                        const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8),
-                        child: Padding(
-                          padding:
-                          const EdgeInsets
-                              .all(12),
-                          child: Column(
-                            children: [
-                              SizedBox(
-                                width: 300,
-                                height: 300,
-                                child:
-                                Image.network(
-                                  product
-                                      .imageUrl,
-                                  fit:
-                                  BoxFit.cover,
-                                  errorBuilder:
-                                      (_, __,
-                                      ___) =>
-                                  const Icon(
-                                    Icons
-                                        .image_not_supported,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(
-                                  height: 16),
-                              Text(
-                                product.name,
-                                style:
-                                const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight:
-                                  FontWeight
-                                      .bold,
-                                ),
-                              ),
-                              const SizedBox(
-                                  height: 8),
-                              Text(product
-                                  .description),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Padding(
-                  padding:
-                  const EdgeInsets.all(24),
-                  child: SizedBox(
-                    width:
-                    double.infinity,
-                    child: ElevatedButton(
-                      onPressed:
-                      disableButton
-                          ? null
-                          : _handleTryGift,
-                      style:
-                      ElevatedButton
-                          .styleFrom(
-                        padding:
-                        const EdgeInsets
-                            .symmetric(
-                            vertical: 16),
-                      ),
-                      child: Text(
-                        _checkingGift
-                            ? "Checking..."
-                            : _alreadyTried
-                            ? "You already tried"
-                            : "Try to Get",
-                        style:
-                        const TextStyle(
-                            fontSize: 18),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
           if (_isBannerReady)
             SizedBox(
-              width: _bannerAd!
-                  .size.width
-                  .toDouble(),
-              height: _bannerAd!
-                  .size.height
-                  .toDouble(),
-              child: AdWidget(
-                  ad: _bannerAd!),
+              width: _bannerAd!.size.width.toDouble(),
+              height: _bannerAd!.size.height.toDouble(),
+              child: AdWidget(ad: _bannerAd!),
             ),
         ],
       ),

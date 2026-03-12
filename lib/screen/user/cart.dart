@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/user/check_out.dart';
 import 'package:dadu/services/auth.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../../model/cart_model.dart';
@@ -21,8 +22,7 @@ class _CartState extends State<Cart> {
   Future<List<CartItem>>? _cartItemsFuture;
   String? _lastCartSignature;
 
-  Future<List<CartItem>> _processCartData(
-      Map<String, dynamic> cartData) async {
+  Future<List<CartItem>> _processCartData(Map<String, dynamic> cartData) async {
     List<CartItem> loadedCartItems = [];
 
     for (var entry in cartData.entries) {
@@ -73,9 +73,7 @@ class _CartState extends State<Cart> {
     dynamic normalize(dynamic value) {
       if (value is Map) {
         final sortedKeys = value.keys.map((k) => k.toString()).toList()..sort();
-        return {
-          for (final key in sortedKeys) key: normalize(value[key]),
-        };
+        return {for (final key in sortedKeys) key: normalize(value[key])};
       }
       if (value is List) {
         return value.map(normalize).toList();
@@ -110,10 +108,12 @@ class _CartState extends State<Cart> {
         }
 
         final userDetails = snapshot.data!.data();
-        final cartData = userDetails?['cart_item'] as Map<String, dynamic>? ?? {};
+        final cartData =
+            userDetails?['cart_item'] as Map<String, dynamic>? ?? {};
         final cartSignature = _buildCartSignature(cartData);
 
-        if (userDetails?['address'] == null || userDetails!['address'].isEmpty) {
+        if (userDetails?['address'] == null ||
+            userDetails!['address'].isEmpty) {
           return _buildProfileCompletionView();
         }
 
@@ -123,27 +123,28 @@ class _CartState extends State<Cart> {
         }
 
         return FutureBuilder<List<CartItem>>(
-            future: _cartItemsFuture,
-            builder: (context, cartSnapshot) {
-              if (cartSnapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          future: _cartItemsFuture,
+          builder: (context, cartSnapshot) {
+            if (cartSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              if (cartSnapshot.hasError) {
-                return Center(child: Text("Error: ${cartSnapshot.error}"));
-              }
+            if (cartSnapshot.hasError) {
+              return Center(child: Text("Error: ${cartSnapshot.error}"));
+            }
 
-              final cartItems = cartSnapshot.data ?? [];
+            final cartItems = cartSnapshot.data ?? [];
 
-              return _buildCartView(cartItems);
-            });
+            return _buildCartView(cartItems);
+          },
+        );
       },
     );
   }
 
   Widget _buildLoggedOutView() {
     return Scaffold(
-      backgroundColor: const Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -157,7 +158,7 @@ class _CartState extends State<Cart> {
                 );
               },
               child: const Text('Log In / Sign Up'),
-            )
+            ),
           ],
         ),
       ),
@@ -166,7 +167,7 @@ class _CartState extends State<Cart> {
 
   Widget _buildProfileCompletionView() {
     return Scaffold(
-      backgroundColor: const Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -180,7 +181,7 @@ class _CartState extends State<Cart> {
                 );
               },
               child: const Text('Complete Profile'),
-            )
+            ),
           ],
         ),
       ),
@@ -189,12 +190,12 @@ class _CartState extends State<Cart> {
 
   Widget _buildCartView(List<CartItem> cartItems) {
     double totalAmount = cartItems.fold(
-        0,
-        (sum, item) =>
-            sum + (item.price * item.quantity)); // Calculate total amount
+      0,
+      (sum, item) => sum + (item.price * item.quantity),
+    ); // Calculate total amount
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
         title: const Text(
           'Your Cart',
@@ -212,117 +213,129 @@ class _CartState extends State<Cart> {
       body: Column(
         children: [
           Expanded(
-            child: cartItems.isEmpty
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.shopping_cart_outlined,
-                          size: 80,
-                          color: Colors.grey,
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          'Your cart is empty',
-                          style: TextStyle(fontSize: 20, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: cartItems.length,
-                    itemBuilder: (ctx, index) {
-                      final item = cartItems[index];
-                      return Dismissible(
-                        key: ValueKey('${item.id}_${item.size}'),
-                        background: Container(
-                          color: Colors.red,
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          child: const Icon(
-                            Icons.delete,
-                            color: Colors.white,
+            child:
+                cartItems.isEmpty
+                    ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.shopping_cart_outlined,
+                            size: 80,
+                            color: Colors.grey,
                           ),
-                        ),
-                        direction: DismissDirection.endToStart,
-                        onDismissed: (direction) =>
-                            _removeItem(item.id, item.size, cartItems),
-                        child: Card(
-                          margin: const EdgeInsets.symmetric(
-                            vertical: 8,
-                            horizontal: 16,
+                          SizedBox(height: 16),
+                          Text(
+                            'Your cart is empty',
+                            style: TextStyle(fontSize: 20, color: Colors.grey),
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Row(
-                              children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Image.network(
-                                    item.imageUrl,
-                                    width: 80,
-                                    height: 80,
-                                    fit: BoxFit.cover,
+                        ],
+                      ),
+                    )
+                    : ListView.builder(
+                      itemCount: cartItems.length,
+                      itemBuilder: (ctx, index) {
+                        final item = cartItems[index];
+                        return Dismissible(
+                          key: ValueKey('${item.id}_${item.size}'),
+                          background: Container(
+                            color: Colors.red,
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            child: const Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
+                          ),
+                          direction: DismissDirection.endToStart,
+                          onDismissed:
+                              (direction) =>
+                                  _removeItem(item.id, item.size, cartItems),
+                          child: Card(
+                            margin: const EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 16,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      item.imageUrl,
+                                      width: 80,
+                                      height: 80,
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.name,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      if (item.size != "default")
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
                                         Text(
-                                          'Size: ${item.size}',
-                                          style: TextStyle(
-                                            color: Colors.grey[600],
-                                            fontSize: 14,
+                                          item.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
                                           ),
                                         ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '\৳${item.price.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                          color: Theme.of(context).primaryColor,
-                                          fontWeight: FontWeight.bold,
+                                        const SizedBox(height: 4),
+                                        if (item.size != "default")
+                                          Text(
+                                            'Size: ${item.size}',
+                                            style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '\৳${item.price.toStringAsFixed(2)}',
+                                          style: TextStyle(
+                                            color:
+                                                Theme.of(context).primaryColor,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
+                                      ],
+                                    ),
+                                  ),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.remove),
+                                        onPressed:
+                                            () => _decreaseQuantity(
+                                              item.id,
+                                              item.size,
+                                              cartItems,
+                                            ),
+                                      ),
+                                      Text(
+                                        item.quantity.toString(),
+                                        style: const TextStyle(fontSize: 18),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.add),
+                                        onPressed:
+                                            () => _increaseQuantity(
+                                              item.id,
+                                              item.size,
+                                              cartItems,
+                                            ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.remove),
-                                      onPressed: () => _decreaseQuantity(
-                                          item.id, item.size, cartItems),
-                                    ),
-                                    Text(
-                                      item.quantity.toString(),
-                                      style: const TextStyle(fontSize: 18),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.add),
-                                      onPressed: () => _increaseQuantity(
-                                          item.id, item.size, cartItems),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
           ),
           if (cartItems.isNotEmpty) ...[
             const Divider(height: 1),
@@ -358,10 +371,11 @@ class _CartState extends State<Cart> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => CheckOut(
-                        cartItems: cartItems,
-                        totalAmount: totalAmount,
-                      ),
+                      builder:
+                          (context) => CheckOut(
+                            cartItems: cartItems,
+                            totalAmount: totalAmount,
+                          ),
                     ),
                   );
                 },
@@ -406,7 +420,10 @@ class _CartState extends State<Cart> {
   }
 
   void _increaseQuantity(
-      String id, String size, List<CartItem> currentItems) async {
+    String id,
+    String size,
+    List<CartItem> currentItems,
+  ) async {
     List<CartItem> updatedItems = List.from(currentItems);
     final item = updatedItems.firstWhere((i) => i.id == id && i.size == size);
     item.quantity++;
@@ -414,7 +431,10 @@ class _CartState extends State<Cart> {
   }
 
   void _decreaseQuantity(
-      String id, String size, List<CartItem> currentItems) async {
+    String id,
+    String size,
+    List<CartItem> currentItems,
+  ) async {
     List<CartItem> updatedItems = List.from(currentItems);
     final item = updatedItems.firstWhere((i) => i.id == id && i.size == size);
     if (item.quantity > 1) {
@@ -425,8 +445,7 @@ class _CartState extends State<Cart> {
     await _updateCartInFirestore(updatedItems);
   }
 
-  void _removeItem(
-      String id, String size, List<CartItem> currentItems) async {
+  void _removeItem(String id, String size, List<CartItem> currentItems) async {
     List<CartItem> updatedItems = List.from(currentItems);
     updatedItems.removeWhere((item) => item.id == id && item.size == size);
     await _updateCartInFirestore(updatedItems);

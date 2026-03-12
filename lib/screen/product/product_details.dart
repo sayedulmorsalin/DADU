@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dadu/screen/user/cart.dart';
 import 'package:dadu/screen/user/check_out.dart';
 import 'package:dadu/services/auth.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
@@ -132,13 +133,19 @@ class _ProductDetailsState extends State<ProductDetails> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: selectedSize == size ? Colors.green : Colors.grey[300],
+                  color:
+                      selectedSize == size
+                          ? AppColors.sizeSelected
+                          : AppColors.sizeUnselected,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   size,
                   style: TextStyle(
-                    color: selectedSize == size ? Colors.white : Colors.black,
+                    color:
+                        selectedSize == size
+                            ? AppColors.textOnPrimary
+                            : AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -173,13 +180,19 @@ class _ProductDetailsState extends State<ProductDetails> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: selectedSize == size ? Colors.green : Colors.grey[300],
+                  color:
+                      selectedSize == size
+                          ? AppColors.sizeSelected
+                          : AppColors.sizeUnselected,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   size,
                   style: TextStyle(
-                    color: selectedSize == size ? Colors.white : Colors.black,
+                    color:
+                        selectedSize == size
+                            ? AppColors.textOnPrimary
+                            : AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -217,13 +230,19 @@ class _ProductDetailsState extends State<ProductDetails> {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: selectedSize == size ? Colors.green : Colors.grey[300],
+                  color:
+                      selectedSize == size
+                          ? AppColors.sizeSelected
+                          : AppColors.sizeUnselected,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   size,
                   style: TextStyle(
-                    color: selectedSize == size ? Colors.white : Colors.black,
+                    color:
+                        selectedSize == size
+                            ? AppColors.textOnPrimary
+                            : AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -428,7 +447,7 @@ class _ProductDetailsState extends State<ProductDetails> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
         title: Text(
           widget.title,
@@ -498,7 +517,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.green,
+                          color: AppColors.success,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -614,7 +633,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orangeAccent,
+                        backgroundColor: AppColors.addToCartButton,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -635,7 +654,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                     child: ElevatedButton(
                       onPressed: _addToCart,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: AppColors.buyNowButton,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -657,7 +676,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                     child: ElevatedButton(
                       onPressed: _buyNow,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+                        backgroundColor: AppColors.shareButton,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

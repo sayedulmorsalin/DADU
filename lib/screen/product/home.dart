@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/component/gitf_box_banner.dart';
 import 'package:dadu/controller/home_controller.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/screen/product/brands.dart';
 import 'package:dadu/screen/product/bundle_deals.dart';
@@ -23,29 +24,28 @@ class Home extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       body: Obx(() => _buildCurrentPage(context)),
       bottomNavigationBar: Obx(
         () => BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
-          currentIndex: controller.selectedIndex.value >= 2
-              ? controller.selectedIndex.value + 1
-              : controller.selectedIndex.value,
-          selectedItemColor: Colors.orange,
+          currentIndex:
+              controller.selectedIndex.value >= 2
+                  ? controller.selectedIndex.value + 1
+                  : controller.selectedIndex.value,
+          selectedItemColor: AppColors.selectedNavItem,
           unselectedItemColor: Colors.black54,
-          onTap: (index) => controller.onBottomNavTap(
-            index,
-            onMessageTap: _sendMessageToWhatsApp,
-          ),
+          onTap:
+              (index) => controller.onBottomNavTap(
+                index,
+                onMessageTap: _sendMessageToWhatsApp,
+              ),
           items: [
             const BottomNavigationBarItem(
               icon: Icon(Icons.home),
               label: 'Home',
             ),
-            BottomNavigationBarItem(
-              icon: _buildCartNavIcon(),
-              label: 'Cart',
-            ),
+            BottomNavigationBarItem(icon: _buildCartNavIcon(), label: 'Cart'),
             const BottomNavigationBarItem(
               icon: Icon(Icons.message),
               label: 'Message',
@@ -93,12 +93,13 @@ class Home extends StatelessWidget {
           ),
           _buildProductGrid(),
           Obx(
-            () => controller.isLoadingMore.value
-                ? const Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                : const SizedBox.shrink(),
+            () =>
+                controller.isLoadingMore.value
+                    ? const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                    : const SizedBox.shrink(),
           ),
           const SizedBox(height: 12),
         ],
@@ -134,16 +135,17 @@ class Home extends StatelessWidget {
                 decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search),
                   suffixIcon: Obx(
-                    () => controller.searchQuery.value.trim().isNotEmpty
-                        ? IconButton(
-                            onPressed: controller.clearSearch,
-                            icon: const Icon(Icons.close),
-                          )
-                        : const SizedBox.shrink(),
+                    () =>
+                        controller.searchQuery.value.trim().isNotEmpty
+                            ? IconButton(
+                              onPressed: controller.clearSearch,
+                              icon: const Icon(Icons.close),
+                            )
+                            : const SizedBox.shrink(),
                   ),
                   filled: true,
                   isDense: true,
-                  fillColor: Colors.grey[300],
+                  fillColor: AppColors.inputFillColor,
                   border: const OutlineInputBorder(
                     borderRadius: BorderRadius.all(Radius.circular(30)),
                     borderSide: BorderSide.none,
@@ -192,16 +194,17 @@ class Home extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => ProductDetails(
-                      productid: product['id'] as String,
-                      title: product['name']?.toString() ?? '',
-                      price: product['price']?.toString() ?? '0',
-                      image20: product['image20']?.toString() ?? '',
-                      description: product['details']?.toString() ?? '',
-                      videoLink: product['videoLink']?.toString() ?? '',
-                      brand: product['brand']?.toString() ?? 'Others',
-                      image5: product['image5']?.toString() ?? '',
-                    ),
+                    builder:
+                        (_) => ProductDetails(
+                          productid: product['id'] as String,
+                          title: product['name']?.toString() ?? '',
+                          price: product['price']?.toString() ?? '0',
+                          image20: product['image20']?.toString() ?? '',
+                          description: product['details']?.toString() ?? '',
+                          videoLink: product['videoLink']?.toString() ?? '',
+                          brand: product['brand']?.toString() ?? 'Others',
+                          image5: product['image5']?.toString() ?? '',
+                        ),
                   ),
                 );
               },
@@ -253,22 +256,30 @@ class Home extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                       color: Colors.grey[300],
                     ),
-                    child: imageUrl == null || imageUrl.isEmpty
-                        ? Image.asset('assets/icon/banner.jpg', fit: BoxFit.cover)
-                        : CachedNetworkImage(
-                            imageUrl: imageUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => Container(
-                              color: Colors.grey[300],
-                              child: const Center(
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                            errorWidget: (_, __, ___) => Image.asset(
+                    child:
+                        imageUrl == null || imageUrl.isEmpty
+                            ? Image.asset(
                               'assets/icon/banner.jpg',
                               fit: BoxFit.cover,
+                            )
+                            : CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              placeholder:
+                                  (_, __) => Container(
+                                    color: Colors.grey[300],
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  ),
+                              errorWidget:
+                                  (_, __, ___) => Image.asset(
+                                    'assets/icon/banner.jpg',
+                                    fit: BoxFit.cover,
+                                  ),
                             ),
-                          ),
                   );
                 },
               ),
@@ -288,9 +299,10 @@ class Home extends StatelessWidget {
                           margin: const EdgeInsets.symmetric(horizontal: 4),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: controller.currentBannerIndex.value == index
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.5),
+                            color:
+                                controller.currentBannerIndex.value == index
+                                    ? Colors.white
+                                    : Colors.white.withValues(alpha: 0.5),
                           ),
                         ),
                       ),
@@ -344,9 +356,10 @@ class Home extends StatelessWidget {
   Widget _buildGiftBanner(BuildContext context) {
     return Obx(
       () => AnimatedSlide(
-        offset: controller.giftBannerVisible.value
-            ? Offset.zero
-            : const Offset(0, 0.2),
+        offset:
+            controller.giftBannerVisible.value
+                ? Offset.zero
+                : const Offset(0, 0.2),
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeOut,
         child: AnimatedOpacity(
@@ -385,7 +398,7 @@ class Home extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: const Color(0xFFEACECE),
+            color: AppColors.flashSaleBackground,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -487,7 +500,7 @@ class Home extends StatelessWidget {
         }
 
         return Container(
-          color: Colors.amberAccent,
+          color: AppColors.updateBanner,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -507,7 +520,9 @@ class Home extends StatelessWidget {
                     await launchUrl(uri);
                   } else if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Could not open update URL')),
+                      const SnackBar(
+                        content: Text('Could not open update URL'),
+                      ),
                     );
                   }
                 },
@@ -556,7 +571,8 @@ class Home extends StatelessWidget {
             price: '৳${product['price']?.toString() ?? '0'}',
             imagePath: product['image5']?.toString() ?? '',
             image20: product['image20']?.toString() ?? '',
-            description: product['details']?.toString() ?? 'No details available',
+            description:
+                product['details']?.toString() ?? 'No details available',
             videoLink:
                 product['videoLink']?.toString() ?? 'No videoLink available',
             brand: product['brand']?.toString() ?? 'Others',
@@ -601,7 +617,7 @@ class Home extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: Colors.red,
+                color: AppColors.badgeBackground,
                 borderRadius: BorderRadius.circular(12),
               ),
               constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
@@ -655,7 +671,9 @@ class Home extends StatelessWidget {
       'Hey I want to order something from your Apps',
     );
 
-    final appUri = Uri.parse('whatsapp://send?phone=8801782124891&text=$message');
+    final appUri = Uri.parse(
+      'whatsapp://send?phone=8801782124891&text=$message',
+    );
     final webUri = Uri.parse('https://wa.me/8801782124891?text=$message');
 
     if (await canLaunchUrl(appUri)) {
@@ -671,7 +689,9 @@ class Home extends StatelessWidget {
       context: context,
       builder: (_) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
           title: const Row(
             children: [
               Icon(Icons.notifications, color: Colors.orange),
@@ -683,10 +703,11 @@ class Home extends StatelessWidget {
             width: double.maxFinite,
             height: 350,
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('notifications')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('notifications')
+                      .orderBy('createdAt', descending: true)
+                      .snapshots(),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -702,9 +723,12 @@ class Home extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final data = docs[index].data() as Map<String, dynamic>;
                     final ts = data['createdAt'] as Timestamp?;
-                    final time = ts != null
-                        ? TimeOfDay.fromDateTime(ts.toDate()).format(context)
-                        : '';
+                    final time =
+                        ts != null
+                            ? TimeOfDay.fromDateTime(
+                              ts.toDate(),
+                            ).format(context)
+                            : '';
 
                     return Card(
                       elevation: 2,
@@ -714,16 +738,20 @@ class Home extends StatelessWidget {
                           data['highPriority'] == true
                               ? Icons.priority_high
                               : Icons.notifications,
-                          color: data['highPriority'] == true
-                              ? Colors.red
-                              : Colors.blue,
+                          color:
+                              data['highPriority'] == true
+                                  ? Colors.red
+                                  : Colors.blue,
                         ),
                         title: Text(
                           data['title']?.toString() ?? '',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(data['body']?.toString() ?? ''),
-                        trailing: Text(time, style: const TextStyle(fontSize: 12)),
+                        trailing: Text(
+                          time,
+                          style: const TextStyle(fontSize: 12),
+                        ),
                       ),
                     );
                   },
@@ -751,9 +779,10 @@ class _FlashItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = product['image5']?.toString().isNotEmpty == true
-        ? product['image5'].toString()
-        : product['image20']?.toString() ?? '';
+    final image =
+        product['image5']?.toString().isNotEmpty == true
+            ? product['image5'].toString()
+            : product['image20']?.toString() ?? '';
 
     return Container(
       decoration: BoxDecoration(
@@ -768,16 +797,17 @@ class _FlashItem extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ProductDetails(
-                productid: product['id']?.toString() ?? '',
-                title: product['name']?.toString() ?? '',
-                price: product['price']?.toString() ?? '0',
-                image20: product['image20']?.toString() ?? '',
-                description: product['details']?.toString() ?? '',
-                videoLink: product['videoLink']?.toString() ?? '',
-                brand: product['brand']?.toString() ?? 'Others',
-                image5: product['image5']?.toString() ?? '',
-              ),
+              builder:
+                  (_) => ProductDetails(
+                    productid: product['id']?.toString() ?? '',
+                    title: product['name']?.toString() ?? '',
+                    price: product['price']?.toString() ?? '0',
+                    image20: product['image20']?.toString() ?? '',
+                    description: product['details']?.toString() ?? '',
+                    videoLink: product['videoLink']?.toString() ?? '',
+                    brand: product['brand']?.toString() ?? 'Others',
+                    image5: product['image5']?.toString() ?? '',
+                  ),
             ),
           );
         },
@@ -789,26 +819,31 @@ class _FlashItem extends StatelessWidget {
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: image.isEmpty
-                      ? Container(
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.image_not_supported),
-                        )
-                      : CachedNetworkImage(
-                          imageUrl: image,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(
+                  child:
+                      image.isEmpty
+                          ? Container(
                             color: Colors.grey[300],
-                            child: const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
+                            child: const Icon(Icons.image_not_supported),
+                          )
+                          : CachedNetworkImage(
+                            imageUrl: image,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            placeholder:
+                                (_, __) => Container(
+                                  color: Colors.grey[300],
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                            errorWidget:
+                                (_, __, ___) => Container(
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.broken_image),
+                                ),
                           ),
-                          errorWidget: (_, __, ___) => Container(
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.broken_image),
-                          ),
-                        ),
                 ),
               ),
               const SizedBox(height: 6),
@@ -816,7 +851,10 @@ class _FlashItem extends StatelessWidget {
                 product['name']?.toString() ?? 'No Name',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
               const SizedBox(height: 3),
               Text(
@@ -824,7 +862,10 @@ class _FlashItem extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: remaining == 'Expired' ? Colors.red : Colors.green,
+                  color:
+                      remaining == 'Expired'
+                          ? AppColors.error
+                          : AppColors.success,
                 ),
               ),
               const SizedBox(height: 3),
@@ -832,7 +873,7 @@ class _FlashItem extends StatelessWidget {
                 'Price: ৳${product['price']?.toString() ?? '0'}',
                 style: const TextStyle(
                   fontSize: 15,
-                  color: Colors.orange,
+                  color: AppColors.selectedNavItem,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -851,9 +892,10 @@ class _ArrivalItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final image = product['image5']?.toString().isNotEmpty == true
-        ? product['image5'].toString()
-        : product['image20']?.toString() ?? '';
+    final image =
+        product['image5']?.toString().isNotEmpty == true
+            ? product['image5'].toString()
+            : product['image20']?.toString() ?? '';
 
     return Container(
       decoration: BoxDecoration(
@@ -865,16 +907,17 @@ class _ArrivalItem extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ProductDetails(
-                productid: product['id']?.toString() ?? '',
-                title: product['name']?.toString() ?? '',
-                price: product['price']?.toString() ?? '0',
-                image20: product['image20']?.toString() ?? '',
-                description: product['details']?.toString() ?? '',
-                videoLink: product['videoLink']?.toString() ?? '',
-                brand: product['brand']?.toString() ?? 'Others',
-                image5: product['image5']?.toString() ?? '',
-              ),
+              builder:
+                  (_) => ProductDetails(
+                    productid: product['id']?.toString() ?? '',
+                    title: product['name']?.toString() ?? '',
+                    price: product['price']?.toString() ?? '0',
+                    image20: product['image20']?.toString() ?? '',
+                    description: product['details']?.toString() ?? '',
+                    videoLink: product['videoLink']?.toString() ?? '',
+                    brand: product['brand']?.toString() ?? 'Others',
+                    image5: product['image5']?.toString() ?? '',
+                  ),
             ),
           );
         },
@@ -886,26 +929,31 @@ class _ArrivalItem extends StatelessWidget {
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: image.isEmpty
-                      ? Container(
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.image_not_supported),
-                        )
-                      : CachedNetworkImage(
-                          imageUrl: image,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(
+                  child:
+                      image.isEmpty
+                          ? Container(
                             color: Colors.grey[300],
-                            child: const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
+                            child: const Icon(Icons.image_not_supported),
+                          )
+                          : CachedNetworkImage(
+                            imageUrl: image,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            placeholder:
+                                (_, __) => Container(
+                                  color: Colors.grey[300],
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                            errorWidget:
+                                (_, __, ___) => Container(
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.broken_image),
+                                ),
                           ),
-                          errorWidget: (_, __, ___) => Container(
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.broken_image),
-                          ),
-                        ),
                 ),
               ),
               const SizedBox(height: 6),
@@ -913,14 +961,17 @@ class _ArrivalItem extends StatelessWidget {
                 product['name']?.toString() ?? 'No Name',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
               const SizedBox(height: 3),
               Text(
                 'Price: ৳${product['price']?.toString() ?? '0'}',
                 style: const TextStyle(
                   fontSize: 15,
-                  color: Colors.orange,
+                  color: AppColors.selectedNavItem,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -931,4 +982,3 @@ class _ArrivalItem extends StatelessWidget {
     );
   }
 }
-

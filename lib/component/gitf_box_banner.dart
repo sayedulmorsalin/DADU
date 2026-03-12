@@ -1,3 +1,4 @@
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class GiftBoxBanner extends StatefulWidget {
@@ -11,7 +12,6 @@ class GiftBoxBanner extends StatefulWidget {
 
 class _GiftBoxBannerState extends State<GiftBoxBanner>
     with SingleTickerProviderStateMixin {
-
   late final AnimationController controller;
 
   late final Animation<double> floatAnim;
@@ -86,7 +86,6 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
               child: Stack(
                 alignment: Alignment.bottomLeft,
                 children: [
-
                   Transform.translate(
                     offset: Offset(0, floatAnim.value),
                     child: SizedBox(
@@ -97,8 +96,10 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                         children: [
                           Transform.scale(
                             scale: popScale.value,
-                            child: const Text("🎉",
-                                style: TextStyle(fontSize: 40)),
+                            child: const Text(
+                              "🎉",
+                              style: TextStyle(fontSize: 40),
+                            ),
                           ),
 
                           /// box body
@@ -106,7 +107,7 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                             width: 65,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: Colors.redAccent,
+                              color: AppColors.giftBoxBody,
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
@@ -120,7 +121,7 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                                 width: 72,
                                 height: 22,
                                 decoration: BoxDecoration(
-                                  color: Colors.yellow,
+                                  color: AppColors.giftBoxLid,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
@@ -130,7 +131,6 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                       ),
                     ),
                   ),
-
                 ],
               ),
             );

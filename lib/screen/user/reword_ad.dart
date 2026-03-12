@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../services/firebase.dart';
@@ -26,14 +27,12 @@ class _RewordAdState extends State<RewordAd> {
 
   Timer? _countdownTimer;
 
-
   bool get isCooldownActive =>
       cooldownEnd != null && DateTime.now().isBefore(cooldownEnd!);
 
   bool get isDailyLimitReached => adsWatchedToday >= 50;
 
   int get adsLeftBeforeCooldown => (10 - adsInRow).clamp(0, 10);
-
 
   Future<void> loadUserData() async {
     final coinData = await db.getUserCoins();
@@ -80,7 +79,6 @@ class _RewordAdState extends State<RewordAd> {
     });
   }
 
-
   void _resetDailyIfNeeded() {
     final now = DateTime.now();
 
@@ -124,7 +122,6 @@ class _RewordAdState extends State<RewordAd> {
 
     return "$minutes:$seconds";
   }
-
 
   RewardedAd? _rewardedAd;
 
@@ -177,7 +174,6 @@ class _RewordAdState extends State<RewordAd> {
       return;
     }
 
-
     if (adsInRow >= 10) {
       cooldownEnd = DateTime.now().add(const Duration(minutes: 30));
 
@@ -222,7 +218,6 @@ class _RewordAdState extends State<RewordAd> {
     _rewardedAd = null;
   }
 
-
   void convertCoins() async {
     if (silverCoins <= 0) {
       ScaffoldMessenger.of(
@@ -250,7 +245,6 @@ class _RewordAdState extends State<RewordAd> {
       ),
     );
   }
-
 
   BannerAd? _bannerAd;
 
@@ -281,7 +275,6 @@ class _RewordAdState extends State<RewordAd> {
 
     _bannerAd!.load();
   }
-
 
   Widget coinCard(String title, double value, IconData icon, Color color) {
     return Expanded(
@@ -316,8 +309,6 @@ class _RewordAdState extends State<RewordAd> {
     );
   }
 
-
-
   @override
   void initState() {
     super.initState();
@@ -340,7 +331,6 @@ class _RewordAdState extends State<RewordAd> {
     super.dispose();
   }
 
-
   @override
   Widget build(BuildContext context) {
     final disableButton = isCooldownActive || isDailyLimitReached;
@@ -358,7 +348,7 @@ class _RewordAdState extends State<RewordAd> {
 
         centerTitle: true,
 
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: AppColors.rewardPrimary,
       ),
 
       body: Column(
@@ -375,7 +365,7 @@ class _RewordAdState extends State<RewordAd> {
                         "Silver",
                         silverCoins,
                         Icons.monetization_on,
-                        Colors.grey,
+                        AppColors.coinSilver,
                       ),
 
                       IconButton(
@@ -390,7 +380,7 @@ class _RewordAdState extends State<RewordAd> {
                         "Gold",
                         goldCoins,
                         Icons.workspace_premium,
-                        Colors.amber,
+                        AppColors.coinGold,
                       ),
                     ],
                   ),
@@ -405,13 +395,18 @@ class _RewordAdState extends State<RewordAd> {
                     child: ElevatedButton.icon(
                       onPressed: disableButton ? null : showRewardedAd,
 
-                      icon: const Icon(Icons.play_arrow, color: Colors.white,),
+                      icon: const Icon(Icons.play_arrow, color: Colors.white),
 
-                      label: const Text("Watch Ad",style: TextStyle(color: Colors.white),),
+                      label: const Text(
+                        "Watch Ad",
+                        style: TextStyle(color: Colors.white),
+                      ),
 
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
-                            disableButton ? Colors.grey : Colors.deepPurple,
+                            disableButton
+                                ? Colors.grey
+                                : AppColors.rewardPrimary,
 
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),

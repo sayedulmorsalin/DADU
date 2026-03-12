@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dadu/data/district_upozila.dart';
 import 'package:dadu/screen/product/home.dart';
 import 'package:dadu/services/auth.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/api.dart';
@@ -51,12 +52,14 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
         String? profilePicUrl;
         if (_profileImage != null) {
           try {
-            profilePicUrl = await _imageService.uploadProfileImage(_profileImage!);
+            profilePicUrl = await _imageService.uploadProfileImage(
+              _profileImage!,
+            );
           } catch (e) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text("Profile image upload failed: ${e.toString()}"),
-                backgroundColor: Colors.orange,
+                backgroundColor: AppColors.warning,
               ),
             );
           }
@@ -79,7 +82,7 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Error: ${e.toString()}"),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       } finally {
@@ -99,9 +102,9 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Color(0xFFf2f2ce),
+        backgroundColor: AppColors.scaffoldBackground,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -127,27 +130,26 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        
                         GestureDetector(
                           onTap: _pickImage,
                           child: CircleAvatar(
                             radius: 50,
                             backgroundColor: Colors.grey[300],
-                            child: _profileImage == null
-                                ? Icon(Icons.add_a_photo, size: 40)
-                                : ClipOval(
-                              child: Image.file(
-                                _profileImage!,
-                                fit: BoxFit.cover,
-                                width: 100,
-                                height: 100,
-                              ),
-                            ),
+                            child:
+                                _profileImage == null
+                                    ? Icon(Icons.add_a_photo, size: 40)
+                                    : ClipOval(
+                                      child: Image.file(
+                                        _profileImage!,
+                                        fit: BoxFit.cover,
+                                        width: 100,
+                                        height: 100,
+                                      ),
+                                    ),
                           ),
                         ),
                         SizedBox(height: 16),
 
-                        
                         TextFormField(
                           controller: _nameController,
                           decoration: InputDecoration(
@@ -157,11 +159,14 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          validator: (value) => value!.isEmpty ? "Please enter your name" : null,
+                          validator:
+                              (value) =>
+                                  value!.isEmpty
+                                      ? "Please enter your name"
+                                      : null,
                         ),
                         SizedBox(height: 16),
 
-                        
                         TextFormField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
@@ -181,32 +186,30 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                         ),
                         SizedBox(height: 16),
 
-                        
                         SizedBox(
                           height: 150,
                           child: LayoutBuilder(
                             builder: (context, constraints) {
                               return constraints.maxWidth > 600
                                   ? Row(
-                                children: [
-                                  _buildDistrictDropdown(),
-                                  SizedBox(width: 12),
-                                  _buildThanaDropdown(),
-                                ],
-                              )
+                                    children: [
+                                      _buildDistrictDropdown(),
+                                      SizedBox(width: 12),
+                                      _buildThanaDropdown(),
+                                    ],
+                                  )
                                   : Column(
-                                children: [
-                                  _buildDistrictDropdown(),
-                                  SizedBox(height: 16),
-                                  _buildThanaDropdown(),
-                                ],
-                              );
+                                    children: [
+                                      _buildDistrictDropdown(),
+                                      SizedBox(height: 16),
+                                      _buildThanaDropdown(),
+                                    ],
+                                  );
                             },
                           ),
                         ),
                         SizedBox(height: 16),
 
-                        
                         TextFormField(
                           controller: _addressController,
                           decoration: InputDecoration(
@@ -216,31 +219,37 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
-                          validator: (value) => value!.isEmpty ? "Please enter your address" : null,
+                          validator:
+                              (value) =>
+                                  value!.isEmpty
+                                      ? "Please enter your address"
+                                      : null,
                         ),
                         SizedBox(height: 24),
 
-                        
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             padding: EdgeInsets.symmetric(vertical: 14),
-                            backgroundColor: Colors.green,
+                            backgroundColor: AppColors.signUpButton,
                             minimumSize: Size(double.infinity, 50),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                           onPressed: _isLoading ? null : _submitForm,
-                          child: _isLoading
-                              ? CircularProgressIndicator(color: Colors.white)
-                              : Text(
-                            "Sign Up",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                          child:
+                              _isLoading
+                                  ? CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
+                                  : Text(
+                                    "Sign Up",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                         ),
                       ],
                     ),
@@ -263,14 +272,20 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
           labelText: "District",
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        items: _districtUpozila.districtToThanas.keys
-            .map<DropdownMenuItem<String>>((String value) {
-          return DropdownMenuItem<String>(value: value, child: Text(value));
-        }).toList(),
-        onChanged: (String? newValue) => setState(() {
-          _selectedDistrict = newValue;
-          _selectedThana = null;
-        }),
+        items:
+            _districtUpozila.districtToThanas.keys
+                .map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                })
+                .toList(),
+        onChanged:
+            (String? newValue) => setState(() {
+              _selectedDistrict = newValue;
+              _selectedThana = null;
+            }),
         validator: (value) => value == null ? "Please select a district" : null,
       ),
     );
@@ -285,17 +300,19 @@ class _SignUpScreen2State extends State<SignUpScreen2> {
           labelText: "Thana",
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        items: _selectedDistrict != null
-            ? _districtUpozila.districtToThanas[_selectedDistrict!]!
-            .map<DropdownMenuItem<String>>((String value) {
-          return DropdownMenuItem<String>(
-            value: value,
-            child: Text(value),
-          );
-        })
-            .toList()
-            : [],
-        onChanged: (String? newValue) => setState(() => _selectedThana = newValue),
+        items:
+            _selectedDistrict != null
+                ? _districtUpozila.districtToThanas[_selectedDistrict!]!
+                    .map<DropdownMenuItem<String>>((String value) {
+                      return DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      );
+                    })
+                    .toList()
+                : [],
+        onChanged:
+            (String? newValue) => setState(() => _selectedThana = newValue),
         validator: (value) {
           if (_selectedDistrict != null && value == null) {
             return "Please select a thana";

@@ -3,6 +3,7 @@ import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:dadu/screen/product/product_details.dart';
 import 'package:dadu/services/auth.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/firebase.dart';
@@ -68,7 +69,9 @@ class ProductItem extends StatelessWidget {
     }
 
     try {
-      final cartItems = Map<String, dynamic>.from(userDetails?['cart_item'] ?? {});
+      final cartItems = Map<String, dynamic>.from(
+        userDetails?['cart_item'] ?? {},
+      );
       const size = 'default';
 
       if (cartItems.containsKey(productId)) {
@@ -95,7 +98,7 @@ class ProductItem extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to add item: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
         ),
       );
     }
@@ -109,16 +112,17 @@ class ProductItem extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProductDetails(
-              productid: productId,
-              title: title,
-              price: price,
-              image20: image20,
-              description: description,
-              videoLink: videoLink,
-              brand: brand,
-              image5: image5,
-            ),
+            builder:
+                (context) => ProductDetails(
+                  productid: productId,
+                  title: title,
+                  price: price,
+                  image20: image20,
+                  description: description,
+                  videoLink: videoLink,
+                  brand: brand,
+                  image5: image5,
+                ),
           ),
         );
       },
@@ -129,23 +133,27 @@ class ProductItem extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(10),
+              ),
               child: CachedNetworkImage(
                 imageUrl: imagePath,
                 height: 135,
                 width: double.infinity,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  height: 135,
-                  alignment: Alignment.center,
-                  color: Colors.grey[300],
-                  child: const CircularProgressIndicator(),
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  height: 135,
-                  color: Colors.grey[300],
-                  child: const Icon(Icons.broken_image),
-                ),
+                placeholder:
+                    (_, __) => Container(
+                      height: 135,
+                      alignment: Alignment.center,
+                      color: Colors.grey[300],
+                      child: const CircularProgressIndicator(),
+                    ),
+                errorWidget:
+                    (_, __, ___) => Container(
+                      height: 135,
+                      color: Colors.grey[300],
+                      child: const Icon(Icons.broken_image),
+                    ),
               ),
             ),
             Padding(

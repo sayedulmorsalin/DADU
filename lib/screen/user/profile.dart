@@ -4,6 +4,7 @@ import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:dadu/screen/product/home.dart';
 import 'package:dadu/screen/user/reword_ad.dart';
 import 'package:dadu/services/auth.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -85,7 +86,8 @@ class _ProfileState extends State<Profile> {
           Thana = userDetails?['thana'] ?? '';
           Phone = userDetails?['phone'] ?? '';
           profilePic = userDetails?['profile_pic'] ?? '';
-          freeDeliveryInfo = (userDetails?["free_delivery_info"] as num?)?.toDouble() ?? 0.0;
+          freeDeliveryInfo =
+              (userDetails?["free_delivery_info"] as num?)?.toDouble() ?? 0.0;
           toReceive = userDetails?["to_receive"];
           toShip = userDetails?["to_ship"];
           toVerify = userDetails?["to_verify"];
@@ -125,10 +127,7 @@ class _ProfileState extends State<Profile> {
       );
     }
 
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => page),
-    );
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => page));
 
     if (mounted) {
       _isRedirecting = false;
@@ -331,7 +330,7 @@ class _ProfileState extends State<Profile> {
                             }
                           },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[700],
+                    backgroundColor: AppColors.profileAccent,
                   ),
                   child:
                       _isSaving
@@ -524,7 +523,7 @@ class _ProfileState extends State<Profile> {
                             }
                           },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[700],
+                    backgroundColor: AppColors.profileAccent,
                   ),
                   child:
                       _isSaving
@@ -725,7 +724,7 @@ class _ProfileState extends State<Profile> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: const Color(0xFFf2f2ce),
+        backgroundColor: AppColors.scaffoldBackground,
         appBar: AppBar(
           title: Text(
             'My Profile',
@@ -750,7 +749,7 @@ class _ProfileState extends State<Profile> {
 
     if (_error.isNotEmpty) {
       return Scaffold(
-        backgroundColor: const Color(0xFFf2f2ce),
+        backgroundColor: AppColors.scaffoldBackground,
         appBar: AppBar(
           title: const Text(
             'My Profile',
@@ -761,7 +760,7 @@ class _ProfileState extends State<Profile> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error, size: 48, color: Colors.red),
+              const Icon(Icons.error, size: 48, color: AppColors.error),
               const SizedBox(height: 16),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -783,7 +782,7 @@ class _ProfileState extends State<Profile> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
         title: const Text(
           'My Profile',
@@ -948,7 +947,7 @@ class _ProfileState extends State<Profile> {
       children: [
         Stack(
           children: [
-            Icon(icon, size: 28, color: Colors.blue[700]),
+            Icon(icon, size: 28, color: AppColors.profileAccent),
             if (count > 0)
               Positioned(
                 right: 0,
@@ -1089,7 +1088,10 @@ class _ProfileState extends State<Profile> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.blue[800]!, Colors.blue[600]!],
+          colors: [
+            AppColors.loyaltyGradientStart,
+            AppColors.loyaltyGradientEnd,
+          ],
         ),
       ),
       child: Row(
@@ -1112,7 +1114,7 @@ class _ProfileState extends State<Profile> {
                 LinearProgressIndicator(
                   value: freeDelivery,
                   backgroundColor: Colors.white.withOpacity(0.3),
-                  color: Colors.amber,
+                  color: AppColors.coinGold,
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(3),
                 ),
@@ -1217,7 +1219,10 @@ class _ProfileState extends State<Profile> {
     return ListTile(
       contentPadding: EdgeInsets.zero,
 
-      leading: Icon(item['icon'], color: customColor ?? Colors.blue[700]),
+      leading: Icon(
+        item['icon'],
+        color: customColor ?? AppColors.profileAccent,
+      ),
 
       title: Text(
         item['title'],

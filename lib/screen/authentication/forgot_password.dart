@@ -1,5 +1,6 @@
 import 'package:dadu/screen/authentication/sign_in.dart';
-import 'package:dadu/services/auth.dart'; 
+import 'package:dadu/services/auth.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 class ForgotPassword extends StatefulWidget {
@@ -13,8 +14,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   bool _isLoading = false;
-  final Auth _auth = Auth(); 
-
+  final Auth _auth = Auth();
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
@@ -26,16 +26,14 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         final error = await _auth.sendPasswordResetEmail(email);
 
         if (error == null) {
-          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("Password reset link sent to $email"),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success,
               duration: Duration(seconds: 5),
             ),
           );
 
-          
           Future.delayed(Duration(seconds: 2), () {
             Navigator.pushReplacement(
               context,
@@ -43,11 +41,10 @@ class _ForgotPasswordState extends State<ForgotPassword> {
             );
           });
         } else {
-          
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(error),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.error,
               duration: Duration(seconds: 5),
             ),
           );
@@ -71,9 +68,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Color(0xFFf2f2ce),
+        backgroundColor: AppColors.scaffoldBackground,
         elevation: 0,
         title: Text("Forgot password"),
       ),
@@ -92,7 +89,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    
                     Container(
                       margin: EdgeInsets.only(bottom: 24),
                       child: Text(
@@ -100,12 +96,11 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.yellow[800],
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
 
-                    
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -126,47 +121,45 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
                     SizedBox(height: 24),
 
-                    
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: Colors.yellow[800],
+                          backgroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         onPressed: _isLoading ? null : _submitForm,
-                        child: _isLoading
-                            ? CircularProgressIndicator(color: Colors.white)
-                            : Text(
-                          "Get password reset link",
-                          style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold
-                          ),
-                        ),
+                        child:
+                            _isLoading
+                                ? CircularProgressIndicator(color: Colors.white)
+                                : Text(
+                                  "Get password reset link",
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                       ),
                     ),
 
                     SizedBox(height: 16),
 
-                    
                     TextButton(
                       onPressed: () {
                         Navigator.pushReplacement(
                           context,
-                          MaterialPageRoute(builder: (context) => SignInScreen()),
+                          MaterialPageRoute(
+                            builder: (context) => SignInScreen(),
+                          ),
                         );
                       },
                       child: Text(
                         "Back to Sign In",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.blue,
-                        ),
+                        style: TextStyle(fontSize: 16, color: Colors.blue),
                       ),
                     ),
                   ],

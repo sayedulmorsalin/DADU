@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/user/profile.dart';
 import 'package:dadu/services/api.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,7 +15,6 @@ import '../../services/firebase.dart';
 class CheckOut extends StatefulWidget {
   final List<CartItem> cartItems;
   final double totalAmount;
-
 
   const CheckOut({
     super.key,
@@ -84,8 +84,7 @@ class _CheckOutState extends State<CheckOut> {
           _calculateDeliveryCharge();
         });
       }
-    } catch (e) {
-    }
+    } catch (e) {}
   }
 
   Future<void> _loadPaymentNumber() async {
@@ -179,7 +178,6 @@ class _CheckOutState extends State<CheckOut> {
   Future<void> _submitOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
-    
     if (!_freeDeliverySelected &&
         (_paymentMethod == 'bkash' ||
             _paymentMethod == 'nagad' ||
@@ -188,17 +186,16 @@ class _CheckOutState extends State<CheckOut> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please upload payment proof screenshot'),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
     }
-    if(needupdate){
-
+    if (needupdate) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please update your app first'),
-          backgroundColor: Colors.orange,
+          backgroundColor: AppColors.warning,
         ),
       );
       return;
@@ -212,12 +209,12 @@ class _CheckOutState extends State<CheckOut> {
         throw Exception("User not authenticated");
       }
 
-      
       if (!_freeDeliverySelected && _paymentProofImage != null) {
-        paymentProof = await _imageService.uploadProfileImage(_paymentProofImage!);
+        paymentProof = await _imageService.uploadProfileImage(
+          _paymentProofImage!,
+        );
       }
 
-      
       final userUpdateData = {
         "to_verify": FieldValue.arrayUnion([
           {
@@ -230,15 +227,21 @@ class _CheckOutState extends State<CheckOut> {
             'thana': selectedThana ?? '',
             'paymentMethod': _paymentMethod,
             'paymentProof': paymentProof ?? '',
-            'items': widget.cartItems.map((item) => {
-              'id': item.id,
-              'name': item.name,
-              'price': item.price,
-              'quantity': item.quantity,
-              'imageUrl': item.imageUrl,
-              'order_uid': '${DateTime.now().millisecondsSinceEpoch}-${item.id}',
-              'size': item.size,
-            }).toList(),
+            'items':
+                widget.cartItems
+                    .map(
+                      (item) => {
+                        'id': item.id,
+                        'name': item.name,
+                        'price': item.price,
+                        'quantity': item.quantity,
+                        'imageUrl': item.imageUrl,
+                        'order_uid':
+                            '${DateTime.now().millisecondsSinceEpoch}-${item.id}',
+                        'size': item.size,
+                      },
+                    )
+                    .toList(),
             'subtotal': widget.totalAmount,
             'deliveryCharge': deliveryCharge,
             'total': _total,
@@ -247,10 +250,10 @@ class _CheckOutState extends State<CheckOut> {
             'baseDeliveryCharge': baseDeliveryCharge,
             'deliveryPoints': deliveryPoints,
             'order_date': DateTime.now().millisecondsSinceEpoch,
-          }
+          },
         ]),
         'freeDeliveryUsed': _freeDeliverySelected,
-        'cart_item': {}, 
+        'cart_item': {},
       };
 
       await db.updateUserDetailsAfterBuy(currentUser.email!, userUpdateData);
@@ -260,7 +263,7 @@ class _CheckOutState extends State<CheckOut> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Order failed: ${e.toString().split(':').last}"),
-          backgroundColor: Colors.red,
+          backgroundColor: AppColors.error,
         ),
       );
     } finally {
@@ -487,7 +490,7 @@ class _CheckOutState extends State<CheckOut> {
                   right: 8,
                   child: CircleAvatar(
                     radius: 16,
-                    backgroundColor: Colors.red,
+                    backgroundColor: AppColors.error,
                     child: IconButton(
                       icon: const Icon(
                         Icons.close,
@@ -623,12 +626,10 @@ class _CheckOutState extends State<CheckOut> {
     );
   }
 
-  int colorr = 0xFFf2f2ce;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(colorr),
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
         title: const Text(
           'Checkout',
@@ -717,8 +718,11 @@ class _CheckOutState extends State<CheckOut> {
                   if (version != null && version > 1) {
                     needupdate = true;
                     return Container(
-                      color: Colors.amberAccent,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      color: AppColors.updateBanner,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -736,7 +740,9 @@ class _CheckOutState extends State<CheckOut> {
                                 await launchUrl(Uri.parse(url));
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Could not launch $url')),
+                                  SnackBar(
+                                    content: Text('Could not launch $url'),
+                                  ),
                                 );
                               }
                             },
@@ -747,7 +753,7 @@ class _CheckOutState extends State<CheckOut> {
                     );
                   }
                 }
-                return const SizedBox.shrink(); 
+                return const SizedBox.shrink();
               },
             ),
             SizedBox(

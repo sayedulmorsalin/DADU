@@ -1,4 +1,6 @@
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+
 class OrderListScreen extends StatelessWidget {
   final String status;
   final List<dynamic>? orders;
@@ -9,16 +11,17 @@ class OrderListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('$status Orders')),
-      body: orders == null || orders!.isEmpty
-          ? const Center(child: Text('No orders found'))
-          : ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: orders!.length,
-        itemBuilder: (context, index) {
-          final order = orders![index];
-          return _buildOrderCard(order);
-        },
-      ),
+      body:
+          orders == null || orders!.isEmpty
+              ? const Center(child: Text('No orders found'))
+              : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: orders!.length,
+                itemBuilder: (context, index) {
+                  final order = orders![index];
+                  return _buildOrderCard(order);
+                },
+              ),
     );
   }
 
@@ -76,7 +79,10 @@ class OrderListScreen extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Quantity', style: TextStyle(color: Colors.grey)),
+                    const Text(
+                      'Quantity',
+                      style: TextStyle(color: Colors.grey),
+                    ),
                     Text(
                       '${order['quantity']}',
                       style: const TextStyle(fontWeight: FontWeight.bold),
@@ -91,7 +97,7 @@ class OrderListScreen extends StatelessWidget {
                       '৳${((order['price'] as num) * (order['quantity'] as num)).toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.green,
+                        color: AppColors.success,
                       ),
                     ),
                   ],

@@ -1,7 +1,7 @@
-
 import 'package:dadu/screen/authentication/forgot_password.dart';
 import 'package:dadu/screen/product/home.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../../services/auth.dart';
@@ -53,7 +53,7 @@ class _SignInScreenState extends State<SignInScreen> {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error), backgroundColor: Colors.red),
+            SnackBar(content: Text(error), backgroundColor: AppColors.error),
           );
         }
       } finally {
@@ -72,9 +72,9 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: Color(0xFFf2f2ce),
+        backgroundColor: AppColors.scaffoldBackground,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black),
@@ -96,7 +96,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    
                     Container(
                       margin: EdgeInsets.only(bottom: 24),
                       child: Text(
@@ -104,12 +103,11 @@ class _SignInScreenState extends State<SignInScreen> {
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
-                          color: Colors.yellow[800],
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
 
-                    
                     TextFormField(
                       controller: _emailController,
                       decoration: InputDecoration(
@@ -130,7 +128,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
                     SizedBox(height: 16),
 
-                    
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -170,15 +167,16 @@ class _SignInScreenState extends State<SignInScreen> {
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
                             ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ForgotPassword(),
-                                  ),
-                                );
-                              },
+                            recognizer:
+                                TapGestureRecognizer()
+                                  ..onTap = () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ForgotPassword(),
+                                      ),
+                                    );
+                                  },
                           ),
                         ),
                       ],
@@ -186,21 +184,24 @@ class _SignInScreenState extends State<SignInScreen> {
 
                     SizedBox(height: 24),
 
-                    
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           padding: EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: Colors.yellow[800],
+                          backgroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         onPressed: _isLoading ? null : _submitForm,
-                        child: _isLoading
-                            ? CircularProgressIndicator(color: Colors.white)
-                            : Text("Sign In", style: TextStyle(fontSize: 16)),
+                        child:
+                            _isLoading
+                                ? CircularProgressIndicator(color: Colors.white)
+                                : Text(
+                                  "Sign In",
+                                  style: TextStyle(fontSize: 16),
+                                ),
                       ),
                     ),
 
@@ -221,15 +222,16 @@ class _SignInScreenState extends State<SignInScreen> {
                               fontWeight: FontWeight.bold,
                               color: Colors.blue,
                             ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SignUpScreen(),
-                                  ),
-                                );
-                              },
+                            recognizer:
+                                TapGestureRecognizer()
+                                  ..onTap = () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => SignUpScreen(),
+                                      ),
+                                    );
+                                  },
                           ),
                         ),
                       ],

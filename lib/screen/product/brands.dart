@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/product/product_item.dart';
+import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import '../../services/firebase.dart';
 
@@ -27,7 +28,8 @@ class _BrandsState extends State<Brands> {
     fetchInitialProducts();
 
     scrollController.addListener(() {
-      if (scrollController.position.pixels >= scrollController.position.maxScrollExtent - 200 &&
+      if (scrollController.position.pixels >=
+              scrollController.position.maxScrollExtent - 200 &&
           !isLoadingMore &&
           !isLoading) {
         fetchMoreProducts();
@@ -50,7 +52,10 @@ class _BrandsState extends State<Brands> {
     if (lastDocument == null) return;
 
     setState(() => isLoadingMore = true);
-    final moreProducts = await db.getBrandedProduct(widget.brandName, startAfterDoc: lastDocument);
+    final moreProducts = await db.getBrandedProduct(
+      widget.brandName,
+      startAfterDoc: lastDocument,
+    );
 
     if (moreProducts.isNotEmpty) {
       lastDocument = moreProducts.last['docSnapshot'];
@@ -63,9 +68,12 @@ class _BrandsState extends State<Brands> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFf2f2ce),
+      backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
-        title: Text(widget.brandName, style: TextStyle(fontWeight: FontWeight.bold),),
+        title: Text(
+          widget.brandName,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         centerTitle: true,
         elevation: 0,
@@ -73,13 +81,12 @@ class _BrandsState extends State<Brands> {
       body: ListView(
         controller: scrollController,
         children: [
-          
           Container(
             padding: const EdgeInsets.all(24),
             color: Colors.grey[200],
             child: Center(
               child: Row(
-                mainAxisSize: MainAxisSize.min, 
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Image.asset(
                     widget.brandLogo,
@@ -124,13 +131,14 @@ class _BrandsState extends State<Brands> {
                   productId: product['id'],
                   title: product['name'] ?? 'No Title',
                   price: '৳${product['price']?.toString() ?? '0'}',
-                  imagePath: product['image5'] ?? 'assets/demo_item_image/d1.jpg',
-                  image20: product['image20'] ?? 'assets/demo_item_image/d1.jpg',
+                  imagePath:
+                      product['image5'] ?? 'assets/demo_item_image/d1.jpg',
+                  image20:
+                      product['image20'] ?? 'assets/demo_item_image/d1.jpg',
                   description: product['details'] ?? 'No details available',
-                  videoLink:
-                  product['videoLink'] ?? 'No videoLink available',
-                  brand: product['brand']?? 'no brand found ',
-                  image5: product['image5']??'assets/demo_item_image/d1.jpg',
+                  videoLink: product['videoLink'] ?? 'No videoLink available',
+                  brand: product['brand'] ?? 'no brand found ',
+                  image5: product['image5'] ?? 'assets/demo_item_image/d1.jpg',
                 );
               },
             ),
