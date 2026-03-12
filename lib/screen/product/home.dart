@@ -174,7 +174,7 @@ class Home extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 12),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(10),
           boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
         ),
@@ -449,7 +449,7 @@ class Home extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppColors.newArrivalBackground,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -786,7 +786,7 @@ class _FlashItem extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(10),
         boxShadow: const [
           BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
@@ -899,7 +899,7 @@ class _ArrivalItem extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(10),
       ),
       child: GestureDetector(

@@ -523,7 +523,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                       const SizedBox(height: 10),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
+                          backgroundColor: AppColors.cardBackground,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 12,
@@ -613,7 +613,7 @@ class _ProductDetailsState extends State<ProductDetails> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.cardBackground,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),

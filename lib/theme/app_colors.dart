@@ -4,7 +4,7 @@ class AppColors {
   AppColors._();
 
   // ─── Core Brand Colors ───
-  static const Color scaffoldBackground = Color.fromARGB(255, 255, 255, 255);
+  static const Color scaffoldBackground = Colors.white;
   static const Color primary = Color(0xFFF9A825); // Colors.yellow[800]
   static const Color selectedNavItem = Colors.orange;
 
@@ -27,7 +27,14 @@ class AppColors {
 
   // ─── Card / Surface Colors ───
   static const Color cardBackground = Colors.white;
-  static const Color surfaceLight = Color.fromARGB(255, 255, 255, 255); // Colors.grey[100]
+  static const Color surfaceLight = Color.fromARGB(
+    255,
+    255,
+    255,
+    255,
+  ); 
+  
+  // Colors.grey[100]
   static Color inputFillColor = Colors.grey[300]!;
 
   // ─── Size Selector Colors ───
@@ -35,8 +42,8 @@ class AppColors {
   static Color sizeUnselected = Colors.grey[300]!;
 
   // ─── Section Colors ───
-  static const Color flashSaleBackground = Color(0xFFEACECE);
-  static const Color newArrivalBackground = Colors.white;
+  static const Color flashSaleBackground = Color(0xFFFFF3E0);
+  static const Color newArrivalBackground = Color.fromARGB(255, 245, 249, 241);
 
   // ─── Reward / Loyalty Colors ───
   static const Color rewardPrimary = Colors.deepPurple;

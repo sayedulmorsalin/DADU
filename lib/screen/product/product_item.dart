@@ -127,7 +127,8 @@ class ProductItem extends StatelessWidget {
         );
       },
       child: Card(
-        elevation: 0,
+        color: AppColors.cardBackground,
+        elevation: 1,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
