@@ -36,8 +36,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  // ================= SUBMIT =================
-
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       if (!_acceptTerms) {
@@ -82,12 +80,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  // ================= BUILD =================
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // dismiss keyboard when tapping outside
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         resizeToAvoidBottomInset: true,
@@ -103,7 +98,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
         ),
 
-        // ================= SCROLL FIX =================
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -118,7 +112,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
 
-                    // ================= FORM =================
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -126,7 +119,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          /// Logo / Title
                           Center(
                             child: Text(
                               "DADU",
@@ -140,7 +132,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                           const SizedBox(height: 24),
 
-                          /// EMAIL
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
@@ -163,7 +154,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                           const SizedBox(height: 16),
 
-                          /// PASSWORD
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
@@ -197,7 +187,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                           const SizedBox(height: 16),
 
-                          /// CONFIRM PASSWORD
                           TextFormField(
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
@@ -232,7 +221,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                           const SizedBox(height: 16),
 
-                          /// TERMS
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -268,7 +256,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             ],
                           ),
 
-                          /// PRIVACY POLICY
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -306,7 +293,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                           const SizedBox(height: 10),
 
-                          /// SIGN IN
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
@@ -340,7 +326,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                           const SizedBox(height: 24),
 
-                          /// BUTTON
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(

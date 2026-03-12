@@ -28,13 +28,11 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
       duration: const Duration(milliseconds: 2400),
     )..repeat();
 
-    /// Floating
     floatAnim = TweenSequence([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: -8.0), weight: 1),
       TweenSequenceItem(tween: Tween(begin: -8.0, end: 0.0), weight: 1),
     ]).animate(controller);
 
-    /// Lid slide
     lidSlide = TweenSequence([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: -55.0), weight: 1),
       TweenSequenceItem(tween: ConstantTween(-55.0), weight: 1),
@@ -42,7 +40,6 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
       TweenSequenceItem(tween: ConstantTween(0.0), weight: 1),
     ]).animate(controller);
 
-    /// Lid rotate
     lidRotate = TweenSequence([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: -0.5), weight: 1),
       TweenSequenceItem(tween: ConstantTween(-0.5), weight: 1),
@@ -50,7 +47,6 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
       TweenSequenceItem(tween: ConstantTween(0.0), weight: 1),
     ]).animate(controller);
 
-    /// 🎉 pop
     popScale = TweenSequence([
       TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.6), weight: 1),
       TweenSequenceItem(tween: ConstantTween(1.6), weight: 1),
@@ -102,7 +98,6 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                             ),
                           ),
 
-                          /// box body
                           Container(
                             width: 65,
                             height: 48,
@@ -112,7 +107,6 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                             ),
                           ),
 
-                          /// lid
                           Transform.translate(
                             offset: Offset(0, lidSlide.value),
                             child: Transform.rotate(
