@@ -720,7 +720,7 @@ class _CheckOutState extends State<CheckOut> {
               builder: (context, snapshot) {
                 if (snapshot.hasData && snapshot.data != null) {
                   final version = int.tryParse(snapshot.data!);
-                  if (version != null && version > 1) {
+                  if (version != null && version > 2) {
                     needupdate = true;
                     return Container(
                       color: AppColors.updateBanner,
@@ -740,7 +740,7 @@ class _CheckOutState extends State<CheckOut> {
                           ),
                           TextButton(
                             onPressed: () async {
-                              const url = 'https://appnest-seven.vercel.app/';
+                              const url = 'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
                               if (await canLaunchUrl(Uri.parse(url))) {
                                 await launchUrl(Uri.parse(url));
                               } else {

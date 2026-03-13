@@ -502,7 +502,7 @@ class Home extends StatelessWidget {
         }
 
         final version = int.tryParse(snapshot.data!);
-        if (version == null || version <= 1) {
+        if (version == null || version <= 2) {
           return const SizedBox.shrink();
         }
 
@@ -521,7 +521,7 @@ class Home extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () async {
-                  const url = 'https://appnest-seven.vercel.app/';
+                  const url = 'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
                   final uri = Uri.parse(url);
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri);
