@@ -1,9 +1,8 @@
-import 'dart:io';
+
 import 'package:dadu/screen/user/cart.dart';
 import 'package:dadu/screen/user/check_out.dart';
 import 'package:dadu/services/auth.dart';
 import 'package:dadu/theme/app_colors.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -13,9 +12,6 @@ import '../../model/cart_model.dart';
 import '../../services/firebase.dart';
 import '../authentication/sign_up_2nd.dart';
 import '../authentication/sign_up_first.dart';
-import 'dart:typed_data';
-import 'package:flutter/services.dart';
-import 'package:flutter_file_downloader/flutter_file_downloader.dart';
 
 class ProductDetails extends StatefulWidget {
   final String title;
