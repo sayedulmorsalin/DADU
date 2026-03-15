@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dadu/data/district_upozila.dart';
+import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:dadu/screen/product/home.dart';
 import 'package:dadu/screen/user/reword_ad.dart';
@@ -7,6 +8,7 @@ import 'package:dadu/services/auth.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api.dart';
@@ -1624,10 +1626,14 @@ class _ProfileState extends State<Profile> {
 
                   try {
                     await _auth.signOut();
+                    if (Get.isRegistered<HomeController>()) {
+                      Get.find<HomeController>().resetToHomeTab();
+                    }
 
-                    Navigator.pushReplacement(
+                    Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(builder: (context) => Home()),
+                      (route) => false,
                     );
 
                     ScaffoldMessenger.of(context).showSnackBar(

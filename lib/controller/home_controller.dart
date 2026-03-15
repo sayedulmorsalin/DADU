@@ -49,6 +49,7 @@ class HomeController extends GetxController {
   Fuzzy<String>? fuzzy;
 
   Timer? _bannerAutoScrollTimer;
+  StreamSubscription<User?>? _authSubscription;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
   _cartSubscription;
   Worker? _searchDebounce;
@@ -62,6 +63,10 @@ class HomeController extends GetxController {
       _runSearch,
       time: const Duration(milliseconds: 140),
     );
+
+    _authSubscription = auth.authStateChanges.listen((_) {
+      unawaited(_ensureAuthState());
+    });
 
     _attachPaginationListener();
     unawaited(_bootstrap());
@@ -95,10 +100,16 @@ class HomeController extends GetxController {
       }
     } else {
       loggedIn.value = false;
+      profileImageUrl.value = null;
       cartCount.value = 0;
+      selectedIndex.value = 0;
       _cartSubscription?.cancel();
       _cartSubscription = null;
     }
+  }
+
+  void resetToHomeTab() {
+    selectedIndex.value = 0;
   }
 
   Future<void> _loadSecondaryDataStaggered() async {
@@ -319,6 +330,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     _bannerAutoScrollTimer?.cancel();
+    _authSubscription?.cancel();
     _cartSubscription?.cancel();
     _searchDebounce?.dispose();
     scrollController.dispose();

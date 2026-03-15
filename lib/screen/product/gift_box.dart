@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dadu/screen/authentication/sign_up_2nd.dart';
+import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/services/firebase.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -190,6 +192,62 @@ class _GiftBoxState extends State<GiftBox> {
   }
 
   Future<void> _handleTryGift() async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SignUpScreen()),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You do not have an account please create one'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (currentUser.isAnonymous) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SignUpScreen()),
+      );
+      return;
+    }
+
+    final userEmail = currentUser.email;
+    if (userEmail == null || userEmail.isEmpty) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SignUpScreen()),
+      );
+      return;
+    }
+
+    final userDetails = await _db.getUserDetails(userEmail);
+    final address = userDetails?['address']?.toString().trim() ?? '';
+
+    if (address.isEmpty) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => SignUpScreen2()),
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please complete your profile to claim the gift.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     setState(() => _checkingGift = true);
 
     await _db.setGiftStatus(true);
