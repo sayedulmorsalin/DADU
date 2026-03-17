@@ -1,6 +1,7 @@
 import 'package:dadu/screen/product/home.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -10,6 +11,7 @@ void main() async {
 
   await Firebase.initializeApp();
   await dotenv.load(fileName: ".env");
+  await FirebaseMessaging.instance.subscribeToTopic("allUsers");
 
   runApp(const MyApp());
 
