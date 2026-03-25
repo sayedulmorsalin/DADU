@@ -470,7 +470,7 @@ class _CheckOutState extends State<CheckOut> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Payment Proof( upload screenshoot of your send money ) (আপনার পাঠানো টাকার স্ক্রিনশট আপলোড করুন)',
+          'Payment Proof( upload screenshoot of Delivery charge ) (আপনার পাঠানো ডেলিভারি চার্জের স্ক্রিনশট আপলোড করুন)',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
