@@ -30,9 +30,9 @@ class _RewordAdState extends State<RewordAd> {
   bool get isCooldownActive =>
       cooldownEnd != null && DateTime.now().isBefore(cooldownEnd!);
 
-  bool get isDailyLimitReached => adsWatchedToday >= 50;
+  bool get isDailyLimitReached => adsWatchedToday >= 20;
 
-  int get adsLeftBeforeCooldown => (10 - adsInRow).clamp(0, 10);
+  int get adsLeftBeforeCooldown => (5 - adsInRow).clamp(0, 5);
 
   Future<void> loadUserData() async {
     final coinData = await db.getUserCoins();
@@ -181,7 +181,7 @@ class _RewordAdState extends State<RewordAd> {
       return;
     }
 
-    if (adsInRow >= 10) {
+    if (adsInRow >= 5) {
       cooldownEnd = DateTime.now().add(const Duration(minutes: 30));
 
       adsInRow = 0;
@@ -441,18 +441,18 @@ class _RewordAdState extends State<RewordAd> {
 
                       child: Column(
                         children: [
-                          Text("Daily Ads $adsWatchedToday / 50"),
+                          Text("Daily Ads $adsWatchedToday / 20"),
 
                           LinearProgressIndicator(
-                            value: (adsWatchedToday / 50).clamp(0.0, 1.0),
+                            value: (adsWatchedToday / 20).clamp(0.0, 1.0),
                           ),
 
                           const SizedBox(height: 12),
 
-                          Text("Continuous Ads $adsInRow / 10"),
+                          Text("Continuous Ads $adsInRow / 5"),
 
                           LinearProgressIndicator(
-                            value: (adsInRow / 10).clamp(0.0, 1.0),
+                            value: (adsInRow / 5).clamp(0.0, 1.0),
                           ),
 
                           const SizedBox(height: 8),
