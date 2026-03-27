@@ -13,6 +13,10 @@ class RewordAd extends StatefulWidget {
 }
 
 class _RewordAdState extends State<RewordAd> {
+  static const int _dailyAdLimit = 30;
+  static const int _adsPerRowLimit = 3;
+  static const Duration _cooldownDuration = Duration(minutes: 30);
+
   final dataBase db = dataBase();
 
   double silverCoins = 0;
@@ -30,9 +34,10 @@ class _RewordAdState extends State<RewordAd> {
   bool get isCooldownActive =>
       cooldownEnd != null && DateTime.now().isBefore(cooldownEnd!);
 
-  bool get isDailyLimitReached => adsWatchedToday >= 20;
+  bool get isDailyLimitReached => adsWatchedToday >= _dailyAdLimit;
 
-  int get adsLeftBeforeCooldown => (5 - adsInRow).clamp(0, 5);
+  int get adsLeftBeforeCooldown =>
+      (_adsPerRowLimit - adsInRow).clamp(0, _adsPerRowLimit);
 
   Future<void> loadUserData() async {
     final coinData = await db.getUserCoins();
@@ -181,8 +186,8 @@ class _RewordAdState extends State<RewordAd> {
       return;
     }
 
-    if (adsInRow >= 5) {
-      cooldownEnd = DateTime.now().add(const Duration(minutes: 30));
+    if (adsInRow >= _adsPerRowLimit) {
+      cooldownEnd = DateTime.now().add(_cooldownDuration);
 
       adsInRow = 0;
 
@@ -212,6 +217,13 @@ class _RewordAdState extends State<RewordAd> {
         adsInRow++;
 
         adsWatchedToday++;
+
+        if (adsInRow >= _adsPerRowLimit) {
+          cooldownEnd = DateTime.now().add(_cooldownDuration);
+          adsInRow = 0;
+          startCountdownTimer();
+        }
+
         await db.increaseGlobalMonthlyRewardAdCount();
 
         await db.updateSilverCoin(silverCoins);
@@ -441,18 +453,22 @@ class _RewordAdState extends State<RewordAd> {
 
                       child: Column(
                         children: [
-                          Text("Daily Ads $adsWatchedToday / 20"),
+                          Text("Daily Ads $adsWatchedToday / $_dailyAdLimit"),
 
                           LinearProgressIndicator(
-                            value: (adsWatchedToday / 20).clamp(0.0, 1.0),
+                            value:
+                                (adsWatchedToday / _dailyAdLimit).clamp(0.0, 1.0),
                           ),
 
                           const SizedBox(height: 12),
 
-                          Text("Continuous Ads $adsInRow / 5"),
+                          Text(
+                            "Continuous Ads $adsInRow / $_adsPerRowLimit",
+                          ),
 
                           LinearProgressIndicator(
-                            value: (adsInRow / 5).clamp(0.0, 1.0),
+                            value:
+                                (adsInRow / _adsPerRowLimit).clamp(0.0, 1.0),
                           ),
 
                           const SizedBox(height: 8),
