@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/user/profile.dart';
 import 'package:dadu/services/api.dart';
+import 'package:dadu/services/app_version_service.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -718,10 +719,21 @@ class _CheckOutState extends State<CheckOut> {
             StreamBuilder<String?>(
               stream: db.getVersionStream(),
               builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data != null) {
-                  final version = int.tryParse(snapshot.data!);
-                  if (version != null && version > 2) {
-                    needupdate = true;
+                if (!snapshot.hasData || snapshot.data == null) {
+                  needupdate = false;
+                  return const SizedBox.shrink();
+                }
+
+                return FutureBuilder<bool>(
+                  future: AppVersionService.isUpdateRequired(snapshot.data!),
+                  builder: (context, versionSnapshot) {
+                    final requiresUpdate = versionSnapshot.data == true;
+                    needupdate = requiresUpdate;
+
+                    if (!requiresUpdate) {
+                      return const SizedBox.shrink();
+                    }
+
                     return Container(
                       color: AppColors.updateBanner,
                       padding: const EdgeInsets.symmetric(
@@ -740,7 +752,8 @@ class _CheckOutState extends State<CheckOut> {
                           ),
                           TextButton(
                             onPressed: () async {
-                              const url = 'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
+                              const url =
+                                  'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
                               if (await canLaunchUrl(Uri.parse(url))) {
                                 await launchUrl(Uri.parse(url));
                               } else {
@@ -756,9 +769,8 @@ class _CheckOutState extends State<CheckOut> {
                         ],
                       ),
                     );
-                  }
-                }
-                return const SizedBox.shrink();
+                  },
+                );
               },
             ),
             SizedBox(

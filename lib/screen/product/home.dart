@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/component/gitf_box_banner.dart';
 import 'package:dadu/controller/home_controller.dart';
+import 'package:dadu/services/app_version_service.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/screen/product/brands.dart';
@@ -501,42 +502,47 @@ class Home extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        final version = int.tryParse(snapshot.data!);
-        if (version == null || version <= 2) {
-          return const SizedBox.shrink();
-        }
+        return FutureBuilder<bool>(
+          future: AppVersionService.isUpdateRequired(snapshot.data!),
+          builder: (context, versionSnapshot) {
+            if (versionSnapshot.data != true) {
+              return const SizedBox.shrink();
+            }
 
-        return Container(
-          color: AppColors.updateBanner,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Row(
+            return Container(
+              color: AppColors.updateBanner,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Icon(Icons.update),
-                  SizedBox(width: 8),
-                  Text('New update is available!'),
+                  const Row(
+                    children: [
+                      Icon(Icons.update),
+                      SizedBox(width: 8),
+                      Text('New update is available!'),
+                    ],
+                  ),
+                  TextButton(
+                    onPressed: () async {
+                      const url =
+                          'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      } else if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not open update URL'),
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('UPDATE'),
+                  ),
                 ],
               ),
-              TextButton(
-                onPressed: () async {
-                  const url = 'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
-                  final uri = Uri.parse(url);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri);
-                  } else if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Could not open update URL'),
-                      ),
-                    );
-                  }
-                },
-                child: const Text('UPDATE'),
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
