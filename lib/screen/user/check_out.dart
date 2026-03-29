@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/user/profile.dart';
@@ -49,8 +50,10 @@ class _CheckOutState extends State<CheckOut> {
   int deliveryCharge = 0;
   double _total = 0;
   bool needupdate = false;
+  bool _versionCheckLoading = true;
   String? _paymentNumber;
   bool _paymentNumberLoading = false;
+  StreamSubscription<String?>? _versionSubscription;
 
   final Auth _auth = Auth();
   final ImageService _imageService = ImageService();
@@ -60,6 +63,21 @@ class _CheckOutState extends State<CheckOut> {
     super.initState();
     _loadUserAddress();
     _loadPaymentNumber();
+    _listenForVersionUpdates();
+  }
+
+  void _listenForVersionUpdates() {
+    _versionSubscription = db.getVersionStream().listen((remoteVersion) async {
+      final requiresUpdate =
+          remoteVersion != null &&
+          await AppVersionService.isUpdateRequired(remoteVersion);
+
+      if (!mounted) return;
+      setState(() {
+        needupdate = requiresUpdate;
+        _versionCheckLoading = false;
+      });
+    });
   }
 
   Future<void> _loadUserAddress() async {
@@ -170,6 +188,7 @@ class _CheckOutState extends State<CheckOut> {
 
   @override
   void dispose() {
+    _versionSubscription?.cancel();
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
@@ -632,6 +651,43 @@ class _CheckOutState extends State<CheckOut> {
     );
   }
 
+  Widget _buildUpdateBanner() {
+    if (_versionCheckLoading || !needupdate) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      color: AppColors.updateBanner,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.update),
+              SizedBox(width: 8),
+              Text("Update required to place orders"),
+            ],
+          ),
+          TextButton(
+            onPressed: () async {
+              const url =
+                  'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
+              if (await canLaunchUrl(Uri.parse(url))) {
+                await launchUrl(Uri.parse(url));
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Could not launch $url')),
+                );
+              }
+            },
+            child: const Text("UPDATE"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -716,68 +772,15 @@ class _CheckOutState extends State<CheckOut> {
             const SizedBox(height: 16),
             _buildOrderSummary(),
             const SizedBox(height: 32),
-            StreamBuilder<String?>(
-              stream: db.getVersionStream(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData || snapshot.data == null) {
-                  needupdate = false;
-                  return const SizedBox.shrink();
-                }
-
-                return FutureBuilder<bool>(
-                  future: AppVersionService.isUpdateRequired(snapshot.data!),
-                  builder: (context, versionSnapshot) {
-                    final requiresUpdate = versionSnapshot.data == true;
-                    needupdate = requiresUpdate;
-
-                    if (!requiresUpdate) {
-                      return const SizedBox.shrink();
-                    }
-
-                    return Container(
-                      color: AppColors.updateBanner,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: const [
-                              Icon(Icons.update),
-                              SizedBox(width: 8),
-                              Text("New update is available!"),
-                            ],
-                          ),
-                          TextButton(
-                            onPressed: () async {
-                              const url =
-                                  'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
-                              if (await canLaunchUrl(Uri.parse(url))) {
-                                await launchUrl(Uri.parse(url));
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Could not launch $url'),
-                                  ),
-                                );
-                              }
-                            },
-                            child: const Text("UPDATE"),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+            _buildUpdateBanner(),
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _isProcessing ? null : _submitOrder,
+                onPressed:
+                    (_isProcessing || _versionCheckLoading || needupdate)
+                        ? null
+                        : _submitOrder,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   shape: RoundedRectangleBorder(
@@ -789,9 +792,13 @@ class _CheckOutState extends State<CheckOut> {
                         ? const CircularProgressIndicator(
                           color: AppColors.textOnPrimary,
                         )
-                        : const Text(
-                          'PLACE ORDER',
-                          style: TextStyle(
+                        : Text(
+                          needupdate
+                              ? 'UPDATE APP TO ORDER'
+                              : _versionCheckLoading
+                              ? 'CHECKING APP VERSION...'
+                              : 'PLACE ORDER',
+                          style: const TextStyle(
                             fontSize: 18,
                             color: AppColors.textOnPrimary,
                           ),
