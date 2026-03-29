@@ -1,9 +1,14 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dadu/services/app_version_service.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/firebase.dart';
+
+const String _playStoreUrl =
+    'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
 
 class RewordAd extends StatefulWidget {
   const RewordAd({super.key});
@@ -11,7 +16,6 @@ class RewordAd extends StatefulWidget {
   @override
   State<RewordAd> createState() => _RewordAdState();
 }
-
 
 class _RewordAdState extends State<RewordAd> {
   static const int _dailyAdLimit = 30;
@@ -31,6 +35,10 @@ class _RewordAdState extends State<RewordAd> {
   DateTime today = DateTime.now();
 
   Timer? _countdownTimer;
+  StreamSubscription<String?>? _versionSubscription;
+  bool _versionCheckLoading = true;
+  bool _updateRequired = false;
+  bool _rewardAccessInitialized = false;
 
   bool get isCooldownActive =>
       cooldownEnd != null && DateTime.now().isBefore(cooldownEnd!);
@@ -41,8 +49,14 @@ class _RewordAdState extends State<RewordAd> {
       (_adsPerRowLimit - adsInRow).clamp(0, _adsPerRowLimit);
 
   Future<void> loadUserData() async {
+    if (_versionCheckLoading || _updateRequired) return;
+
     final coinData = await db.getUserCoins();
-    silverRewardRate = await db.getRewardAdSilverRate();
+    final rewardRate = await db.getRewardAdSilverRate();
+
+    if (!mounted || _updateRequired) return;
+
+    silverRewardRate = rewardRate;
 
     if (coinData != null) {
       silverCoins = (coinData["silver_coin"] ?? 0).toDouble();
@@ -51,6 +65,8 @@ class _RewordAdState extends State<RewordAd> {
     }
 
     final info = await db.getRewardAdInfo();
+
+    if (!mounted || _updateRequired) return;
 
     if (info != null) {
       adsWatchedToday = info["ads_today"] ?? 0;
@@ -68,6 +84,8 @@ class _RewordAdState extends State<RewordAd> {
 
     _resetDailyIfNeeded();
 
+    if (_updateRequired) return;
+
     if (mounted) setState(() {});
 
     startCountdownTimer();
@@ -76,11 +94,8 @@ class _RewordAdState extends State<RewordAd> {
   Future<void> saveRewardInfo() async {
     await db.updateRewardAdInfo({
       "ads_today": adsWatchedToday,
-
       "ads_in_row": adsInRow,
-
       "cooldown_end": cooldownEnd,
-
       "last_watch_day": today,
     });
   }
@@ -105,6 +120,10 @@ class _RewordAdState extends State<RewordAd> {
 
   void startCountdownTimer() {
     _countdownTimer?.cancel();
+
+    if (_versionCheckLoading || _updateRequired || !isCooldownActive) {
+      return;
+    }
 
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
@@ -132,35 +151,46 @@ class _RewordAdState extends State<RewordAd> {
   RewardedAd? _rewardedAd;
 
   void loadRewardedAd() {
+    if (_versionCheckLoading || _updateRequired) return;
+
     RewardedAd.load(
       adUnitId: 'ca-app-pub-3831772617470767/9649646618',
-
       request: const AdRequest(),
-
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
+          if (!mounted || _updateRequired) {
+            ad.dispose();
+            return;
+          }
+
           _rewardedAd = ad;
 
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
 
+              if (!mounted || _updateRequired) return;
+
               loadRewardedAd();
             },
-
             onAdFailedToShowFullScreenContent: (ad, error) {
               ad.dispose();
+
+              if (!mounted || _updateRequired) return;
 
               loadRewardedAd();
             },
           );
         },
-
         onAdFailedToLoad: (error) {
+          if (!mounted || _updateRequired) return;
+
           print("Rewarded failed: ${error.code} ${error.message}");
 
           // Retry loading after a delay
           Future.delayed(const Duration(seconds: 5), () {
+            if (!mounted || _updateRequired) return;
+
             loadRewardedAd();
           });
         },
@@ -169,6 +199,14 @@ class _RewordAdState extends State<RewordAd> {
   }
 
   void showRewardedAd() {
+    if (_versionCheckLoading || _updateRequired) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please update your app first")),
+      );
+
+      return;
+    }
+
     _resetDailyIfNeeded();
 
     if (isDailyLimitReached) {
@@ -239,6 +277,14 @@ class _RewordAdState extends State<RewordAd> {
   }
 
   void convertCoins() async {
+    if (_versionCheckLoading || _updateRequired) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please update your app first")),
+      );
+
+      return;
+    }
+
     if (silverCoins <= 0) {
       ScaffoldMessenger.of(
         context,
@@ -271,22 +317,23 @@ class _RewordAdState extends State<RewordAd> {
   bool _bannerReady = false;
 
   void loadBannerAd() {
+    if (_versionCheckLoading || _updateRequired) return;
+
     _bannerAd = BannerAd(
       size: AdSize.banner,
-
       adUnitId: 'ca-app-pub-3831772617470767/2220866700',
-
       request: const AdRequest(),
-
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          if (!mounted) return;
+          if (!mounted || _updateRequired) {
+            ad.dispose();
+            return;
+          }
 
           setState(() {
             _bannerReady = true;
           });
         },
-
         onAdFailedToLoad: (ad, error) {
           print("Banner failed: ${error.code} ${error.message}");
           ad.dispose();
@@ -297,27 +344,133 @@ class _RewordAdState extends State<RewordAd> {
     _bannerAd!.load();
   }
 
+  void _disposeRewardAds() {
+    _countdownTimer?.cancel();
+    _rewardedAd?.dispose();
+    _rewardedAd = null;
+    _bannerAd?.dispose();
+    _bannerAd = null;
+    _bannerReady = false;
+  }
+
+  void _initializeRewardAccess() {
+    if (_rewardAccessInitialized) return;
+
+    _rewardAccessInitialized = true;
+    loadUserData();
+    loadRewardedAd();
+    loadBannerAd();
+  }
+
+  void _listenForVersionUpdates() {
+    _versionSubscription = db.getVersionStream().listen(
+      (remoteVersion) async {
+        final requiresUpdate = remoteVersion != null &&
+            await AppVersionService.isUpdateRequired(remoteVersion);
+
+        if (!mounted) return;
+
+        if (requiresUpdate) {
+          _disposeRewardAds();
+        }
+
+        setState(() {
+          _updateRequired = requiresUpdate;
+          _versionCheckLoading = false;
+
+          if (requiresUpdate) {
+            _rewardAccessInitialized = false;
+          }
+        });
+
+        if (!requiresUpdate) {
+          _initializeRewardAccess();
+        }
+      },
+      onError: (_) {
+        if (!mounted) return;
+
+        setState(() {
+          _updateRequired = false;
+          _versionCheckLoading = false;
+        });
+
+        _initializeRewardAccess();
+      },
+    );
+  }
+
+  Future<void> _openUpdatePage() async {
+    final uri = Uri.parse(_playStoreUrl);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+          const SnackBar(content: Text("Could not open update URL")));
+    }
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(child: CircularProgressIndicator());
+  }
+
+  Widget _buildUpdateRequiredState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.system_update, size: 54, color: AppColors.warning),
+                const SizedBox(height: 16),
+                const Text(
+                  "Update required",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "Please update the app to access reward ads and earn coins.",
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: _openUpdatePage,
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text("Update App"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.rewardPrimary,
+                    foregroundColor: AppColors.textOnPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget coinCard(String title, double value, IconData icon, Color color) {
     return Expanded(
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-
         elevation: 6,
-
         child: Padding(
           padding: const EdgeInsets.all(18),
-
           child: Column(
             children: [
               Icon(icon, size: 42, color: color),
-
               const SizedBox(height: 8),
-
               Text(title),
-
               Text(
                 value.toStringAsFixed(2),
-
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -333,22 +486,13 @@ class _RewordAdState extends State<RewordAd> {
   @override
   void initState() {
     super.initState();
-
-    loadUserData();
-
-    loadRewardedAd();
-
-    loadBannerAd();
+    _listenForVersionUpdates();
   }
 
   @override
   void dispose() {
-    _countdownTimer?.cancel();
-
-    _rewardedAd?.dispose();
-
-    _bannerAd?.dispose();
-
+    _versionSubscription?.cancel();
+    _disposeRewardAds();
     super.dispose();
   }
 
@@ -366,163 +510,143 @@ class _RewordAdState extends State<RewordAd> {
             fontWeight: FontWeight.bold,
           ),
         ),
-
         centerTitle: true,
-
         backgroundColor: AppColors.rewardPrimary,
       ),
-
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      coinCard(
-                        "Silver",
-                        silverCoins,
-                        Icons.monetization_on,
-                        AppColors.coinSilver,
-                      ),
-
-                      IconButton(
-                        iconSize: 45,
-
-                        onPressed: convertCoins,
-
-                        icon: const Icon(Icons.swap_horiz),
-                      ),
-
-                      coinCard(
-                        "Gold",
-                        goldCoins,
-                        Icons.workspace_premium,
-                        AppColors.coinGold,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  SizedBox(
-                    width: double.infinity,
-
-                    height: 60,
-
-                    child: ElevatedButton.icon(
-                      onPressed: disableButton ? null : showRewardedAd,
-
-                      icon: const Icon(
-                        Icons.play_arrow,
-                        color: AppColors.textOnPrimary,
-                      ),
-
-                      label: const Text(
-                        "Watch Ad",
-                        style: TextStyle(color: AppColors.textOnPrimary),
-                      ),
-
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            disableButton
-                                ? AppColors.disabledColor
-                                : AppColors.rewardPrimary,
-
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  Text(
-                    "Per ad reward: +${silverRewardRate.toStringAsFixed(2)} Silver",
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-
-                  const SizedBox(height: 25),
-
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(15),
-
-                      child: Column(
-                        children: [
-                          Text("Daily Ads $adsWatchedToday / $_dailyAdLimit"),
-
-                          LinearProgressIndicator(
-                            value:
-                                (adsWatchedToday / _dailyAdLimit).clamp(0.0, 1.0),
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          Text(
-                            "Continuous Ads $adsInRow / $_adsPerRowLimit",
-                          ),
-
-                          LinearProgressIndicator(
-                            value:
-                                (adsInRow / _adsPerRowLimit).clamp(0.0, 1.0),
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          Text(
-                            "$adsLeftBeforeCooldown ads left before cooldown",
-
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-
-                          if (isCooldownActive)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 15),
-
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-
-                                decoration: BoxDecoration(
-                                  color: AppColors.error.withOpacity(0.1),
-
-                                  borderRadius: BorderRadius.circular(12),
+      body: _versionCheckLoading
+          ? _buildLoadingState()
+          : _updateRequired
+              ? _buildUpdateRequiredState()
+              : Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                coinCard(
+                                  "Silver",
+                                  silverCoins,
+                                  Icons.monetization_on,
+                                  AppColors.coinSilver,
                                 ),
-
-                                child: Text(
-                                  "Next ads in : ${cooldownText()}",
-
-                                  style: const TextStyle(
-                                    color: AppColors.error,
-
-                                    fontWeight: FontWeight.bold,
+                                IconButton(
+                                  iconSize: 45,
+                                  onPressed: convertCoins,
+                                  icon: const Icon(Icons.swap_horiz),
+                                ),
+                                coinCard(
+                                  "Gold",
+                                  goldCoins,
+                                  Icons.workspace_premium,
+                                  AppColors.coinGold,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 30),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 60,
+                              child: ElevatedButton.icon(
+                                onPressed:
+                                    disableButton ? null : showRewardedAd,
+                                icon: const Icon(
+                                  Icons.play_arrow,
+                                  color: AppColors.textOnPrimary,
+                                ),
+                                label: const Text(
+                                  "Watch Ad",
+                                  style:
+                                      TextStyle(color: AppColors.textOnPrimary),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: disableButton
+                                      ? AppColors.disabledColor
+                                      : AppColors.rewardPrimary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
                                 ),
                               ),
                             ),
-                        ],
+                            const SizedBox(height: 12),
+                            Text(
+                              "Per ad reward: +${silverRewardRate.toStringAsFixed(2)} Silver",
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 25),
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(15),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                        "Daily Ads $adsWatchedToday / $_dailyAdLimit"),
+                                    LinearProgressIndicator(
+                                      value: (adsWatchedToday / _dailyAdLimit)
+                                          .clamp(
+                                        0.0,
+                                        1.0,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      "Continuous Ads $adsInRow / $_adsPerRowLimit",
+                                    ),
+                                    LinearProgressIndicator(
+                                      value: (adsInRow / _adsPerRowLimit).clamp(
+                                        0.0,
+                                        1.0,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "$adsLeftBeforeCooldown ads left before cooldown",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (isCooldownActive)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 15),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(10),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.error.withOpacity(
+                                              0.1,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            "Next ads in : ${cooldownText()}",
+                                            style: const TextStyle(
+                                              color: AppColors.error,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          if (_bannerReady)
-            SizedBox(
-              width: _bannerAd!.size.width.toDouble(),
-
-              height: _bannerAd!.size.height.toDouble(),
-
-              child: AdWidget(ad: _bannerAd!),
-            ),
-        ],
-      ),
+                    if (_bannerReady && _bannerAd != null)
+                      SizedBox(
+                        width: _bannerAd!.size.width.toDouble(),
+                        height: _bannerAd!.size.height.toDouble(),
+                        child: AdWidget(ad: _bannerAd!),
+                      ),
+                  ],
+                ),
     );
   }
 }

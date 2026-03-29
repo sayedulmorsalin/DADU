@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:dadu/data/district_upozila.dart';
 import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:dadu/screen/product/home.dart';
 import 'package:dadu/screen/user/reword_ad.dart';
+import 'package:dadu/services/app_version_service.dart';
 import 'package:dadu/services/auth.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +17,9 @@ import '../../services/api.dart';
 import '../../services/firebase.dart';
 import '../authentication/sign_up_first.dart';
 import 'order_list_screen.dart';
+
+const String _playStoreUrl =
+    'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -50,11 +55,45 @@ class _ProfileState extends State<Profile> {
   String _error = '';
   bool _isUpdatingProfilePic = false;
   bool _isRedirecting = false;
+  bool _rewardAdUpdateRequired = false;
+  bool _rewardAdVersionLoading = true;
+  StreamSubscription<String?>? _versionSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadProfileData();
+    _listenForVersionUpdates();
+  }
+
+  void _listenForVersionUpdates() {
+    _versionSubscription = db.getVersionStream().listen(
+      (remoteVersion) async {
+        final requiresUpdate = remoteVersion != null &&
+            await AppVersionService.isUpdateRequired(remoteVersion);
+
+        if (!mounted) return;
+
+        setState(() {
+          _rewardAdUpdateRequired = requiresUpdate;
+          _rewardAdVersionLoading = false;
+        });
+      },
+      onError: (_) {
+        if (!mounted) return;
+
+        setState(() {
+          _rewardAdUpdateRequired = false;
+          _rewardAdVersionLoading = false;
+        });
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _versionSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadProfileData() async {
@@ -197,14 +236,12 @@ class _ProfileState extends State<Profile> {
                                 CircleAvatar(
                                   radius: 50,
                                   backgroundColor: AppColors.surfaceGrey,
-                                  backgroundImage:
-                                      tempProfilePic.isNotEmpty
-                                          ? NetworkImage(tempProfilePic)
-                                          : null,
-                                  child:
-                                      tempProfilePic.isEmpty
-                                          ? const Icon(Icons.person, size: 50)
-                                          : null,
+                                  backgroundImage: tempProfilePic.isNotEmpty
+                                      ? NetworkImage(tempProfilePic)
+                                      : null,
+                                  child: tempProfilePic.isEmpty
+                                      ? const Icon(Icons.person, size: 50)
+                                      : null,
                                 ),
                               ],
                             ),
@@ -232,7 +269,6 @@ class _ProfileState extends State<Profile> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     TextFormField(
                       initialValue: tempName,
                       onChanged: (value) => tempName = value,
@@ -246,7 +282,6 @@ class _ProfileState extends State<Profile> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     TextFormField(
                       initialValue: tempPhone,
                       onChanged: (value) => tempPhone = value,
@@ -261,7 +296,6 @@ class _ProfileState extends State<Profile> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     TextFormField(
                       initialValue: Email,
                       enabled: false,
@@ -286,68 +320,66 @@ class _ProfileState extends State<Profile> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed:
-                      _isSaving
-                          ? null
-                          : () async {
-                            setDialogState(() => _isSaving = true);
+                  onPressed: _isSaving
+                      ? null
+                      : () async {
+                          setDialogState(() => _isSaving = true);
 
-                            try {
-                              Map<String, dynamic> updatedData = {
-                                'name': tempName,
-                                'phone': tempPhone,
-                                'profile_pic': tempProfilePic,
-                              };
+                          try {
+                            Map<String, dynamic> updatedData = {
+                              'name': tempName,
+                              'phone': tempPhone,
+                              'profile_pic': tempProfilePic,
+                            };
 
-                              bool success = await db.updateUserDetails(
-                                Email,
-                                updatedData,
-                              );
+                            bool success = await db.updateUserDetails(
+                              Email,
+                              updatedData,
+                            );
 
-                              if (success) {
-                                setState(() {
-                                  Name = tempName;
-                                  Phone = tempPhone;
-                                  profilePic = tempProfilePic;
-                                });
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(mainContext).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Profile updated successfully',
-                                    ),
-                                    duration: Duration(seconds: 2),
+                            if (success) {
+                              setState(() {
+                                Name = tempName;
+                                Phone = tempPhone;
+                                profilePic = tempProfilePic;
+                              });
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(mainContext).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Profile updated successfully',
                                   ),
-                                );
-                              } else {
-                                throw Exception('Failed to update Firestore');
-                              }
-                            } catch (e) {
-                              setDialogState(() => _isSaving = false);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("Error saving data: $e"),
+                                  duration: Duration(seconds: 2),
                                 ),
                               );
+                            } else {
+                              throw Exception('Failed to update Firestore');
                             }
-                          },
+                          } catch (e) {
+                            setDialogState(() => _isSaving = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Error saving data: $e"),
+                              ),
+                            );
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.profileAccent,
                   ),
-                  child:
-                      _isSaving
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: AppColors.textOnPrimary,
-                              strokeWidth: 2,
-                            ),
-                          )
-                          : const Text(
-                            'SAVE',
-                            style: TextStyle(color: AppColors.textOnPrimary),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: AppColors.textOnPrimary,
+                            strokeWidth: 2,
                           ),
+                        )
+                      : const Text(
+                          'SAVE',
+                          style: TextStyle(color: AppColors.textOnPrimary),
+                        ),
                 ),
               ],
             );
@@ -393,18 +425,18 @@ class _ProfileState extends State<Profile> {
                       value: tempDistrict,
                       items:
                           districtUpozila.districtToThanas.keys.map((district) {
-                            return DropdownMenuItem(
-                              value: district,
-                              child: Text(district),
-                            );
-                          }).toList(),
+                        return DropdownMenuItem(
+                          value: district,
+                          child: Text(district),
+                        );
+                      }).toList(),
                       onChanged: (newDistrict) {
                         if (newDistrict != null) {
                           setDialogState(() {
                             tempDistrict = newDistrict;
                             thanaList =
                                 districtUpozila.districtToThanas[newDistrict] ??
-                                [];
+                                    [];
                             tempThana =
                                 thanaList.isNotEmpty ? thanaList.first : '';
                           });
@@ -420,26 +452,23 @@ class _ProfileState extends State<Profile> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
                     DropdownButtonFormField<String>(
                       value: thanaList.isNotEmpty ? tempThana : null,
-                      items:
-                          thanaList.map((thana) {
-                            return DropdownMenuItem(
-                              value: thana,
-                              child: Text(thana),
-                            );
-                          }).toList(),
-                      onChanged:
-                          thanaList.isNotEmpty
-                              ? (newThana) {
-                                if (newThana != null) {
-                                  setDialogState(() {
-                                    tempThana = newThana;
-                                  });
-                                }
+                      items: thanaList.map((thana) {
+                        return DropdownMenuItem(
+                          value: thana,
+                          child: Text(thana),
+                        );
+                      }).toList(),
+                      onChanged: thanaList.isNotEmpty
+                          ? (newThana) {
+                              if (newThana != null) {
+                                setDialogState(() {
+                                  tempThana = newThana;
+                                });
                               }
-                              : null,
+                            }
+                          : null,
                       decoration: const InputDecoration(
                         labelText: 'Thana/Upazila',
                         border: OutlineInputBorder(),
@@ -451,7 +480,6 @@ class _ProfileState extends State<Profile> {
                       disabledHint: const Text('No thanas available'),
                     ),
                     const SizedBox(height: 20),
-
                     TextFormField(
                       initialValue: tempAddress,
                       onChanged: (value) => tempAddress = value,
@@ -478,69 +506,67 @@ class _ProfileState extends State<Profile> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed:
-                      _isSaving
-                          ? null
-                          : () async {
-                            setDialogState(() => _isSaving = true);
+                  onPressed: _isSaving
+                      ? null
+                      : () async {
+                          setDialogState(() => _isSaving = true);
 
-                            try {
-                              Map<String, dynamic> updatedData = {
-                                'district': tempDistrict,
-                                'thana': tempThana,
-                                'address': tempAddress,
-                              };
+                          try {
+                            Map<String, dynamic> updatedData = {
+                              'district': tempDistrict,
+                              'thana': tempThana,
+                              'address': tempAddress,
+                            };
 
-                              bool success = await db.updateUserDetails(
-                                Email,
-                                updatedData,
-                              );
+                            bool success = await db.updateUserDetails(
+                              Email,
+                              updatedData,
+                            );
 
-                              if (success) {
-                                setState(() {
-                                  District = tempDistrict;
-                                  Thana = tempThana;
-                                  Address = tempAddress;
-                                });
+                            if (success) {
+                              setState(() {
+                                District = tempDistrict;
+                                Thana = tempThana;
+                                Address = tempAddress;
+                              });
 
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(mainContext).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Address updated successfully',
-                                    ),
-                                    duration: Duration(seconds: 2),
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(mainContext).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Address updated successfully',
                                   ),
-                                );
-                              } else {
-                                throw Exception('Failed to update Firestore');
-                              }
-                            } catch (e) {
-                              setDialogState(() => _isSaving = false);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text("Error saving address: $e"),
+                                  duration: Duration(seconds: 2),
                                 ),
                               );
+                            } else {
+                              throw Exception('Failed to update Firestore');
                             }
-                          },
+                          } catch (e) {
+                            setDialogState(() => _isSaving = false);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Error saving address: $e"),
+                              ),
+                            );
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.profileAccent,
                   ),
-                  child:
-                      _isSaving
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: AppColors.textOnPrimary,
-                              strokeWidth: 2,
-                            ),
-                          )
-                          : const Text(
-                            'SAVE',
-                            style: TextStyle(color: AppColors.textOnPrimary),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: AppColors.textOnPrimary,
+                            strokeWidth: 2,
                           ),
+                        )
+                      : const Text(
+                          'SAVE',
+                          style: TextStyle(color: AppColors.textOnPrimary),
+                        ),
                 ),
               ],
             );
@@ -556,24 +582,23 @@ class _ProfileState extends State<Profile> {
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder:
-          (context) => GestureDetector(
-            onTap: () => Navigator.of(context).pop(),
-            child: Dialog(
-              backgroundColor: Colors.transparent,
-              insetPadding: EdgeInsets.zero,
-              child: Container(
-                width: MediaQuery.of(context).size.width,
-                height: MediaQuery.of(context).size.height,
-                child: InteractiveViewer(
-                  panEnabled: true,
-                  minScale: 0.5,
-                  maxScale: 4.0,
-                  child: Image.network(profilePic, fit: BoxFit.contain),
-                ),
-              ),
+      builder: (context) => GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.zero,
+          child: Container(
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.height,
+            child: InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.network(profilePic, fit: BoxFit.contain),
             ),
           ),
+        ),
+      ),
     );
   }
 
@@ -640,79 +665,77 @@ class _ProfileState extends State<Profile> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed:
-                      _isChangingPassword
-                          ? null
-                          : () async {
-                            setDialogState(() => _isChangingPassword = true);
+                  onPressed: _isChangingPassword
+                      ? null
+                      : () async {
+                          setDialogState(() => _isChangingPassword = true);
 
-                            final currentPassword =
-                                currentPasswordController.text;
-                            final newPassword = newPasswordController.text;
-                            final confirmPassword =
-                                confirmPasswordController.text;
+                          final currentPassword =
+                              currentPasswordController.text;
+                          final newPassword = newPasswordController.text;
+                          final confirmPassword =
+                              confirmPasswordController.text;
 
-                            if (currentPassword.isEmpty ||
-                                newPassword.isEmpty ||
-                                confirmPassword.isEmpty) {
-                              setDialogState(() {
-                                _errorMessage = 'All fields are required';
-                                _isChangingPassword = false;
-                              });
-                              return;
-                            }
+                          if (currentPassword.isEmpty ||
+                              newPassword.isEmpty ||
+                              confirmPassword.isEmpty) {
+                            setDialogState(() {
+                              _errorMessage = 'All fields are required';
+                              _isChangingPassword = false;
+                            });
+                            return;
+                          }
 
-                            if (newPassword != confirmPassword) {
-                              setDialogState(() {
-                                _errorMessage = 'New passwords do not match';
-                                _isChangingPassword = false;
-                              });
-                              return;
-                            }
+                          if (newPassword != confirmPassword) {
+                            setDialogState(() {
+                              _errorMessage = 'New passwords do not match';
+                              _isChangingPassword = false;
+                            });
+                            return;
+                          }
 
-                            if (newPassword.length < 6) {
-                              setDialogState(() {
-                                _errorMessage =
-                                    'Password must be at least 6 characters';
-                                _isChangingPassword = false;
-                              });
-                              return;
-                            }
+                          if (newPassword.length < 6) {
+                            setDialogState(() {
+                              _errorMessage =
+                                  'Password must be at least 6 characters';
+                              _isChangingPassword = false;
+                            });
+                            return;
+                          }
 
-                            try {
-                              final result = await _auth.changePassword(
-                                currentPassword,
-                                newPassword,
-                              );
+                          try {
+                            final result = await _auth.changePassword(
+                              currentPassword,
+                              newPassword,
+                            );
 
-                              if (result == null) {
-                                if (mounted) {
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Password changed successfully',
-                                      ),
+                            if (result == null) {
+                              if (mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Password changed successfully',
                                     ),
-                                  );
-                                }
-                              } else {
-                                setDialogState(() {
-                                  _errorMessage = result;
-                                  _isChangingPassword = false;
-                                });
+                                  ),
+                                );
                               }
-                            } catch (e) {
+                            } else {
                               setDialogState(() {
-                                _errorMessage = 'Password change failed: $e';
+                                _errorMessage = result;
                                 _isChangingPassword = false;
                               });
                             }
-                          },
-                  child:
-                      _isChangingPassword
-                          ? const CircularProgressIndicator()
-                          : const Text('Update Password'),
+                          } catch (e) {
+                            setDialogState(() {
+                              _errorMessage = 'Password change failed: $e';
+                              _isChangingPassword = false;
+                            });
+                          }
+                        },
+                  child: _isChangingPassword
+                      ? const CircularProgressIndicator()
+                      : const Text('Update Password'),
                 ),
               ],
             );
@@ -792,7 +815,6 @@ class _ProfileState extends State<Profile> {
         ),
         backgroundColor: Colors.transparent,
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -831,10 +853,9 @@ class _ProfileState extends State<Profile> {
                 backgroundColor: AppColors.surfaceGrey,
                 backgroundImage:
                     profilePic.isNotEmpty ? NetworkImage(profilePic) : null,
-                child:
-                    profilePic.isEmpty
-                        ? const Icon(Icons.person, size: 40)
-                        : null,
+                child: profilePic.isEmpty
+                    ? const Icon(Icons.person, size: 40)
+                    : null,
               ),
               if (_isUpdatingProfilePic)
                 const Padding(
@@ -913,8 +934,8 @@ class _ProfileState extends State<Profile> {
               ),
             ),
             GestureDetector(
-              onTap:
-                  () => _navigateToOrderPage(context, 'To Receive', toReceive),
+              onTap: () =>
+                  _navigateToOrderPage(context, 'To Receive', toReceive),
               child: _buildOrderStatus(
                 'To Receive',
                 Icons.shopping_bag,
@@ -922,8 +943,8 @@ class _ProfileState extends State<Profile> {
               ),
             ),
             GestureDetector(
-              onTap:
-                  () => _navigateToOrderPage(context, 'Completed', Completed),
+              onTap: () =>
+                  _navigateToOrderPage(context, 'Completed', Completed),
               child: _buildOrderStatus(
                 'Completed',
                 Icons.check_circle,
@@ -1095,6 +1116,51 @@ class _ProfileState extends State<Profile> {
     );
   }
 
+  ButtonStyle _buildLoyaltyButtonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: AppColors.textOnPrimary,
+      foregroundColor: AppColors.profileAccent,
+    );
+  }
+
+  Widget _buildRewardAdAction() {
+    if (_rewardAdVersionLoading) {
+      return const Text(
+        'Checking reward access...',
+        style: TextStyle(color: AppColors.textOnPrimary, fontSize: 12),
+      );
+    }
+
+    if (_rewardAdUpdateRequired) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Update the app to keep earning coins from ads.',
+            style: TextStyle(color: AppColors.textOnPrimary, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          ElevatedButton(
+            onPressed: () => _launchUrl(_playStoreUrl),
+            style: _buildLoyaltyButtonStyle(),
+            child: const Text('Update App'),
+          ),
+        ],
+      );
+    }
+
+    return ElevatedButton(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const RewordAd()),
+        );
+      },
+      style: _buildLoyaltyButtonStyle(),
+      child: const Text('Watch Ad to earn more coins'),
+    );
+  }
+
   Widget _buildLoyaltySection() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1148,15 +1214,7 @@ class _ProfileState extends State<Profile> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const RewordAd()),
-                    );
-                  },
-                  child: Text('Watch Ad to earn more coins'),
-                ),
+                _buildRewardAdAction(),
               ],
             ),
           ),
@@ -1168,15 +1226,12 @@ class _ProfileState extends State<Profile> {
   Widget _buildSettingsSection() {
     final List<Map<String, dynamic>> accountSettings = [
       {'icon': Icons.password, 'title': 'Change password'},
-
       {'icon': Icons.help_outline, 'title': 'Help Center'},
     ];
 
     final List<Map<String, dynamic>> legalSettings = [
       {'icon': Icons.privacy_tip, 'title': 'Privacy Policy'},
-
       {'icon': Icons.description, 'title': 'Terms & Conditions'},
-
       {'icon': Icons.person_outline, 'title': 'Developer Info'},
     ];
 
@@ -1186,7 +1241,6 @@ class _ProfileState extends State<Profile> {
         'title': 'Delete Account',
         'color': AppColors.error,
       },
-
       {'icon': Icons.logout, 'title': 'Logout', 'color': AppColors.error},
     ];
 
@@ -1197,13 +1251,9 @@ class _ProfileState extends State<Profile> {
           'Account Settings',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
-
         const SizedBox(height: 12),
-
         ...accountSettings.map((item) => _buildSettingTile(item)),
-
         const SizedBox(height: 20),
-
         const Text(
           'Legal',
           style: TextStyle(
@@ -1212,13 +1262,9 @@ class _ProfileState extends State<Profile> {
             color: AppColors.textSecondary,
           ),
         ),
-
         const Divider(),
-
         ...legalSettings.map((item) => _buildSettingTile(item)),
-
         const SizedBox(height: 20),
-
         const Text(
           'Danger Zone',
           style: TextStyle(
@@ -1227,9 +1273,7 @@ class _ProfileState extends State<Profile> {
             color: AppColors.error,
           ),
         ),
-
         const Divider(),
-
         ...dangerSettings.map((item) => _buildSettingTile(item)),
       ],
     );
@@ -1240,12 +1284,10 @@ class _ProfileState extends State<Profile> {
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
-
       leading: Icon(
         item['icon'],
         color: customColor ?? AppColors.profileAccent,
       ),
-
       title: Text(
         item['title'],
         style: TextStyle(
@@ -1253,9 +1295,7 @@ class _ProfileState extends State<Profile> {
           fontWeight: customColor != null ? FontWeight.bold : FontWeight.normal,
         ),
       ),
-
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-
       onTap: () => _handleSettingsTap(item['title']),
     );
   }
@@ -1300,42 +1340,30 @@ class _ProfileState extends State<Profile> {
 
     showDialog(
       context: context,
-
       builder: (context) {
         return AlertDialog(
           title: const Text("Developer Information"),
-
           content: Column(
             mainAxisSize: MainAxisSize.min,
-
             crossAxisAlignment: CrossAxisAlignment.start,
-
             children: [
               const Text(
                 "App Name : DADU",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-
               const SizedBox(height: 10),
-
               const Text("Developer : Md. Sayedul Marsalin"),
-
               const SizedBox(height: 14),
-
               const Text(
                 "Phone",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-
               Row(
                 children: [
                   Expanded(child: Text(phoneDisplay)),
-
                   IconButton(
                     tooltip: "Copy",
-
                     icon: const Icon(Icons.copy, size: 20),
-
                     onPressed: () {
                       Clipboard.setData(const ClipboardData(text: phoneRaw));
 
@@ -1347,24 +1375,18 @@ class _ProfileState extends State<Profile> {
                       );
                     },
                   ),
-
                   IconButton(
                     tooltip: "Call",
-
                     icon: const Icon(Icons.call, color: AppColors.iconSuccess),
-
                     onPressed: () async {
                       final Uri uri = Uri.parse("tel:$phoneRaw");
 
                       await launchUrl(uri);
                     },
                   ),
-
                   IconButton(
                     tooltip: "WhatsApp",
-
                     icon: const Icon(Icons.chat, color: AppColors.iconSuccess),
-
                     onPressed: () async {
                       final Uri uri = Uri.parse(
                         "https://wa.me/${phoneRaw.replaceAll('+', '')}",
@@ -1378,23 +1400,17 @@ class _ProfileState extends State<Profile> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 12),
-
               const Text(
                 "Email",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-
               Row(
                 children: [
                   const Expanded(child: Text(email)),
-
                   IconButton(
                     tooltip: "Copy",
-
                     icon: const Icon(Icons.copy, size: 20),
-
                     onPressed: () {
                       Clipboard.setData(const ClipboardData(text: email));
 
@@ -1406,12 +1422,9 @@ class _ProfileState extends State<Profile> {
                       );
                     },
                   ),
-
                   IconButton(
                     tooltip: "Send Email",
-
                     icon: const Icon(Icons.email, color: AppColors.iconAccent),
-
                     onPressed: () async {
                       final Uri uri = Uri.parse("mailto:$email");
 
@@ -1422,11 +1435,9 @@ class _ProfileState extends State<Profile> {
               ),
             ],
           ),
-
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-
               child: const Text("Close"),
             ),
           ],
@@ -1472,23 +1483,21 @@ class _ProfileState extends State<Profile> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => Scaffold(
-              appBar: AppBar(title: const Text('Help Center')),
-              body: ListView(
-                padding: const EdgeInsets.all(16),
-                children:
-                    helpItems
-                        .map(
-                          (item) => _buildHelpItem(
-                            item['title'] as String,
-                            item['icon'] as IconData,
-                            item['url'] as String,
-                          ),
-                        )
-                        .toList(),
-              ),
-            ),
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Help Center')),
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: helpItems
+                .map(
+                  (item) => _buildHelpItem(
+                    item['title'] as String,
+                    item['icon'] as IconData,
+                    item['url'] as String,
+                  ),
+                )
+                .toList(),
+          ),
+        ),
       ),
     );
   }
@@ -1546,59 +1555,57 @@ class _ProfileState extends State<Profile> {
                   child: const Text('Cancel'),
                 ),
                 TextButton(
-                  onPressed:
-                      isDeleting
-                          ? null
-                          : () async {
-                            setDialogState(() {
-                              isDeleting = true;
-                              errorMessage = null;
-                            });
+                  onPressed: isDeleting
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            isDeleting = true;
+                            errorMessage = null;
+                          });
 
-                            try {
-                              final result = await _auth.deleteAccount();
+                          try {
+                            final result = await _auth.deleteAccount();
 
-                              if (result == null) {
-                                if (!mounted) return;
-                                Navigator.pop(dialogContext);
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => Home(),
+                            if (result == null) {
+                              if (!mounted) return;
+                              Navigator.pop(dialogContext);
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => Home(),
+                                ),
+                                (route) => false,
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Account deleted successfully',
                                   ),
-                                  (route) => false,
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Account deleted successfully',
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                setDialogState(() {
-                                  errorMessage = result;
-                                  isDeleting = false;
-                                });
-                              }
-                            } catch (e) {
+                                ),
+                              );
+                            } else {
                               setDialogState(() {
-                                errorMessage = 'Account deletion failed: $e';
+                                errorMessage = result;
                                 isDeleting = false;
                               });
                             }
-                          },
-                  child:
-                      isDeleting
-                          ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Text(
-                            'Delete',
-                            style: TextStyle(color: AppColors.error),
-                          ),
+                          } catch (e) {
+                            setDialogState(() {
+                              errorMessage = 'Account deletion failed: $e';
+                              isDeleting = false;
+                            });
+                          }
+                        },
+                  child: isDeleting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          'Delete',
+                          style: TextStyle(color: AppColors.error),
+                        ),
                 ),
               ],
             );
@@ -1611,47 +1618,46 @@ class _ProfileState extends State<Profile> {
   void _logout() {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Logout Confirmation'),
-            content: const Text('Are you sure you want to logout?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () async {
-                  Navigator.pop(context);
-
-                  try {
-                    await _auth.signOut();
-                    if (Get.isRegistered<HomeController>()) {
-                      Get.find<HomeController>().resetToHomeTab();
-                    }
-
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => Home()),
-                      (route) => false,
-                    );
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Logged out successfully')),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Logout failed: $e")),
-                    );
-                  }
-                },
-                child: const Text(
-                  'Logout',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Logout Confirmation'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+
+              try {
+                await _auth.signOut();
+                if (Get.isRegistered<HomeController>()) {
+                  Get.find<HomeController>().resetToHomeTab();
+                }
+
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => Home()),
+                  (route) => false,
+                );
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Logged out successfully')),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Logout failed: $e")),
+                );
+              }
+            },
+            child: const Text(
+              'Logout',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
