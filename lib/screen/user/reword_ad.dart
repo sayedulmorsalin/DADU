@@ -12,6 +12,7 @@ class RewordAd extends StatefulWidget {
   State<RewordAd> createState() => _RewordAdState();
 }
 
+
 class _RewordAdState extends State<RewordAd> {
   static const int _dailyAdLimit = 30;
   static const int _adsPerRowLimit = 3;
