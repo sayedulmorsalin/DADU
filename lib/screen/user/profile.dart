@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'package:dadu/data/district_upozila.dart';
 import 'package:dadu/controller/home_controller.dart';
@@ -17,9 +16,6 @@ import '../../services/api.dart';
 import '../../services/firebase.dart';
 import '../authentication/sign_up_first.dart';
 import 'order_list_screen.dart';
-
-const String _playStoreUrl =
-    'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -57,24 +53,19 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   bool _isRedirecting = false;
   bool _rewardAdUpdateRequired = false;
   bool _rewardAdVersionLoading = true;
-  StreamSubscription<String?>? _versionSubscription;
-  String? _remoteVersion;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadProfileData();
-    _listenForVersionUpdates();
+    _refreshVersionRequirement();
   }
 
-  Future<void> _refreshVersionRequirement([String? remoteVersion]) async {
-    final currentRemoteVersion = remoteVersion ?? _remoteVersion;
-    final requiresUpdate =
-        currentRemoteVersion != null &&
-        await AppVersionService.isUpdateRequired(currentRemoteVersion);
+  Future<void> _refreshVersionRequirement() async {
+    final requiresUpdate = await AppVersionService.isUpdateRequired();
 
-    if (!mounted || currentRemoteVersion != _remoteVersion) return;
+    if (!mounted) return;
 
     setState(() {
       _rewardAdUpdateRequired = requiresUpdate;
@@ -82,39 +73,30 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     });
   }
 
-  void _listenForVersionUpdates() {
-    _versionSubscription = db.getVersionStream().listen(
-      (remoteVersion) {
-        _remoteVersion = remoteVersion;
-        unawaited(_refreshVersionRequirement(remoteVersion));
-      },
-      onError: (_) {
-        if (!mounted) return;
-
-        setState(() {
-          _remoteVersion = null;
-          _rewardAdUpdateRequired = false;
-          _rewardAdVersionLoading = false;
-        });
-      },
-    );
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed || _remoteVersion == null) return;
+    if (state != AppLifecycleState.resumed) return;
 
     setState(() {
       _rewardAdVersionLoading = true;
     });
 
-    unawaited(_refreshVersionRequirement());
+    _refreshVersionRequirement();
+  }
+
+  Future<void> _openUpdateFlow() async {
+    final opened = await AppVersionService.openUpdateFlow();
+
+    if (opened || !mounted) return;
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Could not open update page')));
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _versionSubscription?.cancel();
     super.dispose();
   }
 
@@ -1175,7 +1157,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 8),
           ElevatedButton(
-            onPressed: () => _launchUrl(_playStoreUrl),
+            onPressed: _openUpdateFlow,
             style: _buildLoyaltyButtonStyle(),
             child: const Text('Update App'),
           ),

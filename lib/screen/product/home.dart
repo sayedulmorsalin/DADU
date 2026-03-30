@@ -1,11 +1,8 @@
-import 'dart:async';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/component/gitf_box_banner.dart';
 import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/services/app_version_service.dart';
-import 'package:dadu/services/firebase.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/screen/product/brands.dart';
@@ -742,10 +739,6 @@ class _VersionUpdateBanner extends StatefulWidget {
 
 class _VersionUpdateBannerState extends State<_VersionUpdateBanner>
     with WidgetsBindingObserver {
-  final dataBase _db = dataBase();
-
-  StreamSubscription<String?>? _versionSubscription;
-  String? _remoteVersion;
   bool _versionCheckLoading = true;
   bool _updateRequired = false;
 
@@ -753,34 +746,13 @@ class _VersionUpdateBannerState extends State<_VersionUpdateBanner>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _listenForVersionUpdates();
+    _refreshVersionRequirement();
   }
 
-  void _listenForVersionUpdates() {
-    _versionSubscription = _db.getVersionStream().listen(
-      (remoteVersion) {
-        _remoteVersion = remoteVersion;
-        unawaited(_refreshVersionRequirement(remoteVersion));
-      },
-      onError: (_) {
-        if (!mounted) return;
+  Future<void> _refreshVersionRequirement() async {
+    final requiresUpdate = await AppVersionService.isUpdateRequired();
 
-        setState(() {
-          _remoteVersion = null;
-          _versionCheckLoading = false;
-          _updateRequired = false;
-        });
-      },
-    );
-  }
-
-  Future<void> _refreshVersionRequirement([String? remoteVersion]) async {
-    final currentRemoteVersion = remoteVersion ?? _remoteVersion;
-    final requiresUpdate =
-        currentRemoteVersion != null &&
-        await AppVersionService.isUpdateRequired(currentRemoteVersion);
-
-    if (!mounted || currentRemoteVersion != _remoteVersion) return;
+    if (!mounted) return;
 
     setState(() {
       _versionCheckLoading = false;
@@ -790,19 +762,18 @@ class _VersionUpdateBannerState extends State<_VersionUpdateBanner>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed || _remoteVersion == null) return;
+    if (state != AppLifecycleState.resumed) return;
 
     setState(() {
       _versionCheckLoading = true;
     });
 
-    unawaited(_refreshVersionRequirement());
+    _refreshVersionRequirement();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _versionSubscription?.cancel();
     super.dispose();
   }
 
@@ -827,12 +798,8 @@ class _VersionUpdateBannerState extends State<_VersionUpdateBanner>
           ),
           TextButton(
             onPressed: () async {
-              const url =
-                  'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
-              final uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri);
-              } else if (context.mounted) {
+              final opened = await AppVersionService.openUpdateFlow();
+              if (!opened && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Could not open update URL')),
                 );

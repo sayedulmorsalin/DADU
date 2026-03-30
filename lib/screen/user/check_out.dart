@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/user/profile.dart';
@@ -8,7 +7,6 @@ import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../data/district_upozila.dart';
 import '../../model/cart_model.dart';
 import '../../services/auth.dart';
@@ -53,8 +51,6 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   bool _versionCheckLoading = true;
   String? _paymentNumber;
   bool _paymentNumberLoading = false;
-  StreamSubscription<String?>? _versionSubscription;
-  String? _remoteVersion;
 
   final Auth _auth = Auth();
   final ImageService _imageService = ImageService();
@@ -65,16 +61,13 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _loadUserAddress();
     _loadPaymentNumber();
-    _listenForVersionUpdates();
+    _refreshVersionRequirement();
   }
 
-  Future<void> _refreshVersionRequirement([String? remoteVersion]) async {
-    final currentRemoteVersion = remoteVersion ?? _remoteVersion;
-    final requiresUpdate =
-        currentRemoteVersion != null &&
-        await AppVersionService.isUpdateRequired(currentRemoteVersion);
+  Future<void> _refreshVersionRequirement() async {
+    final requiresUpdate = await AppVersionService.isUpdateRequired();
 
-    if (!mounted || currentRemoteVersion != _remoteVersion) return;
+    if (!mounted) return;
 
     setState(() {
       needupdate = requiresUpdate;
@@ -82,33 +75,28 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     });
   }
 
-  void _listenForVersionUpdates() {
-    _versionSubscription = db.getVersionStream().listen(
-      (remoteVersion) {
-        _remoteVersion = remoteVersion;
-        unawaited(_refreshVersionRequirement(remoteVersion));
-      },
-      onError: (_) {
-        if (!mounted) return;
-
-        setState(() {
-          _remoteVersion = null;
-          needupdate = false;
-          _versionCheckLoading = false;
-        });
-      },
-    );
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed || _remoteVersion == null) return;
+    if (state != AppLifecycleState.resumed) return;
 
     setState(() {
       _versionCheckLoading = true;
     });
 
-    unawaited(_refreshVersionRequirement());
+    _refreshVersionRequirement();
+  }
+
+  Future<void> _openUpdateFlow() async {
+    final opened = await AppVersionService.openUpdateFlow();
+
+    if (opened || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Could not open update page'),
+        backgroundColor: AppColors.warning,
+      ),
+    );
   }
 
   Future<void> _loadUserAddress() async {
@@ -220,7 +208,6 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _versionSubscription?.cancel();
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
@@ -701,20 +688,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
               Text("Update required to place orders"),
             ],
           ),
-          TextButton(
-            onPressed: () async {
-              const url =
-                  'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
-              if (await canLaunchUrl(Uri.parse(url))) {
-                await launchUrl(Uri.parse(url));
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Could not launch $url')),
-                );
-              }
-            },
-            child: const Text("UPDATE"),
-          ),
+          TextButton(onPressed: _openUpdateFlow, child: const Text("UPDATE")),
         ],
       ),
     );

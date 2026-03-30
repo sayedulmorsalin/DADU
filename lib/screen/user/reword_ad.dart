@@ -4,11 +4,7 @@ import 'package:dadu/services/app_version_service.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../services/firebase.dart';
-
-const String _playStoreUrl =
-    'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
 
 class RewordAd extends StatefulWidget {
   const RewordAd({super.key});
@@ -35,11 +31,9 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
   DateTime today = DateTime.now();
 
   Timer? _countdownTimer;
-  StreamSubscription<String?>? _versionSubscription;
   bool _versionCheckLoading = true;
   bool _updateRequired = false;
   bool _rewardAccessInitialized = false;
-  String? _remoteVersion;
 
   bool get isCooldownActive =>
       cooldownEnd != null && DateTime.now().isBefore(cooldownEnd!);
@@ -363,13 +357,10 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
     loadBannerAd();
   }
 
-  Future<void> _refreshVersionRequirement([String? remoteVersion]) async {
-    final currentRemoteVersion = remoteVersion ?? _remoteVersion;
-    final requiresUpdate =
-        currentRemoteVersion != null &&
-        await AppVersionService.isUpdateRequired(currentRemoteVersion);
+  Future<void> _refreshVersionRequirement() async {
+    final requiresUpdate = await AppVersionService.isUpdateRequired();
 
-    if (!mounted || currentRemoteVersion != _remoteVersion) return;
+    if (!mounted) return;
 
     if (requiresUpdate) {
       _disposeRewardAds();
@@ -389,32 +380,10 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
     }
   }
 
-  void _listenForVersionUpdates() {
-    _versionSubscription = db.getVersionStream().listen(
-      (remoteVersion) {
-        _remoteVersion = remoteVersion;
-        unawaited(_refreshVersionRequirement(remoteVersion));
-      },
-      onError: (_) {
-        if (!mounted) return;
-
-        setState(() {
-          _remoteVersion = null;
-          _updateRequired = false;
-          _versionCheckLoading = false;
-        });
-
-        _initializeRewardAccess();
-      },
-    );
-  }
-
   Future<void> _openUpdatePage() async {
-    final uri = Uri.parse(_playStoreUrl);
+    final opened = await AppVersionService.openUpdateFlow();
 
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
-    } else if (mounted) {
+    if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Could not open update URL")),
       );
@@ -495,24 +464,23 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _listenForVersionUpdates();
+    _refreshVersionRequirement();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed || _remoteVersion == null) return;
+    if (state != AppLifecycleState.resumed) return;
 
     setState(() {
       _versionCheckLoading = true;
     });
 
-    unawaited(_refreshVersionRequirement());
+    _refreshVersionRequirement();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _versionSubscription?.cancel();
     _disposeRewardAds();
     super.dispose();
   }

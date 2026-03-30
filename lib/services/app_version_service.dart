@@ -1,50 +1,66 @@
-import 'package:package_info_plus/package_info_plus.dart';
+import 'dart:io';
+
+import 'package:flutter/services.dart';
+import 'package:in_app_update/in_app_update.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AppVersionService {
   AppVersionService._();
 
-  static Future<String> getInstalledVersion() async {
-    final info = await PackageInfo.fromPlatform();
-    return '${info.version}+${info.buildNumber}';
-  }
+  static const String playStoreUrl =
+      'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
 
-  static Future<bool> isUpdateRequired(String remoteVersion) async {
-    final installedVersion = await getInstalledVersion();
-    return compareVersions(remoteVersion, installedVersion) > 0;
-  }
-
-  static int compareVersions(String first, String second) {
-    final firstParts = _normalizeVersion(first);
-    final secondParts = _normalizeVersion(second);
-    final maxLength =
-        firstParts.length > secondParts.length
-            ? firstParts.length
-            : secondParts.length;
-
-    for (var index = 0; index < maxLength; index++) {
-      final firstValue = index < firstParts.length ? firstParts[index] : 0;
-      final secondValue = index < secondParts.length ? secondParts[index] : 0;
-
-      if (firstValue != secondValue) {
-        return firstValue.compareTo(secondValue);
-      }
+  static Future<bool> isUpdateRequired() async {
+    if (!Platform.isAndroid) {
+      return false;
     }
 
-    return 0;
+    try {
+      final updateInfo = await InAppUpdate.checkForUpdate();
+      return _isUpdateAvailable(updateInfo);
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    } on UnsupportedError {
+      return false;
+    }
   }
 
-  static List<int> _normalizeVersion(String version) {
-    final sanitized = version.trim();
-    if (sanitized.isEmpty) {
-      return [0];
+  static Future<bool> openUpdateFlow() async {
+    if (Platform.isAndroid) {
+      try {
+        final updateInfo = await InAppUpdate.checkForUpdate();
+
+        if (_isUpdateAvailable(updateInfo)) {
+          if (updateInfo.immediateUpdateAllowed) {
+            await InAppUpdate.performImmediateUpdate();
+            return true;
+          }
+
+          if (updateInfo.flexibleUpdateAllowed) {
+            await InAppUpdate.startFlexibleUpdate();
+            await InAppUpdate.completeFlexibleUpdate();
+            return true;
+          }
+        }
+      } on MissingPluginException {
+      } on PlatformException {
+      } on UnsupportedError {}
     }
 
-    final values =
-        RegExp(r'\d+')
-            .allMatches(sanitized)
-            .map((match) => int.tryParse(match.group(0)!) ?? 0)
-            .toList();
+    return _openPlayStorePage();
+  }
 
-    return values.isEmpty ? [0] : values;
+  static bool _isUpdateAvailable(AppUpdateInfo updateInfo) {
+    return updateInfo.updateAvailability ==
+            UpdateAvailability.updateAvailable ||
+        updateInfo.updateAvailability ==
+            UpdateAvailability.developerTriggeredUpdateInProgress;
+  }
+
+  static Future<bool> _openPlayStorePage() async {
+    final uri = Uri.parse(playStoreUrl);
+    return launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
