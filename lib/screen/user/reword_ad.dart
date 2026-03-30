@@ -17,7 +17,7 @@ class RewordAd extends StatefulWidget {
   State<RewordAd> createState() => _RewordAdState();
 }
 
-class _RewordAdState extends State<RewordAd> {
+class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
   static const int _dailyAdLimit = 30;
   static const int _adsPerRowLimit = 3;
   static const Duration _cooldownDuration = Duration(minutes: 30);
@@ -39,6 +39,7 @@ class _RewordAdState extends State<RewordAd> {
   bool _versionCheckLoading = true;
   bool _updateRequired = false;
   bool _rewardAccessInitialized = false;
+  String? _remoteVersion;
 
   bool get isCooldownActive =>
       cooldownEnd != null && DateTime.now().isBefore(cooldownEnd!);
@@ -362,35 +363,43 @@ class _RewordAdState extends State<RewordAd> {
     loadBannerAd();
   }
 
+  Future<void> _refreshVersionRequirement([String? remoteVersion]) async {
+    final currentRemoteVersion = remoteVersion ?? _remoteVersion;
+    final requiresUpdate =
+        currentRemoteVersion != null &&
+        await AppVersionService.isUpdateRequired(currentRemoteVersion);
+
+    if (!mounted || currentRemoteVersion != _remoteVersion) return;
+
+    if (requiresUpdate) {
+      _disposeRewardAds();
+    }
+
+    setState(() {
+      _updateRequired = requiresUpdate;
+      _versionCheckLoading = false;
+
+      if (requiresUpdate) {
+        _rewardAccessInitialized = false;
+      }
+    });
+
+    if (!requiresUpdate) {
+      _initializeRewardAccess();
+    }
+  }
+
   void _listenForVersionUpdates() {
     _versionSubscription = db.getVersionStream().listen(
-      (remoteVersion) async {
-        final requiresUpdate = remoteVersion != null &&
-            await AppVersionService.isUpdateRequired(remoteVersion);
-
-        if (!mounted) return;
-
-        if (requiresUpdate) {
-          _disposeRewardAds();
-        }
-
-        setState(() {
-          _updateRequired = requiresUpdate;
-          _versionCheckLoading = false;
-
-          if (requiresUpdate) {
-            _rewardAccessInitialized = false;
-          }
-        });
-
-        if (!requiresUpdate) {
-          _initializeRewardAccess();
-        }
+      (remoteVersion) {
+        _remoteVersion = remoteVersion;
+        unawaited(_refreshVersionRequirement(remoteVersion));
       },
       onError: (_) {
         if (!mounted) return;
 
         setState(() {
+          _remoteVersion = null;
           _updateRequired = false;
           _versionCheckLoading = false;
         });
@@ -406,10 +415,9 @@ class _RewordAdState extends State<RewordAd> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     } else if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
-          const SnackBar(content: Text("Could not open update URL")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Could not open update URL")),
+      );
     }
   }
 
@@ -486,11 +494,24 @@ class _RewordAdState extends State<RewordAd> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _listenForVersionUpdates();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _remoteVersion == null) return;
+
+    setState(() {
+      _versionCheckLoading = true;
+    });
+
+    unawaited(_refreshVersionRequirement());
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _versionSubscription?.cancel();
     _disposeRewardAds();
     super.dispose();
@@ -513,140 +534,139 @@ class _RewordAdState extends State<RewordAd> {
         centerTitle: true,
         backgroundColor: AppColors.rewardPrimary,
       ),
-      body: _versionCheckLoading
-          ? _buildLoadingState()
-          : _updateRequired
+      body:
+          _versionCheckLoading
+              ? _buildLoadingState()
+              : _updateRequired
               ? _buildUpdateRequiredState()
               : Column(
-                  children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                coinCard(
-                                  "Silver",
-                                  silverCoins,
-                                  Icons.monetization_on,
-                                  AppColors.coinSilver,
-                                ),
-                                IconButton(
-                                  iconSize: 45,
-                                  onPressed: convertCoins,
-                                  icon: const Icon(Icons.swap_horiz),
-                                ),
-                                coinCard(
-                                  "Gold",
-                                  goldCoins,
-                                  Icons.workspace_premium,
-                                  AppColors.coinGold,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 30),
-                            SizedBox(
-                              width: double.infinity,
-                              height: 60,
-                              child: ElevatedButton.icon(
-                                onPressed:
-                                    disableButton ? null : showRewardedAd,
-                                icon: const Icon(
-                                  Icons.play_arrow,
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              coinCard(
+                                "Silver",
+                                silverCoins,
+                                Icons.monetization_on,
+                                AppColors.coinSilver,
+                              ),
+                              IconButton(
+                                iconSize: 45,
+                                onPressed: convertCoins,
+                                icon: const Icon(Icons.swap_horiz),
+                              ),
+                              coinCard(
+                                "Gold",
+                                goldCoins,
+                                Icons.workspace_premium,
+                                AppColors.coinGold,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 30),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 60,
+                            child: ElevatedButton.icon(
+                              onPressed: disableButton ? null : showRewardedAd,
+                              icon: const Icon(
+                                Icons.play_arrow,
+                                color: AppColors.textOnPrimary,
+                              ),
+                              label: const Text(
+                                "Watch Ad",
+                                style: TextStyle(
                                   color: AppColors.textOnPrimary,
                                 ),
-                                label: const Text(
-                                  "Watch Ad",
-                                  style:
-                                      TextStyle(color: AppColors.textOnPrimary),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: disableButton
-                                      ? AppColors.disabledColor
-                                      : AppColors.rewardPrimary,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    disableButton
+                                        ? AppColors.disabledColor
+                                        : AppColors.rewardPrimary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Text(
-                              "Per ad reward: +${silverRewardRate.toStringAsFixed(2)} Silver",
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 25),
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(15),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                        "Daily Ads $adsWatchedToday / $_dailyAdLimit"),
-                                    LinearProgressIndicator(
-                                      value: (adsWatchedToday / _dailyAdLimit)
-                                          .clamp(
-                                        0.0,
-                                        1.0,
-                                      ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            "Per ad reward: +${silverRewardRate.toStringAsFixed(2)} Silver",
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 25),
+                          Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(15),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    "Daily Ads $adsWatchedToday / $_dailyAdLimit",
+                                  ),
+                                  LinearProgressIndicator(
+                                    value: (adsWatchedToday / _dailyAdLimit)
+                                        .clamp(0.0, 1.0),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    "Continuous Ads $adsInRow / $_adsPerRowLimit",
+                                  ),
+                                  LinearProgressIndicator(
+                                    value: (adsInRow / _adsPerRowLimit).clamp(
+                                      0.0,
+                                      1.0,
                                     ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      "Continuous Ads $adsInRow / $_adsPerRowLimit",
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    "$adsLeftBeforeCooldown ads left before cooldown",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    LinearProgressIndicator(
-                                      value: (adsInRow / _adsPerRowLimit).clamp(
-                                        0.0,
-                                        1.0,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      "$adsLeftBeforeCooldown ads left before cooldown",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (isCooldownActive)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 15),
-                                        child: Container(
-                                          padding: const EdgeInsets.all(10),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.error.withOpacity(
-                                              0.1,
-                                            ),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
+                                  ),
+                                  if (isCooldownActive)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 15),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.error.withOpacity(
+                                            0.1,
                                           ),
-                                          child: Text(
-                                            "Next ads in : ${cooldownText()}",
-                                            style: const TextStyle(
-                                              color: AppColors.error,
-                                              fontWeight: FontWeight.bold,
-                                            ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          "Next ads in : ${cooldownText()}",
+                                          style: const TextStyle(
+                                            color: AppColors.error,
+                                            fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       ),
-                                  ],
-                                ),
+                                    ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                    if (_bannerReady && _bannerAd != null)
-                      SizedBox(
-                        width: _bannerAd!.size.width.toDouble(),
-                        height: _bannerAd!.size.height.toDouble(),
-                        child: AdWidget(ad: _bannerAd!),
-                      ),
-                  ],
-                ),
+                  ),
+                  if (_bannerReady && _bannerAd != null)
+                    SizedBox(
+                      width: _bannerAd!.size.width.toDouble(),
+                      height: _bannerAd!.size.height.toDouble(),
+                      child: AdWidget(ad: _bannerAd!),
+                    ),
+                ],
+              ),
     );
   }
 }

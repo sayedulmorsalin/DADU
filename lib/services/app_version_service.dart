@@ -3,15 +3,13 @@ import 'package:package_info_plus/package_info_plus.dart';
 class AppVersionService {
   AppVersionService._();
 
-  static final Future<String> _installedVersion = _loadInstalledVersion();
-
-  static Future<String> _loadInstalledVersion() async {
+  static Future<String> getInstalledVersion() async {
     final info = await PackageInfo.fromPlatform();
     return '${info.version}+${info.buildNumber}';
   }
 
   static Future<bool> isUpdateRequired(String remoteVersion) async {
-    final installedVersion = await _installedVersion;
+    final installedVersion = await getInstalledVersion();
     return compareVersions(remoteVersion, installedVersion) > 0;
   }
 
@@ -41,10 +39,11 @@ class AppVersionService {
       return [0];
     }
 
-    final replacedBuildSeparator = sanitized.replaceAll('+', '.');
-    final segments = replacedBuildSeparator.split('.');
     final values =
-        segments.map((segment) => int.tryParse(segment.trim()) ?? 0).toList();
+        RegExp(r'\d+')
+            .allMatches(sanitized)
+            .map((match) => int.tryParse(match.group(0)!) ?? 0)
+            .toList();
 
     return values.isEmpty ? [0] : values;
   }

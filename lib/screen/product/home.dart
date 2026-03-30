@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/component/gitf_box_banner.dart';
 import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/services/app_version_service.dart';
+import 'package:dadu/services/firebase.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/screen/product/brands.dart';
@@ -87,7 +90,7 @@ class Home extends StatelessWidget {
           _buildGiftBanner(context),
           _buildFlashSaleSection(context),
           _buildNewArrivalSection(context),
-          _buildVersionUpdateBanner(context),
+          const _VersionUpdateBanner(),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: InfoBanner(),
@@ -494,60 +497,6 @@ class Home extends StatelessWidget {
     });
   }
 
-  Widget _buildVersionUpdateBanner(BuildContext context) {
-    return StreamBuilder<String?>(
-      stream: controller.db.getVersionStream(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data == null) {
-          return const SizedBox.shrink();
-        }
-
-        return FutureBuilder<bool>(
-          future: AppVersionService.isUpdateRequired(snapshot.data!),
-          builder: (context, versionSnapshot) {
-            if (versionSnapshot.data != true) {
-              return const SizedBox.shrink();
-            }
-
-            return Container(
-              color: AppColors.updateBanner,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.update),
-                      SizedBox(width: 8),
-                      Text('New update is available!'),
-                    ],
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      const url =
-                          'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
-                      final uri = Uri.parse(url);
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri);
-                      } else if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Could not open update URL'),
-                          ),
-                        );
-                      }
-                    },
-                    child: const Text('UPDATE'),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   Widget _buildProductGrid() {
     return Obx(() {
       if (controller.isInitialLoading.value) {
@@ -780,6 +729,119 @@ class Home extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _VersionUpdateBanner extends StatefulWidget {
+  const _VersionUpdateBanner();
+
+  @override
+  State<_VersionUpdateBanner> createState() => _VersionUpdateBannerState();
+}
+
+class _VersionUpdateBannerState extends State<_VersionUpdateBanner>
+    with WidgetsBindingObserver {
+  final dataBase _db = dataBase();
+
+  StreamSubscription<String?>? _versionSubscription;
+  String? _remoteVersion;
+  bool _versionCheckLoading = true;
+  bool _updateRequired = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _listenForVersionUpdates();
+  }
+
+  void _listenForVersionUpdates() {
+    _versionSubscription = _db.getVersionStream().listen(
+      (remoteVersion) {
+        _remoteVersion = remoteVersion;
+        unawaited(_refreshVersionRequirement(remoteVersion));
+      },
+      onError: (_) {
+        if (!mounted) return;
+
+        setState(() {
+          _remoteVersion = null;
+          _versionCheckLoading = false;
+          _updateRequired = false;
+        });
+      },
+    );
+  }
+
+  Future<void> _refreshVersionRequirement([String? remoteVersion]) async {
+    final currentRemoteVersion = remoteVersion ?? _remoteVersion;
+    final requiresUpdate =
+        currentRemoteVersion != null &&
+        await AppVersionService.isUpdateRequired(currentRemoteVersion);
+
+    if (!mounted || currentRemoteVersion != _remoteVersion) return;
+
+    setState(() {
+      _versionCheckLoading = false;
+      _updateRequired = requiresUpdate;
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _remoteVersion == null) return;
+
+    setState(() {
+      _versionCheckLoading = true;
+    });
+
+    unawaited(_refreshVersionRequirement());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _versionSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_versionCheckLoading || !_updateRequired) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      color: AppColors.updateBanner,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.update),
+              SizedBox(width: 8),
+              Text('New update is available!'),
+            ],
+          ),
+          TextButton(
+            onPressed: () async {
+              const url =
+                  'https://play.google.com/store/apps/details?id=com.sayedulmarsalin.dadu';
+              final uri = Uri.parse(url);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Could not open update URL')),
+                );
+              }
+            },
+            child: const Text('UPDATE'),
+          ),
+        ],
+      ),
     );
   }
 }

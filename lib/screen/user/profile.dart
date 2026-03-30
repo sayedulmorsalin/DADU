@@ -27,7 +27,7 @@ class Profile extends StatefulWidget {
   State<Profile> createState() => _ProfileState();
 }
 
-class _ProfileState extends State<Profile> {
+class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   String Name = '';
   String Phone = '';
   String Email = '';
@@ -58,31 +58,41 @@ class _ProfileState extends State<Profile> {
   bool _rewardAdUpdateRequired = false;
   bool _rewardAdVersionLoading = true;
   StreamSubscription<String?>? _versionSubscription;
+  String? _remoteVersion;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadProfileData();
     _listenForVersionUpdates();
   }
 
+  Future<void> _refreshVersionRequirement([String? remoteVersion]) async {
+    final currentRemoteVersion = remoteVersion ?? _remoteVersion;
+    final requiresUpdate =
+        currentRemoteVersion != null &&
+        await AppVersionService.isUpdateRequired(currentRemoteVersion);
+
+    if (!mounted || currentRemoteVersion != _remoteVersion) return;
+
+    setState(() {
+      _rewardAdUpdateRequired = requiresUpdate;
+      _rewardAdVersionLoading = false;
+    });
+  }
+
   void _listenForVersionUpdates() {
     _versionSubscription = db.getVersionStream().listen(
-      (remoteVersion) async {
-        final requiresUpdate = remoteVersion != null &&
-            await AppVersionService.isUpdateRequired(remoteVersion);
-
-        if (!mounted) return;
-
-        setState(() {
-          _rewardAdUpdateRequired = requiresUpdate;
-          _rewardAdVersionLoading = false;
-        });
+      (remoteVersion) {
+        _remoteVersion = remoteVersion;
+        unawaited(_refreshVersionRequirement(remoteVersion));
       },
       onError: (_) {
         if (!mounted) return;
 
         setState(() {
+          _remoteVersion = null;
           _rewardAdUpdateRequired = false;
           _rewardAdVersionLoading = false;
         });
@@ -91,7 +101,19 @@ class _ProfileState extends State<Profile> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _remoteVersion == null) return;
+
+    setState(() {
+      _rewardAdVersionLoading = true;
+    });
+
+    unawaited(_refreshVersionRequirement());
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _versionSubscription?.cancel();
     super.dispose();
   }
@@ -236,12 +258,14 @@ class _ProfileState extends State<Profile> {
                                 CircleAvatar(
                                   radius: 50,
                                   backgroundColor: AppColors.surfaceGrey,
-                                  backgroundImage: tempProfilePic.isNotEmpty
-                                      ? NetworkImage(tempProfilePic)
-                                      : null,
-                                  child: tempProfilePic.isEmpty
-                                      ? const Icon(Icons.person, size: 50)
-                                      : null,
+                                  backgroundImage:
+                                      tempProfilePic.isNotEmpty
+                                          ? NetworkImage(tempProfilePic)
+                                          : null,
+                                  child:
+                                      tempProfilePic.isEmpty
+                                          ? const Icon(Icons.person, size: 50)
+                                          : null,
                                 ),
                               ],
                             ),
@@ -320,66 +344,68 @@ class _ProfileState extends State<Profile> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: _isSaving
-                      ? null
-                      : () async {
-                          setDialogState(() => _isSaving = true);
+                  onPressed:
+                      _isSaving
+                          ? null
+                          : () async {
+                            setDialogState(() => _isSaving = true);
 
-                          try {
-                            Map<String, dynamic> updatedData = {
-                              'name': tempName,
-                              'phone': tempPhone,
-                              'profile_pic': tempProfilePic,
-                            };
+                            try {
+                              Map<String, dynamic> updatedData = {
+                                'name': tempName,
+                                'phone': tempPhone,
+                                'profile_pic': tempProfilePic,
+                              };
 
-                            bool success = await db.updateUserDetails(
-                              Email,
-                              updatedData,
-                            );
+                              bool success = await db.updateUserDetails(
+                                Email,
+                                updatedData,
+                              );
 
-                            if (success) {
-                              setState(() {
-                                Name = tempName;
-                                Phone = tempPhone;
-                                profilePic = tempProfilePic;
-                              });
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(mainContext).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Profile updated successfully',
+                              if (success) {
+                                setState(() {
+                                  Name = tempName;
+                                  Phone = tempPhone;
+                                  profilePic = tempProfilePic;
+                                });
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(mainContext).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Profile updated successfully',
+                                    ),
+                                    duration: Duration(seconds: 2),
                                   ),
-                                  duration: Duration(seconds: 2),
+                                );
+                              } else {
+                                throw Exception('Failed to update Firestore');
+                              }
+                            } catch (e) {
+                              setDialogState(() => _isSaving = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("Error saving data: $e"),
                                 ),
                               );
-                            } else {
-                              throw Exception('Failed to update Firestore');
                             }
-                          } catch (e) {
-                            setDialogState(() => _isSaving = false);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text("Error saving data: $e"),
-                              ),
-                            );
-                          }
-                        },
+                          },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.profileAccent,
                   ),
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: AppColors.textOnPrimary,
-                            strokeWidth: 2,
+                  child:
+                      _isSaving
+                          ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: AppColors.textOnPrimary,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : const Text(
+                            'SAVE',
+                            style: TextStyle(color: AppColors.textOnPrimary),
                           ),
-                        )
-                      : const Text(
-                          'SAVE',
-                          style: TextStyle(color: AppColors.textOnPrimary),
-                        ),
                 ),
               ],
             );
@@ -425,18 +451,18 @@ class _ProfileState extends State<Profile> {
                       value: tempDistrict,
                       items:
                           districtUpozila.districtToThanas.keys.map((district) {
-                        return DropdownMenuItem(
-                          value: district,
-                          child: Text(district),
-                        );
-                      }).toList(),
+                            return DropdownMenuItem(
+                              value: district,
+                              child: Text(district),
+                            );
+                          }).toList(),
                       onChanged: (newDistrict) {
                         if (newDistrict != null) {
                           setDialogState(() {
                             tempDistrict = newDistrict;
                             thanaList =
                                 districtUpozila.districtToThanas[newDistrict] ??
-                                    [];
+                                [];
                             tempThana =
                                 thanaList.isNotEmpty ? thanaList.first : '';
                           });
@@ -454,21 +480,23 @@ class _ProfileState extends State<Profile> {
                     const SizedBox(height: 20),
                     DropdownButtonFormField<String>(
                       value: thanaList.isNotEmpty ? tempThana : null,
-                      items: thanaList.map((thana) {
-                        return DropdownMenuItem(
-                          value: thana,
-                          child: Text(thana),
-                        );
-                      }).toList(),
-                      onChanged: thanaList.isNotEmpty
-                          ? (newThana) {
-                              if (newThana != null) {
-                                setDialogState(() {
-                                  tempThana = newThana;
-                                });
+                      items:
+                          thanaList.map((thana) {
+                            return DropdownMenuItem(
+                              value: thana,
+                              child: Text(thana),
+                            );
+                          }).toList(),
+                      onChanged:
+                          thanaList.isNotEmpty
+                              ? (newThana) {
+                                if (newThana != null) {
+                                  setDialogState(() {
+                                    tempThana = newThana;
+                                  });
+                                }
                               }
-                            }
-                          : null,
+                              : null,
                       decoration: const InputDecoration(
                         labelText: 'Thana/Upazila',
                         border: OutlineInputBorder(),
@@ -506,67 +534,69 @@ class _ProfileState extends State<Profile> {
                   ),
                 ),
                 ElevatedButton(
-                  onPressed: _isSaving
-                      ? null
-                      : () async {
-                          setDialogState(() => _isSaving = true);
+                  onPressed:
+                      _isSaving
+                          ? null
+                          : () async {
+                            setDialogState(() => _isSaving = true);
 
-                          try {
-                            Map<String, dynamic> updatedData = {
-                              'district': tempDistrict,
-                              'thana': tempThana,
-                              'address': tempAddress,
-                            };
+                            try {
+                              Map<String, dynamic> updatedData = {
+                                'district': tempDistrict,
+                                'thana': tempThana,
+                                'address': tempAddress,
+                              };
 
-                            bool success = await db.updateUserDetails(
-                              Email,
-                              updatedData,
-                            );
+                              bool success = await db.updateUserDetails(
+                                Email,
+                                updatedData,
+                              );
 
-                            if (success) {
-                              setState(() {
-                                District = tempDistrict;
-                                Thana = tempThana;
-                                Address = tempAddress;
-                              });
+                              if (success) {
+                                setState(() {
+                                  District = tempDistrict;
+                                  Thana = tempThana;
+                                  Address = tempAddress;
+                                });
 
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(mainContext).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Address updated successfully',
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(mainContext).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Address updated successfully',
+                                    ),
+                                    duration: Duration(seconds: 2),
                                   ),
-                                  duration: Duration(seconds: 2),
+                                );
+                              } else {
+                                throw Exception('Failed to update Firestore');
+                              }
+                            } catch (e) {
+                              setDialogState(() => _isSaving = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text("Error saving address: $e"),
                                 ),
                               );
-                            } else {
-                              throw Exception('Failed to update Firestore');
                             }
-                          } catch (e) {
-                            setDialogState(() => _isSaving = false);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text("Error saving address: $e"),
-                              ),
-                            );
-                          }
-                        },
+                          },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.profileAccent,
                   ),
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            color: AppColors.textOnPrimary,
-                            strokeWidth: 2,
+                  child:
+                      _isSaving
+                          ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: AppColors.textOnPrimary,
+                              strokeWidth: 2,
+                            ),
+                          )
+                          : const Text(
+                            'SAVE',
+                            style: TextStyle(color: AppColors.textOnPrimary),
                           ),
-                        )
-                      : const Text(
-                          'SAVE',
-                          style: TextStyle(color: AppColors.textOnPrimary),
-                        ),
                 ),
               ],
             );
@@ -582,23 +612,24 @@ class _ProfileState extends State<Profile> {
     showDialog(
       context: context,
       barrierColor: Colors.black87,
-      builder: (context) => GestureDetector(
-        onTap: () => Navigator.of(context).pop(),
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.zero,
-          child: Container(
-            width: MediaQuery.of(context).size.width,
-            height: MediaQuery.of(context).size.height,
-            child: InteractiveViewer(
-              panEnabled: true,
-              minScale: 0.5,
-              maxScale: 4.0,
-              child: Image.network(profilePic, fit: BoxFit.contain),
+      builder:
+          (context) => GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: EdgeInsets.zero,
+              child: Container(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Image.network(profilePic, fit: BoxFit.contain),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -665,77 +696,79 @@ class _ProfileState extends State<Profile> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: _isChangingPassword
-                      ? null
-                      : () async {
-                          setDialogState(() => _isChangingPassword = true);
+                  onPressed:
+                      _isChangingPassword
+                          ? null
+                          : () async {
+                            setDialogState(() => _isChangingPassword = true);
 
-                          final currentPassword =
-                              currentPasswordController.text;
-                          final newPassword = newPasswordController.text;
-                          final confirmPassword =
-                              confirmPasswordController.text;
+                            final currentPassword =
+                                currentPasswordController.text;
+                            final newPassword = newPasswordController.text;
+                            final confirmPassword =
+                                confirmPasswordController.text;
 
-                          if (currentPassword.isEmpty ||
-                              newPassword.isEmpty ||
-                              confirmPassword.isEmpty) {
-                            setDialogState(() {
-                              _errorMessage = 'All fields are required';
-                              _isChangingPassword = false;
-                            });
-                            return;
-                          }
-
-                          if (newPassword != confirmPassword) {
-                            setDialogState(() {
-                              _errorMessage = 'New passwords do not match';
-                              _isChangingPassword = false;
-                            });
-                            return;
-                          }
-
-                          if (newPassword.length < 6) {
-                            setDialogState(() {
-                              _errorMessage =
-                                  'Password must be at least 6 characters';
-                              _isChangingPassword = false;
-                            });
-                            return;
-                          }
-
-                          try {
-                            final result = await _auth.changePassword(
-                              currentPassword,
-                              newPassword,
-                            );
-
-                            if (result == null) {
-                              if (mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Password changed successfully',
-                                    ),
-                                  ),
-                                );
-                              }
-                            } else {
+                            if (currentPassword.isEmpty ||
+                                newPassword.isEmpty ||
+                                confirmPassword.isEmpty) {
                               setDialogState(() {
-                                _errorMessage = result;
+                                _errorMessage = 'All fields are required';
+                                _isChangingPassword = false;
+                              });
+                              return;
+                            }
+
+                            if (newPassword != confirmPassword) {
+                              setDialogState(() {
+                                _errorMessage = 'New passwords do not match';
+                                _isChangingPassword = false;
+                              });
+                              return;
+                            }
+
+                            if (newPassword.length < 6) {
+                              setDialogState(() {
+                                _errorMessage =
+                                    'Password must be at least 6 characters';
+                                _isChangingPassword = false;
+                              });
+                              return;
+                            }
+
+                            try {
+                              final result = await _auth.changePassword(
+                                currentPassword,
+                                newPassword,
+                              );
+
+                              if (result == null) {
+                                if (mounted) {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Password changed successfully',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } else {
+                                setDialogState(() {
+                                  _errorMessage = result;
+                                  _isChangingPassword = false;
+                                });
+                              }
+                            } catch (e) {
+                              setDialogState(() {
+                                _errorMessage = 'Password change failed: $e';
                                 _isChangingPassword = false;
                               });
                             }
-                          } catch (e) {
-                            setDialogState(() {
-                              _errorMessage = 'Password change failed: $e';
-                              _isChangingPassword = false;
-                            });
-                          }
-                        },
-                  child: _isChangingPassword
-                      ? const CircularProgressIndicator()
-                      : const Text('Update Password'),
+                          },
+                  child:
+                      _isChangingPassword
+                          ? const CircularProgressIndicator()
+                          : const Text('Update Password'),
                 ),
               ],
             );
@@ -853,9 +886,10 @@ class _ProfileState extends State<Profile> {
                 backgroundColor: AppColors.surfaceGrey,
                 backgroundImage:
                     profilePic.isNotEmpty ? NetworkImage(profilePic) : null,
-                child: profilePic.isEmpty
-                    ? const Icon(Icons.person, size: 40)
-                    : null,
+                child:
+                    profilePic.isEmpty
+                        ? const Icon(Icons.person, size: 40)
+                        : null,
               ),
               if (_isUpdatingProfilePic)
                 const Padding(
@@ -934,8 +968,8 @@ class _ProfileState extends State<Profile> {
               ),
             ),
             GestureDetector(
-              onTap: () =>
-                  _navigateToOrderPage(context, 'To Receive', toReceive),
+              onTap:
+                  () => _navigateToOrderPage(context, 'To Receive', toReceive),
               child: _buildOrderStatus(
                 'To Receive',
                 Icons.shopping_bag,
@@ -943,8 +977,8 @@ class _ProfileState extends State<Profile> {
               ),
             ),
             GestureDetector(
-              onTap: () =>
-                  _navigateToOrderPage(context, 'Completed', Completed),
+              onTap:
+                  () => _navigateToOrderPage(context, 'Completed', Completed),
               child: _buildOrderStatus(
                 'Completed',
                 Icons.check_circle,
@@ -1483,21 +1517,23 @@ class _ProfileState extends State<Profile> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Help Center')),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: helpItems
-                .map(
-                  (item) => _buildHelpItem(
-                    item['title'] as String,
-                    item['icon'] as IconData,
-                    item['url'] as String,
-                  ),
-                )
-                .toList(),
-          ),
-        ),
+        builder:
+            (context) => Scaffold(
+              appBar: AppBar(title: const Text('Help Center')),
+              body: ListView(
+                padding: const EdgeInsets.all(16),
+                children:
+                    helpItems
+                        .map(
+                          (item) => _buildHelpItem(
+                            item['title'] as String,
+                            item['icon'] as IconData,
+                            item['url'] as String,
+                          ),
+                        )
+                        .toList(),
+              ),
+            ),
       ),
     );
   }
@@ -1555,57 +1591,59 @@ class _ProfileState extends State<Profile> {
                   child: const Text('Cancel'),
                 ),
                 TextButton(
-                  onPressed: isDeleting
-                      ? null
-                      : () async {
-                          setDialogState(() {
-                            isDeleting = true;
-                            errorMessage = null;
-                          });
+                  onPressed:
+                      isDeleting
+                          ? null
+                          : () async {
+                            setDialogState(() {
+                              isDeleting = true;
+                              errorMessage = null;
+                            });
 
-                          try {
-                            final result = await _auth.deleteAccount();
+                            try {
+                              final result = await _auth.deleteAccount();
 
-                            if (result == null) {
-                              if (!mounted) return;
-                              Navigator.pop(dialogContext);
-                              Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => Home(),
-                                ),
-                                (route) => false,
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Account deleted successfully',
+                              if (result == null) {
+                                if (!mounted) return;
+                                Navigator.pop(dialogContext);
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => Home(),
                                   ),
-                                ),
-                              );
-                            } else {
+                                  (route) => false,
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Account deleted successfully',
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                setDialogState(() {
+                                  errorMessage = result;
+                                  isDeleting = false;
+                                });
+                              }
+                            } catch (e) {
                               setDialogState(() {
-                                errorMessage = result;
+                                errorMessage = 'Account deletion failed: $e';
                                 isDeleting = false;
                               });
                             }
-                          } catch (e) {
-                            setDialogState(() {
-                              errorMessage = 'Account deletion failed: $e';
-                              isDeleting = false;
-                            });
-                          }
-                        },
-                  child: isDeleting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(
-                          'Delete',
-                          style: TextStyle(color: AppColors.error),
-                        ),
+                          },
+                  child:
+                      isDeleting
+                          ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Text(
+                            'Delete',
+                            style: TextStyle(color: AppColors.error),
+                          ),
                 ),
               ],
             );
@@ -1618,46 +1656,47 @@ class _ProfileState extends State<Profile> {
   void _logout() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout Confirmation'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Logout Confirmation'),
+            content: const Text('Are you sure you want to logout?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+
+                  try {
+                    await _auth.signOut();
+                    if (Get.isRegistered<HomeController>()) {
+                      Get.find<HomeController>().resetToHomeTab();
+                    }
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => Home()),
+                      (route) => false,
+                    );
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Logged out successfully')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Logout failed: $e")),
+                    );
+                  }
+                },
+                child: const Text(
+                  'Logout',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-
-              try {
-                await _auth.signOut();
-                if (Get.isRegistered<HomeController>()) {
-                  Get.find<HomeController>().resetToHomeTab();
-                }
-
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => Home()),
-                  (route) => false,
-                );
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Logged out successfully')),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Logout failed: $e")),
-                );
-              }
-            },
-            child: const Text(
-              'Logout',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

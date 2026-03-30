@@ -28,7 +28,7 @@ class CheckOut extends StatefulWidget {
   State<CheckOut> createState() => _CheckOutState();
 }
 
-class _CheckOutState extends State<CheckOut> {
+class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   final dataBase db = new dataBase();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
@@ -54,6 +54,7 @@ class _CheckOutState extends State<CheckOut> {
   String? _paymentNumber;
   bool _paymentNumberLoading = false;
   StreamSubscription<String?>? _versionSubscription;
+  String? _remoteVersion;
 
   final Auth _auth = Auth();
   final ImageService _imageService = ImageService();
@@ -61,23 +62,53 @@ class _CheckOutState extends State<CheckOut> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUserAddress();
     _loadPaymentNumber();
     _listenForVersionUpdates();
   }
 
-  void _listenForVersionUpdates() {
-    _versionSubscription = db.getVersionStream().listen((remoteVersion) async {
-      final requiresUpdate =
-          remoteVersion != null &&
-          await AppVersionService.isUpdateRequired(remoteVersion);
+  Future<void> _refreshVersionRequirement([String? remoteVersion]) async {
+    final currentRemoteVersion = remoteVersion ?? _remoteVersion;
+    final requiresUpdate =
+        currentRemoteVersion != null &&
+        await AppVersionService.isUpdateRequired(currentRemoteVersion);
 
-      if (!mounted) return;
-      setState(() {
-        needupdate = requiresUpdate;
-        _versionCheckLoading = false;
-      });
+    if (!mounted || currentRemoteVersion != _remoteVersion) return;
+
+    setState(() {
+      needupdate = requiresUpdate;
+      _versionCheckLoading = false;
     });
+  }
+
+  void _listenForVersionUpdates() {
+    _versionSubscription = db.getVersionStream().listen(
+      (remoteVersion) {
+        _remoteVersion = remoteVersion;
+        unawaited(_refreshVersionRequirement(remoteVersion));
+      },
+      onError: (_) {
+        if (!mounted) return;
+
+        setState(() {
+          _remoteVersion = null;
+          needupdate = false;
+          _versionCheckLoading = false;
+        });
+      },
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _remoteVersion == null) return;
+
+    setState(() {
+      _versionCheckLoading = true;
+    });
+
+    unawaited(_refreshVersionRequirement());
   }
 
   Future<void> _loadUserAddress() async {
@@ -188,6 +219,7 @@ class _CheckOutState extends State<CheckOut> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _versionSubscription?.cancel();
     _nameController.dispose();
     _phoneController.dispose();
