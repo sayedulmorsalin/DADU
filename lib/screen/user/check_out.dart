@@ -41,9 +41,8 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   final ImagePicker _picker = ImagePicker();
   bool _imageSelected = false;
   String? paymentProof;
-  int deliveryPoints = 0;
+  double deliveryPoints = 0;
   bool _freeDeliverySelected = false;
-  bool freeDeliveryUsed = false;
   int baseDeliveryCharge = 0;
   int deliveryCharge = 0;
   double _total = 0;
@@ -59,9 +58,20 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _calculateDeliveryCharge();
     _loadUserAddress();
     _loadPaymentNumber();
     _refreshVersionRequirement();
+  }
+
+  @override
+  void didUpdateWidget(covariant CheckOut oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.totalAmount != widget.totalAmount ||
+        oldWidget.cartItems != widget.cartItems) {
+      _calculateDeliveryCharge();
+    }
   }
 
   Future<void> _refreshVersionRequirement() async {
@@ -112,8 +122,8 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
           _addressController.text = userDetails['address'] ?? '';
           selectedDistrict = userDetails['district'];
           selectedThana = userDetails['thana'];
-          deliveryPoints = userDetails['free_delivery_info'] ?? 0;
-          freeDeliveryUsed = userDetails['freeDeliveryUsed'] ?? false;
+          deliveryPoints =
+              (userDetails['free_delivery_info'] as num?)?.toDouble() ?? 0.0;
 
           if (selectedDistrict != null) {
             thanaList =
@@ -122,7 +132,9 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
           _calculateDeliveryCharge();
         });
       }
-    } catch (e) {}
+    } catch (e) {
+      debugPrint('Failed to load checkout user data: $e');
+    }
   }
 
   Future<void> _loadPaymentNumber() async {
@@ -164,29 +176,35 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     return widget.cartItems.fold(0, (sum, item) => sum + item.quantity);
   }
 
+  int _countDiscountItems(String brandName) {
+    return widget.cartItems
+        .where(
+          (item) =>
+              item.price >= 500 &&
+              item.brand.trim().toLowerCase() == brandName,
+        )
+        .fold(0, (sum, item) => sum + item.quantity);
+  }
+
+  int get _chargeableQuantity {
+    return widget.cartItems
+        .where((item) => item.price >= 500)
+        .fold(0, (sum, item) => sum + item.quantity);
+  }
+
+  double get _freeDeliveryCost => baseDeliveryCharge.toDouble();
+
+  bool get _canUseFreeDelivery =>
+      baseDeliveryCharge > 0 && deliveryPoints >= _freeDeliveryCost;
+
   void _calculateDeliveryCharge() {
-    int glovesCount = widget.cartItems
-        .where((item) => item.brand == 'Gloves')
-        .fold(0, (sum, item) => sum + item.quantity);
-
-    int jerseyCount = widget.cartItems
-        .where((item) => item.brand == 'jersey')
-        .fold(0, (sum, item) => sum + item.quantity);
-
-    int pantCount = widget.cartItems
-        .where((item) => item.brand == 'pant')
-        .fold(0, (sum, item) => sum + item.quantity);
-
-    int othersCount = widget.cartItems
-        .where((item) => item.brand == 'Others')
-        .fold(0, (sum, item) => sum + item.quantity);
+    int glovesCount = _countDiscountItems('gloves');
+    int jerseyCount = _countDiscountItems('jersey');
+    int pantCount = _countDiscountItems('pant');
+    int othersCount = _countDiscountItems('others');
 
     int discountItems = glovesCount + othersCount + jerseyCount + pantCount;
-    int totalQuantity = widget.cartItems.fold(
-      0,
-      (sum, item) => sum + item.quantity,
-    );
-    int normalItems = totalQuantity - discountItems;
+    int normalItems = _chargeableQuantity - discountItems;
 
     int calculatedCharge = 100 + (normalItems * 30) + (discountItems * 10);
     baseDeliveryCharge = calculatedCharge < 130 ? 130 : calculatedCharge;
@@ -254,6 +272,13 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
         );
       }
 
+      final double remainingDeliveryPoints =
+          _freeDeliverySelected
+              ? (deliveryPoints - _freeDeliveryCost)
+                  .clamp(0.0, double.infinity)
+                  .toDouble()
+              : deliveryPoints;
+
       final userUpdateData = {
         "to_verify": FieldValue.arrayUnion([
           {
@@ -288,10 +313,14 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
             'freeDeliveryUsed': _freeDeliverySelected,
             'baseDeliveryCharge': baseDeliveryCharge,
             'deliveryPoints': deliveryPoints,
+            'deliveryPointsUsed':
+                _freeDeliverySelected ? _freeDeliveryCost : 0.0,
+            'remainingDeliveryPoints': remainingDeliveryPoints,
             'order_date': DateTime.now().millisecondsSinceEpoch,
           },
         ]),
-        'freeDeliveryUsed': _freeDeliverySelected,
+        'free_delivery_info': remainingDeliveryPoints,
+        'freeDeliveryUsed': false,
         'cart_item': {},
       };
 
@@ -447,7 +476,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   }
 
   Widget _buildFreeDeliveryButton() {
-    if (deliveryPoints >= baseDeliveryCharge && !freeDeliveryUsed) {
+    if (_canUseFreeDelivery) {
       return Padding(
         padding: const EdgeInsets.only(top: 16, bottom: 16),
         child: ElevatedButton(
@@ -461,8 +490,8 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
           ),
           child: Text(
             _freeDeliverySelected
-                ? 'Free Delivery Applied! Remaining Points: ${deliveryPoints - baseDeliveryCharge}'
-                : 'Use Free Delivery (Cost: $baseDeliveryCharge points)',
+                ? 'Free Delivery Applied! Remaining Points: ${(deliveryPoints - _freeDeliveryCost).toStringAsFixed(2)}'
+                : 'Use Free Delivery (Cost: ${_freeDeliveryCost.toStringAsFixed(0)} points)',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -645,7 +674,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Shipping', style: TextStyle(fontSize: 14)),
+                  const Text('Delivery charge', style: TextStyle(fontSize: 14)),
                   Text(
                     _freeDeliverySelected
                         ? 'FREE (৳0.00)'
@@ -712,18 +741,29 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Shipping Information',
+              'Delivery Information',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             _buildShippingForm(),
+
+            const SizedBox(height: 24),
+            const Text(
+              'Order Summary',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            _buildOrderSummary(),
+            const SizedBox(height: 32),
+            _buildUpdateBanner(),
+
             _buildFreeDeliveryButton(),
 
             if (!_freeDeliverySelected) ...[
               const SizedBox(height: 24),
               ListTile(
                 title: const Text(
-                  "Number to Pay(send money)",
+                  "Send delivery charge to this number (এই নাম্বারে ডেলিভারি চার্জ পাঠান)",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 subtitle: Row(
@@ -758,7 +798,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
               ),
               const SizedBox(height: 24),
               const Text(
-                'Payment Method',
+                ' Send money By',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
@@ -770,15 +810,6 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                 _buildPaymentProofSection(),
             ],
 
-            const SizedBox(height: 24),
-            const Text(
-              'Order Summary',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _buildOrderSummary(),
-            const SizedBox(height: 32),
-            _buildUpdateBanner(),
             SizedBox(
               width: double.infinity,
               height: 50,

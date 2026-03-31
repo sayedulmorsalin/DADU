@@ -22,6 +22,11 @@ class _CartState extends State<Cart> {
   Future<List<CartItem>>? _cartItemsFuture;
   String? _lastCartSignature;
 
+  double _parsePrice(dynamic rawPrice) {
+    final cleanedPrice = rawPrice.toString().replaceAll(RegExp(r'[^\d.]'), '');
+    return double.tryParse(cleanedPrice) ?? 0.0;
+  }
+
   Future<List<CartItem>> _processCartData(Map<String, dynamic> cartData) async {
     List<CartItem> loadedCartItems = [];
 
@@ -36,10 +41,10 @@ class _CartState extends State<Cart> {
             CartItem(
               id: productId,
               name: productData['name'] ?? 'Unknown',
-              price: double.tryParse(productData['price'].toString()) ?? 0.0,
+              price: _parsePrice(productData['price']),
               quantity: value,
               imageUrl: productData['image5'] ?? '',
-              brand: productData['brand'],
+              brand: productData['brand'] ?? '',
               size: "default",
             ),
           );
@@ -55,10 +60,10 @@ class _CartState extends State<Cart> {
               CartItem(
                 id: productId,
                 name: productData['name'] ?? 'Unknown',
-                price: double.tryParse(productData['price'].toString()) ?? 0.0,
+                price: _parsePrice(productData['price']),
                 quantity: quantity,
                 imageUrl: productData['image5'] ?? '',
-                brand: productData['brand'],
+                brand: productData['brand'] ?? '',
                 size: size,
               ),
             );
