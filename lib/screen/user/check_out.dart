@@ -205,9 +205,14 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
 
     int discountItems = glovesCount + othersCount + jerseyCount + pantCount;
     int normalItems = _chargeableQuantity - discountItems;
+    bool isNaogaon = selectedDistrict?.trim().toLowerCase() == 'naogaon';
+    int baseCharge = isNaogaon ? 40 : 100;
+    int minimumCharge = isNaogaon ? 70 : 130;
 
-    int calculatedCharge = 100 + (normalItems * 30) + (discountItems * 10);
-    baseDeliveryCharge = calculatedCharge < 130 ? 130 : calculatedCharge;
+    int calculatedCharge =
+        baseCharge + (normalItems * 30) + (discountItems * 10);
+    baseDeliveryCharge =
+        calculatedCharge < minimumCharge ? minimumCharge : calculatedCharge;
     deliveryCharge = _freeDeliverySelected ? 0 : baseDeliveryCharge;
     _total = widget.totalAmount + deliveryCharge;
   }
@@ -431,6 +436,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                   selectedThana = null;
                   thanaList =
                       DistrictUpozila().districtToThanas[newValue] ?? [];
+                  _calculateDeliveryCharge();
                 }),
           ),
           const SizedBox(height: 12),
