@@ -34,6 +34,9 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
   bool _versionCheckLoading = true;
   bool _updateRequired = false;
   bool _rewardAccessInitialized = false;
+  bool _rewardAdLoading = false;
+
+  Completer<RewardedAd?>? _rewardedAdLoadCompleter;
 
   bool get isCooldownActive =>
       cooldownEnd != null && DateTime.now().isBefore(cooldownEnd!);
@@ -145,8 +148,29 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
 
   RewardedAd? _rewardedAd;
 
-  void loadRewardedAd() {
-    if (_versionCheckLoading || _updateRequired) return;
+  Future<RewardedAd?> _loadRewardedAd({bool retryOnFailure = true}) {
+    if (_rewardedAd != null) {
+      return Future.value(_rewardedAd);
+    }
+
+    if (_rewardedAdLoadCompleter != null) {
+      return _rewardedAdLoadCompleter!.future;
+    }
+
+    final completer = Completer<RewardedAd?>();
+    _rewardedAdLoadCompleter = completer;
+
+    if (mounted) {
+      setState(() {
+        _rewardAdLoading = true;
+      });
+    } else {
+      _rewardAdLoading = true;
+    }
+
+    if (_versionCheckLoading || _updateRequired) {
+      return Future.value(null);
+    }
 
     RewardedAd.load(
       adUnitId: 'ca-app-pub-3831772617470767/9649646618',
@@ -155,6 +179,12 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
         onAdLoaded: (ad) {
           if (!mounted || _updateRequired) {
             ad.dispose();
+            if (!completer.isCompleted) {
+              completer.complete(null);
+            }
+
+            _rewardedAdLoadCompleter = null;
+            _rewardAdLoading = false;
             return;
           }
 
@@ -176,24 +206,108 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
               loadRewardedAd();
             },
           );
+
+          if (!completer.isCompleted) {
+            completer.complete(ad);
+          }
+
+          _rewardedAdLoadCompleter = null;
+
+          if (mounted) {
+            setState(() {
+              _rewardAdLoading = false;
+            });
+          } else {
+            _rewardAdLoading = false;
+          }
         },
         onAdFailedToLoad: (error) {
-          if (!mounted || _updateRequired) return;
+          if (!mounted || _updateRequired) {
+            if (!completer.isCompleted) {
+              completer.complete(null);
+            }
+
+            _rewardedAdLoadCompleter = null;
+            _rewardAdLoading = false;
+            return;
+          }
 
           print("Rewarded failed: ${error.code} ${error.message}");
 
-          // Retry loading after a delay
-          Future.delayed(const Duration(seconds: 5), () {
-            if (!mounted || _updateRequired) return;
+          if (!completer.isCompleted) {
+            completer.complete(null);
+          }
 
-            loadRewardedAd();
+          _rewardedAdLoadCompleter = null;
+
+          setState(() {
+            _rewardAdLoading = false;
           });
+
+          if (retryOnFailure) {
+            // Retry loading after a delay
+            Future.delayed(const Duration(seconds: 5), () {
+              if (!mounted || _updateRequired) return;
+
+              loadRewardedAd();
+            });
+          }
         },
       ),
     );
+
+    return completer.future;
   }
 
-  void showRewardedAd() {
+  void loadRewardedAd() {
+    if (_versionCheckLoading || _updateRequired) return;
+
+    _loadRewardedAd();
+  }
+
+  Future<void> _showRewardLoadingDialog() async {
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return const Dialog(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 48,
+                  width: 48,
+                  child: CircularProgressIndicator(),
+                ),
+                SizedBox(height: 18),
+                Text(
+                  "Loading ad...",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _hideRewardLoadingDialog() async {
+    if (!mounted) return;
+
+    final navigator = Navigator.of(context, rootNavigator: true);
+
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
+
+  Future<void> showRewardedAd() async {
     if (_versionCheckLoading || _updateRequired) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please update your app first")),
@@ -234,14 +348,30 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
       return;
     }
 
-    if (_rewardedAd == null) {
-      loadRewardedAd();
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Ad loading")));
+    if (_rewardAdLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Ad is loading, please wait")),
+      );
 
       return;
+    }
+
+    if (_rewardedAd == null) {
+      unawaited(_showRewardLoadingDialog());
+
+      final ad = await _loadRewardedAd(retryOnFailure: false);
+
+      await _hideRewardLoadingDialog();
+
+      if (!mounted || _updateRequired) return;
+
+      if (ad == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Ad is not available right now")),
+        );
+
+        return;
+      }
     }
 
     _rewardedAd!.show(
@@ -343,6 +473,8 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
     _countdownTimer?.cancel();
     _rewardedAd?.dispose();
     _rewardedAd = null;
+    _rewardedAdLoadCompleter = null;
+    _rewardAdLoading = false;
     _bannerAd?.dispose();
     _bannerAd = null;
     _bannerReady = false;
@@ -391,7 +523,19 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
   }
 
   Widget _buildLoadingState() {
-    return const Center(child: CircularProgressIndicator());
+    return const Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(height: 48, width: 48, child: CircularProgressIndicator()),
+          SizedBox(height: 16),
+          Text(
+            "Checking app status...",
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildUpdateRequiredState() {
@@ -487,7 +631,8 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final disableButton = isCooldownActive || isDailyLimitReached;
+    final disableButton =
+        isCooldownActive || isDailyLimitReached || _rewardAdLoading;
 
     return Scaffold(
       appBar: AppBar(

@@ -574,14 +574,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                           ],
                         ),
                       ),
-                      Text(
-                        widget.description,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          height: 1.5,
-                        ),
-                      ),
+
                       const SizedBox(height: 20),
                       if (widget.brand == "Puma" ||
                           widget.brand == "Nike" ||
@@ -594,6 +587,16 @@ class _ProductDetailsState extends State<ProductDetails> {
                         method3()
                       else
                         method4(),
+                      const SizedBox(height: 20),
+                      Text(
+                        widget.description,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          height: 1.5,
+                        ),
+                      ),
+                      
                       SizedBox(height: 180),
                     ],
                   ),
