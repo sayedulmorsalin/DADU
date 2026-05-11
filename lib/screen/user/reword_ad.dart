@@ -148,7 +148,7 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
 
   RewardedAd? _rewardedAd;
 
-  Future<RewardedAd?> _loadRewardedAd({bool retryOnFailure = true}) {
+  Future<RewardedAd?> _loadRewardedAd() {
     if (_rewardedAd != null) {
       return Future.value(_rewardedAd);
     }
@@ -169,6 +169,8 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
     }
 
     if (_versionCheckLoading || _updateRequired) {
+      _rewardAdLoading = false;
+      _rewardedAdLoadCompleter = null;
       return Future.value(null);
     }
 
@@ -182,7 +184,6 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
             if (!completer.isCompleted) {
               completer.complete(null);
             }
-
             _rewardedAdLoadCompleter = null;
             _rewardAdLoading = false;
             return;
@@ -193,17 +194,11 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
-
-              if (!mounted || _updateRequired) return;
-
-              loadRewardedAd();
+              _rewardedAd = null;
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
               ad.dispose();
-
-              if (!mounted || _updateRequired) return;
-
-              loadRewardedAd();
+              _rewardedAd = null;
             },
           );
 
@@ -222,16 +217,6 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
           }
         },
         onAdFailedToLoad: (error) {
-          if (!mounted || _updateRequired) {
-            if (!completer.isCompleted) {
-              completer.complete(null);
-            }
-
-            _rewardedAdLoadCompleter = null;
-            _rewardAdLoading = false;
-            return;
-          }
-
           print("Rewarded failed: ${error.code} ${error.message}");
 
           if (!completer.isCompleted) {
@@ -240,17 +225,12 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
 
           _rewardedAdLoadCompleter = null;
 
-          setState(() {
-            _rewardAdLoading = false;
-          });
-
-          if (retryOnFailure) {
-            // Retry loading after a delay
-            Future.delayed(const Duration(seconds: 5), () {
-              if (!mounted || _updateRequired) return;
-
-              loadRewardedAd();
+          if (mounted) {
+            setState(() {
+              _rewardAdLoading = false;
             });
+          } else {
+            _rewardAdLoading = false;
           }
         },
       ),
@@ -259,11 +239,7 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
     return completer.future;
   }
 
-  void loadRewardedAd() {
-    if (_versionCheckLoading || _updateRequired) return;
 
-    _loadRewardedAd();
-  }
 
   Future<void> _showRewardLoadingDialog() async {
     if (!mounted) return;
@@ -359,7 +335,7 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
     if (_rewardedAd == null) {
       unawaited(_showRewardLoadingDialog());
 
-      final ad = await _loadRewardedAd(retryOnFailure: false);
+      final ad = await _loadRewardedAd();
 
       await _hideRewardLoadingDialog();
 
@@ -485,7 +461,6 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
 
     _rewardAccessInitialized = true;
     loadUserData();
-    loadRewardedAd();
     loadBannerAd();
   }
 

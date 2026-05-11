@@ -438,7 +438,7 @@ class dataBase {
   }
 
 
-  Future<String?> getPaymentNumber() async {
+  Future<Map<String, dynamic>?> getPaymentNumber() async {
 
     final doc = await FirebaseFirestore.instance
         .collection("paymentNumber")
@@ -447,7 +447,7 @@ class dataBase {
 
     if (!doc.exists) return null;
 
-    return doc.data()?['number']?.toString();
+    return doc.data();
   }
 
   Future<Map<String, dynamic>?> getLastGiftWinner() async {

@@ -48,7 +48,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   double _total = 0;
   bool needupdate = false;
   bool _versionCheckLoading = true;
-  String? _paymentNumber;
+  Map<String, dynamic>? _paymentDetails;
   bool _paymentNumberLoading = false;
 
   final Auth _auth = Auth();
@@ -140,19 +140,30 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   Future<void> _loadPaymentNumber() async {
     setState(() => _paymentNumberLoading = true);
     try {
-      final number = await db.getPaymentNumber();
+      final details = await db.getPaymentNumber();
       if (!mounted) return;
       setState(() {
-        _paymentNumber = number;
+        _paymentDetails = details;
         _paymentNumberLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _paymentNumber = null;
+        _paymentDetails = null;
         _paymentNumberLoading = false;
       });
     }
+  }
+
+  String _getDisplayNumber() {
+    if (_paymentDetails == null) return "Not available";
+
+    String? specificNumber = _paymentDetails![_paymentMethod]?.toString();
+    if (specificNumber != null && specificNumber.trim().isNotEmpty) {
+      return specificNumber;
+    }
+
+    return _paymentDetails!['number']?.toString() ?? "Not available";
   }
 
   Future<void> _pickPaymentProof() async {
@@ -777,7 +788,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                     SelectableText(
                       _paymentNumberLoading
                           ? "Loading..."
-                          : (_paymentNumber ?? "Not available"),
+                          : _getDisplayNumber(),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -786,11 +797,12 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                     IconButton(
                       icon: const Icon(Icons.copy, size: 20),
                       onPressed:
-                          (_paymentNumberLoading || _paymentNumber == null)
+                          (_paymentNumberLoading ||
+                                  _getDisplayNumber() == "Not available")
                               ? null
                               : () {
                                 Clipboard.setData(
-                                  ClipboardData(text: _paymentNumber!),
+                                  ClipboardData(text: _getDisplayNumber()),
                                 );
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
