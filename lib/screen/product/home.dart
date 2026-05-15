@@ -6,7 +6,7 @@ import 'package:dadu/services/app_version_service.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/screen/product/brands.dart';
-import 'package:dadu/screen/product/bundle_deals.dart';
+import 'package:dadu/screen/product/combo_pack.dart';
 import 'package:dadu/screen/product/gift_box.dart';
 import 'package:dadu/screen/product/info_banner.dart';
 import 'package:dadu/screen/product/product_details.dart';
@@ -83,7 +83,7 @@ class Home extends StatelessWidget {
           _buildSearchResults(context),
           _buildBannerSection(context),
           _buildBrandGrid(context),
-          _buildBundleBanner(context),
+          _buildComboPackBanner(context),
           _buildGiftBanner(context),
           _buildFlashSaleSection(context),
           _buildNewArrivalSection(context),
@@ -342,18 +342,18 @@ class Home extends StatelessWidget {
     );
   }
 
-  Widget _buildBundleBanner(BuildContext context) {
+  Widget _buildComboPackBanner(BuildContext context) {
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const BundleDeals()),
+          MaterialPageRoute(builder: (_) => const ComboPack()),
         );
       },
       child: const Padding(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Image(
-          image: AssetImage('assets/gif/bundle.gif'),
+          image: AssetImage('assets/gif/Combo.png'),
           width: double.infinity,
           fit: BoxFit.contain,
         ),
@@ -399,6 +399,7 @@ class Home extends StatelessWidget {
 
   Widget _buildFlashSaleSection(BuildContext context) {
     return Obx(() {
+      final _ = controller.timerTick.value;
       if (controller.flashProducts.isEmpty) return const SizedBox.shrink();
 
       return Padding(

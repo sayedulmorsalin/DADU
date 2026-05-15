@@ -5,15 +5,15 @@ import 'package:flutter/material.dart';
 
 import '../../services/firebase.dart';
 
-class BundleDeals extends StatefulWidget {
-  const BundleDeals({super.key});
+class ComboPack extends StatefulWidget {
+  const ComboPack({super.key});
 
   @override
-  State<BundleDeals> createState() => _BundleDealsState();
+  State<ComboPack> createState() => _ComboPackState();
 }
 
-class _BundleDealsState extends State<BundleDeals> {
-  String bundle = "Bundle";
+class _ComboPackState extends State<ComboPack> {
+  String bundle = "Combo Pack";
   final dataBase db = new dataBase();
   List<Map<String, dynamic>> brandProducts = [];
   bool isLoading = true;
@@ -83,7 +83,7 @@ class _BundleDealsState extends State<BundleDeals> {
             padding: const EdgeInsets.all(24),
             color: AppColors.surfaceGrey,
             child: Image.asset(
-              "assets/gif/bundle.gif",
+              "assets/gif/Combo.png",
               width: double.infinity,
               fit: BoxFit.contain,
             ),

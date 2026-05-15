@@ -71,11 +71,11 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
           animation: controller,
           builder: (_, __) {
             return Container(
-              height: 130,
+              height: 120,
               width: double.infinity,
               decoration: const BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage("assets/banar/freeproduct.jpeg"),
+                  image: AssetImage("assets/banar/FreeBoot.gif"),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -115,7 +115,12 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                                 width: 72,
                                 height: 22,
                                 decoration: BoxDecoration(
-                                  color: AppColors.giftBoxLid,
+                                  color: const Color.fromARGB(
+                                    255,
+                                    255,
+                                    206,
+                                    59,
+                                  ),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                               ),

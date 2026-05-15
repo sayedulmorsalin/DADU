@@ -29,6 +29,8 @@ class HomeController extends GetxController {
   final RxInt selectedIndex = 0.obs;
   final RxInt currentBannerIndex = 0.obs;
   final RxInt cartCount = 0.obs;
+  final RxInt timerTick = 0.obs;
+
 
   final RxnString profileImageUrl = RxnString();
 
@@ -49,6 +51,7 @@ class HomeController extends GetxController {
   Fuzzy<String>? fuzzy;
 
   Timer? _bannerAutoScrollTimer;
+  Timer? _flashTimer;
   StreamSubscription<User?>? _authSubscription;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
   _cartSubscription;
@@ -57,6 +60,11 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+
+    _flashTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      timerTick.value++;
+    });
+
 
     _searchDebounce = debounce<String>(
       searchQuery,
@@ -224,6 +232,8 @@ class HomeController extends GetxController {
   }
 
   String formatFlashRemaining(dynamic ts) {
+    final _ = timerTick.value;
+
     if (ts == null) return 'Expired';
 
     late final DateTime end;
@@ -245,7 +255,8 @@ class HomeController extends GetxController {
 
     final hours = diff.inHours.toString().padLeft(2, '0');
     final minutes = (diff.inMinutes % 60).toString().padLeft(2, '0');
-    return '$hours:$minutes left';
+    final seconds = (diff.inSeconds % 60).toString().padLeft(2, '0');
+    return '$hours:$minutes:$seconds left';
   }
 
   void onBottomNavTap(int tappedIndex, {required VoidCallback onMessageTap}) {
@@ -330,6 +341,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     _bannerAutoScrollTimer?.cancel();
+    _flashTimer?.cancel();
     _authSubscription?.cancel();
     _cartSubscription?.cancel();
     _searchDebounce?.dispose();
