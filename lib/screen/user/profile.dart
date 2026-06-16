@@ -133,17 +133,28 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           profilePic = userDetails?['profile_pic'] ?? '';
           freeDeliveryInfo =
               (userDetails?["free_delivery_info"] as num?)?.toDouble() ?? 0.0;
-          toReceive = userDetails?["to_receive"];
-          toShip = userDetails?["to_ship"];
-          toVerify = userDetails?["to_verify"];
-          Completed = userDetails?["completed"];
-          toReceiveCount = userDetails?["to_receive_count"] ?? 0;
-          toShipCount = userDetails?["to_ship_count"] ?? 0;
-          toVerifyCount = userDetails?["to_verify_count"] ?? 0;
-          completedCount = userDetails?["completed_count"] ?? 0;
+
+          // Safely convert order data to List<dynamic>
+          toReceive = _castToList(userDetails?["to_receive"]);
+          toShip = _castToList(userDetails?["to_ship"]);
+          toVerify = _castToList(userDetails?["to_verify"]);
+          Completed = _castToList(userDetails?["completed"]);
+
+          // Use list length as counts to ensure accuracy if count field is missing or out of sync
+          toReceiveCount = toReceive?.length ?? 0;
+          toShipCount = toShip?.length ?? 0;
+          toVerifyCount = toVerify?.length ?? 0;
+          completedCount = Completed?.length ?? 0;
           _isLoading = false;
           freeDelivery = (freeDeliveryInfo / 130);
         });
+        // Debug logging
+        print('\n===== ORDER DATA LOADED =====');
+        print('toVerify (${toVerify?.runtimeType}): $toVerify');
+        print('toShip (${toShip?.runtimeType}): $toShip');
+        print('toReceive (${toReceive?.runtimeType}): $toReceive');
+        print('Completed (${Completed?.runtimeType}): $Completed');
+        print('=============================\n');
       }
     } catch (e) {
       print("Error loading profile: $e");
@@ -154,6 +165,12 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         });
       }
     }
+  }
+
+  List<dynamic>? _castToList(dynamic data) {
+    if (data == null) return null;
+    if (data is List) return data;
+    return null;
   }
 
   Future<void> _redirectToAuth(
@@ -930,8 +947,10 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
           children: [
             GestureDetector(
               onTap: () => _navigateToOrderPage(context, 'To Verify', toVerify),
@@ -979,6 +998,18 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     String status,
     List<dynamic>? orders,
   ) {
+    // Debug logging
+    print('\n===== NAVIGATING TO ORDER PAGE =====');
+    print('Status: $status');
+    print('Orders count: ${orders?.length ?? 0}');
+    if (orders != null && orders.isNotEmpty) {
+      print('First order: ${orders[0]}');
+      print('All orders: $orders');
+    } else {
+      print('No orders found for status: $status');
+    }
+    print('=====================================\n');
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1350,8 +1381,6 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   }
 
   void _showDeveloperInfo() {
-    const String phoneDisplay = "+880 1775-876544";
-    const String phoneRaw = "+8801775876544";
     const String email = "sayadulmorsalin123@gmail.com";
 
     showDialog(
@@ -1370,52 +1399,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
               const SizedBox(height: 10),
               const Text("Developer : Md. Sayedul Marsalin"),
               const SizedBox(height: 14),
-              const Text(
-                "Phone",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              Row(
-                children: [
-                  Expanded(child: Text(phoneDisplay)),
-                  IconButton(
-                    tooltip: "Copy",
-                    icon: const Icon(Icons.copy, size: 20),
-                    onPressed: () {
-                      Clipboard.setData(const ClipboardData(text: phoneRaw));
 
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Phone copied"),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                  ),
-                  IconButton(
-                    tooltip: "Call",
-                    icon: const Icon(Icons.call, color: AppColors.iconSuccess),
-                    onPressed: () async {
-                      final Uri uri = Uri.parse("tel:$phoneRaw");
-
-                      await launchUrl(uri);
-                    },
-                  ),
-                  IconButton(
-                    tooltip: "WhatsApp",
-                    icon: const Icon(Icons.chat, color: AppColors.iconSuccess),
-                    onPressed: () async {
-                      final Uri uri = Uri.parse(
-                        "https://wa.me/${phoneRaw.replaceAll('+', '')}",
-                      );
-
-                      await launchUrl(
-                        uri,
-                        mode: LaunchMode.externalApplication,
-                      );
-                    },
-                  ),
-                ],
-              ),
               const SizedBox(height: 12),
               const Text(
                 "Email",

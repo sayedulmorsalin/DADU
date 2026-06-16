@@ -9,23 +9,94 @@ class OrderListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Process and flatten orders to handle multiple items per order structure
+    // coming from check_out.dart (where each order has an 'items' list)
+    final List<Map<String, dynamic>> displayedItems = [];
+
+    if (orders != null) {
+      for (var orderEntry in orders!) {
+        try {
+          if (orderEntry is Map) {
+            final orderMap = Map<String, dynamic>.from(orderEntry);
+
+            // If this is an order container with an 'items' list
+            if (orderMap.containsKey('items') && orderMap['items'] is List) {
+              final items = orderMap['items'] as List;
+              for (var itemEntry in items) {
+                if (itemEntry is Map) {
+                  final itemMap = Map<String, dynamic>.from(itemEntry);
+                  // Enrich item with order-level metadata
+                  itemMap['_order_id'] = orderMap['order_id'];
+                  itemMap['_order_date'] = orderMap['order_date'];
+                  displayedItems.add(itemMap);
+                }
+              }
+            } else {
+              // Fallback for flat structure or already processed items
+              displayedItems.add(orderMap);
+            }
+          }
+        } catch (e) {
+          debugPrint('Error processing order entry: $e');
+        }
+      }
+    }
+
+    // Debug logging
+    debugPrint('\n===== ORDER LIST SCREEN RECEIVED DATA =====');
+    debugPrint('Status: $status');
+    debugPrint('Original Orders Count: ${orders?.length ?? 0}');
+    debugPrint('Flattened Items Count: ${displayedItems.length}');
+    debugPrint('===========================================\n');
+
     return Scaffold(
       appBar: AppBar(title: Text('$status Orders')),
       body:
-          orders == null || orders!.isEmpty
-              ? const Center(child: Text('No orders found'))
+          displayedItems.isEmpty
+              ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.shopping_bag_outlined,
+                      size: 48,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No $status orders found',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              )
               : ListView.builder(
                 padding: const EdgeInsets.all(16),
-                itemCount: orders!.length,
+                itemCount: displayedItems.length,
                 itemBuilder: (context, index) {
-                  final order = orders![index];
-                  return _buildOrderCard(order);
+                  final item = displayedItems[index];
+                  return _buildOrderCard(item, index);
                 },
               ),
     );
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order) {
+  Widget _buildOrderCard(Map<String, dynamic> order, int index) {
+    // Debug individual order
+    print('Order $index: $order');
+    print('Order $index type: ${order.runtimeType}');
+    print('Order $index keys: ${order.keys.toList()}');
+
+    // Safely extract data with type checking
+    final imageUrl = _safeGetString(order, 'imageUrl');
+    final name = _safeGetString(order, 'name') ?? 'Unknown Product';
+    final price = _safeGetNum(order, 'price') ?? 0;
+    final quantity = _safeGetNum(order, 'quantity') ?? 0;
+    final total = price * quantity;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -36,12 +107,34 @@ class OrderListScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                if (order['imageUrl'] != null && order['imageUrl'].isNotEmpty)
-                  Image.network(
-                    order['imageUrl'],
+                if (imageUrl != null && imageUrl.isNotEmpty)
+                  Container(
                     width: 60,
                     height: 60,
-                    fit: BoxFit.cover,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.surfaceGrey,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.image_not_supported);
+                        },
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.surfaceGrey,
+                    ),
+                    child: const Icon(Icons.shopping_bag),
                   ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -49,10 +142,22 @@ class OrderListScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        order['name'] ?? 'No name',
+                        name,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        order.containsKey('_order_id')
+                            ? 'Order ${order['_order_id']}'
+                            : 'Order #${index + 1}',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ],
@@ -71,11 +176,17 @@ class OrderListScreen extends StatelessWidget {
                   children: [
                     const Text(
                       'Price',
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                     Text(
-                      '৳${(order['price'] as num).toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      '৳${price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -84,11 +195,17 @@ class OrderListScreen extends StatelessWidget {
                   children: [
                     const Text(
                       'Quantity',
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                     Text(
-                      '${order['quantity']}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      quantity.toStringAsFixed(0),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ],
                 ),
@@ -97,12 +214,16 @@ class OrderListScreen extends StatelessWidget {
                   children: [
                     const Text(
                       'Total',
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
                     Text(
-                      '৳${((order['price'] as num) * (order['quantity'] as num)).toStringAsFixed(2)}',
+                      '৳${total.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
+                        fontSize: 14,
                         color: AppColors.success,
                       ),
                     ),
@@ -114,5 +235,30 @@ class OrderListScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Helper methods for safe data extraction
+  String? _safeGetString(Map<String, dynamic> map, String key) {
+    try {
+      final value = map[key];
+      if (value == null) return null;
+      return value.toString();
+    } catch (e) {
+      print('Error getting string $key: $e');
+      return null;
+    }
+  }
+
+  num? _safeGetNum(Map<String, dynamic> map, String key) {
+    try {
+      final value = map[key];
+      if (value == null) return null;
+      if (value is num) return value;
+      if (value is String) return num.tryParse(value);
+      return null;
+    } catch (e) {
+      print('Error getting number $key: $e');
+      return null;
+    }
   }
 }
