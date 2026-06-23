@@ -11,8 +11,10 @@ import 'package:dadu/screen/product/gift_box.dart';
 import 'package:dadu/screen/product/info_banner.dart';
 import 'package:dadu/screen/product/product_details.dart';
 import 'package:dadu/screen/product/product_item.dart';
+import 'package:dadu/screen/product/search_page.dart';
 import 'package:dadu/screen/user/cart.dart';
 import 'package:dadu/screen/user/profile.dart';
+import 'package:dadu/screen/user/reword_ad.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -31,7 +33,7 @@ class Home extends StatelessWidget {
         () => BottomNavigationBar(
           type: BottomNavigationBarType.fixed,
           currentIndex:
-              controller.selectedIndex.value >= 2
+              controller.selectedIndex.value >= 3
                   ? controller.selectedIndex.value + 1
                   : controller.selectedIndex.value,
           selectedItemColor: AppColors.selectedNavItem,
@@ -47,6 +49,10 @@ class Home extends StatelessWidget {
               label: 'Home',
             ),
             BottomNavigationBarItem(icon: _buildCartNavIcon(), label: 'Cart'),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.search),
+              label: 'Search',
+            ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.message),
               label: 'Message',
@@ -68,6 +74,8 @@ class Home extends StatelessWidget {
       case 1:
         return controller.loggedIn.value ? const Cart() : SignUpScreen();
       case 2:
+        return const SearchPage();
+      case 3:
         return controller.loggedIn.value ? const Profile() : SignUpScreen();
       default:
         return _buildHomeContent(context);
@@ -80,7 +88,6 @@ class Home extends StatelessWidget {
         controller: controller.scrollController,
         children: [
           _buildTopBar(context),
-          _buildSearchResults(context),
           _buildBannerSection(context),
           _buildBrandGrid(context),
           _buildComboPackBanner(context),
@@ -126,36 +133,43 @@ class Home extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: SizedBox(
-              height: 40,
-              child: TextField(
-                controller: controller.searchController,
-                onChanged: controller.onSearchChanged,
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: Obx(
-                    () =>
-                        controller.searchQuery.value.trim().isNotEmpty
-                            ? IconButton(
-                              onPressed: controller.clearSearch,
-                              icon: const Icon(Icons.close),
-                            )
-                            : const SizedBox.shrink(),
-                  ),
-                  filled: true,
-                  isDense: true,
-                  fillColor: AppColors.inputFillColor,
-                  border: const OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(30)),
-                    borderSide: BorderSide.none,
-                  ),
-                  hintText: 'Search products',
+          const Spacer(),
+          Obx(() {
+            if (!controller.loggedIn.value) return const SizedBox.shrink();
+            return InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RewordAd()),
+                );
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Row(
+                  children: [
+                    Text(
+                      controller.coinAmount.value.toStringAsFixed(2),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    const Text(
+                      '৳',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: AppColors.coinGold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ),
+            );
+          }),
           IconButton(
             icon: const Icon(Icons.notifications),
             onPressed: () => _showNotificationDialog(context),
@@ -163,62 +177,6 @@ class Home extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  Widget _buildSearchResults(BuildContext context) {
-    return Obx(() {
-      if (!controller.showSearchResults.value) {
-        return const SizedBox(height: 8);
-      }
-
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12),
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.textPrimary.withOpacity(0.12),
-              blurRadius: 6,
-            ),
-          ],
-        ),
-        child: ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: controller.searchResults.length,
-          itemBuilder: (context, index) {
-            final productName = controller.searchResults[index];
-
-            return ListTile(
-              title: Text(productName),
-              onTap: () async {
-                final product = await controller.getProductByName(productName);
-                if (!context.mounted) return;
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder:
-                        (_) => ProductDetails(
-                          productid: product['id'] as String,
-                          title: product['name']?.toString() ?? '',
-                          price: product['price']?.toString() ?? '0',
-                          image20: product['image20']?.toString() ?? '',
-                          description: product['details']?.toString() ?? '',
-                          videoLink: product['videoLink']?.toString() ?? '',
-                          brand: product['brand']?.toString() ?? 'Others',
-                          image5: product['image5']?.toString() ?? '',
-                        ),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      );
-    });
   }
 
   Widget _buildBannerSection(BuildContext context) {
@@ -328,7 +286,8 @@ class Home extends StatelessWidget {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 4,
+      crossAxisCount: 2,
+      childAspectRatio: 3.2,
       children: [
         _buildBrandItem(context, 'Adidas', 'assets/icon/adidas.png'),
         _buildBrandItem(context, 'Nike', 'assets/icon/Nike.png'),
@@ -607,19 +566,23 @@ class Home extends StatelessWidget {
           ),
         );
       },
-      child: SizedBox(
-        width: 100,
-        height: 100,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      child: Container(
+        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceGrey.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Image.asset(imagePath, width: 50, height: 50, fit: BoxFit.contain),
-            const SizedBox(height: 5),
             Text(
               brand,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(width: 8),
+            Image.asset(imagePath, width: 35, height: 35, fit: BoxFit.contain),
           ],
         ),
       ),

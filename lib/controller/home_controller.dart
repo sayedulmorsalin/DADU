@@ -30,6 +30,7 @@ class HomeController extends GetxController {
   final RxInt currentBannerIndex = 0.obs;
   final RxInt cartCount = 0.obs;
   final RxInt timerTick = 0.obs;
+  final RxDouble coinAmount = 0.0.obs;
 
 
   final RxnString profileImageUrl = RxnString();
@@ -110,6 +111,7 @@ class HomeController extends GetxController {
       loggedIn.value = false;
       profileImageUrl.value = null;
       cartCount.value = 0;
+      coinAmount.value = 0.0;
       selectedIndex.value = 0;
       _cartSubscription?.cancel();
       _cartSubscription = null;
@@ -260,12 +262,16 @@ class HomeController extends GetxController {
   }
 
   void onBottomNavTap(int tappedIndex, {required VoidCallback onMessageTap}) {
-    if (tappedIndex == 2) {
+    if (tappedIndex == 3) {
       onMessageTap();
       return;
     }
 
-    selectedIndex.value = tappedIndex > 2 ? tappedIndex - 1 : tappedIndex;
+    if (tappedIndex < 3) {
+      selectedIndex.value = tappedIndex;
+    } else {
+      selectedIndex.value = tappedIndex - 1;
+    }
   }
 
   void _attachPaginationListener() {
@@ -328,8 +334,10 @@ class HomeController extends GetxController {
       }
 
       cartCount.value = total;
+      coinAmount.value = (data?['free_delivery_info'] as num?)?.toDouble() ?? 0.0;
     }, onError: (_) {
       cartCount.value = 0;
+      coinAmount.value = 0.0;
     });
   }
 
