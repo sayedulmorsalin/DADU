@@ -32,6 +32,7 @@ class dataBase {
               "image5": data['image5'],
               "brand": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
+              "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
               "createdAt": data['createdAt'],
               "docSnapshot": doc,
             };
@@ -75,6 +76,7 @@ class dataBase {
               "image5": data['image5'],
               "brand": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
+              "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
               "createdAt": data['createdAt'],
               "docSnapshot": doc,
             };
@@ -150,6 +152,7 @@ class dataBase {
               "image5": data['image5'],
               "brand": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
+              "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
             };
           }).toList();
 
@@ -325,6 +328,7 @@ class dataBase {
         "videoLink": data['videoLink'] ?? "",
         "brand": data['brand'] ?? "Others",
         "flashSell": data['flashSell'] ?? false,
+        "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
         "flash-expire": data['flash-expire'], 
       };
     }).toList();
@@ -351,6 +355,7 @@ class dataBase {
         "videoLink": data['videoLink'] ?? "",
         "brand": data['brand'] ?? "Others",
         "freeGift": data['freeGift'] ?? false,
+        "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
       };
     }).toList();
   }
@@ -376,6 +381,7 @@ class dataBase {
         "videoLink": data['videoLink'] ?? "",
         "brand": data['brand'] ?? "Others",
         "newArrival": data['newArrival'] ?? false,
+        "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
       };
     }).toList();
   }

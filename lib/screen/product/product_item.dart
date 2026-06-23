@@ -18,6 +18,7 @@ class ProductItem extends StatelessWidget {
   final String description;
   final String videoLink;
   final String brand;
+  final double goldCoin;
   final dataBase db = dataBase();
 
   ProductItem({
@@ -31,6 +32,7 @@ class ProductItem extends StatelessWidget {
     required this.videoLink,
     required this.brand,
     required this.image5,
+    this.goldCoin = 0.0,
   });
 
   void _addToCart(BuildContext context) async {
@@ -171,30 +173,69 @@ class ProductItem extends StatelessWidget {
                       fontSize: 16,
                     ),
                   ),
+                  const SizedBox(height: 2),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         price,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontSize: 15,
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => _addToCart(context),
-                        icon: Icon(
-                          Icons.add_shopping_cart,
-                          color: Theme.of(context).primaryColor,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
                         ),
-                        iconSize: 20,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Free ${(goldCoin > 0 ? goldCoin + 10 : 10).toStringAsFixed(0)} Dadu coin',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  InkWell(
+                    onTap: () => _addToCart(context),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.flashSaleBackground.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_shopping_cart,
+                            color: AppColors.primary,
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Add to Cart',
+                            style: TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),

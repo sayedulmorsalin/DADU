@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/component/gitf_box_banner.dart';
@@ -121,19 +122,25 @@ class Home extends StatelessWidget {
       child: Row(
         children: [
           const SizedBox(width: 10),
-          const Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: Text(
-              'DADU',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 25,
-                color: AppColors.textPrimary,
-                fontFamily: 'Times New Roman',
-              ),
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Image.asset(
+              'assets/icon/user_icon.png',
+              height: 35,
+              fit: BoxFit.contain,
+            ),
+          ),
+          const _TypingText(
+            text: 'DADU',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 25,
+              color: AppColors.textPrimary,
+              fontFamily: 'Times New Roman',
             ),
           ),
           const Spacer(),
+
           Obx(() {
             if (!controller.loggedIn.value) return const SizedBox.shrink();
             return InkWell(
@@ -148,6 +155,8 @@ class Home extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 child: Row(
                   children: [
+                    Text("Dadu  coin", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange, fontSize: 16),),
+                    const SizedBox(width: 5),
                     Text(
                       controller.coinAmount.value.toStringAsFixed(2),
                       style: const TextStyle(
@@ -479,7 +488,7 @@ class Home extends StatelessWidget {
           crossAxisCount: 2,
           mainAxisSpacing: 10,
           crossAxisSpacing: 10,
-          childAspectRatio: 0.79,
+          childAspectRatio: 0.72,
         ),
         itemBuilder: (context, index) {
           final product = controller.products[index];
@@ -496,6 +505,7 @@ class Home extends StatelessWidget {
                 product['videoLink']?.toString() ?? 'No videoLink available',
             brand: product['brand']?.toString() ?? 'Others',
             image5: product['image5']?.toString() ?? '',
+            goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
           );
         },
       );
@@ -774,6 +784,61 @@ class _VersionUpdateBannerState extends State<_VersionUpdateBanner>
         ],
       ),
     );
+  }
+}
+
+class _TypingText extends StatefulWidget {
+  final String text;
+  final TextStyle style;
+  const _TypingText({required this.text, required this.style});
+
+  @override
+  State<_TypingText> createState() => _TypingTextState();
+}
+
+class _TypingTextState extends State<_TypingText> {
+  String _displayedText = "";
+  int _currentIndex = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAnimation();
+  }
+
+  void _startAnimation() {
+    _timer = Timer.periodic(const Duration(milliseconds: 300), (timer) {
+      if (!mounted) return;
+      if (_currentIndex < widget.text.length) {
+        setState(() {
+          _displayedText += widget.text[_currentIndex];
+          _currentIndex++;
+        });
+      } else {
+        timer.cancel();
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() {
+              _displayedText = "";
+              _currentIndex = 0;
+            });
+            _startAnimation();
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(_displayedText, style: widget.style);
   }
 }
 

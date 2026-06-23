@@ -139,6 +139,7 @@ class _BrandsState extends State<Brands> {
                   videoLink: product['videoLink'] ?? 'No videoLink available',
                   brand: product['brand'] ?? 'no brand found ',
                   image5: product['image5'] ?? 'assets/demo_item_image/d1.jpg',
+                  goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
                 );
               },
             ),
