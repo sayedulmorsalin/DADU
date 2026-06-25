@@ -79,13 +79,75 @@ class _ComboPackState extends State<ComboPack> {
       body: ListView(
         controller: scrollController,
         children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            color: AppColors.surfaceGrey,
-            child: Image.asset(
-              "assets/gif/Combo.png",
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Container(
+              height: 100,
               width: double.infinity,
-              fit: BoxFit.contain,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFFF6D00), Color(0xFFFFAB40)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.orange.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: -10,
+                    bottom: -10,
+                    child: Icon(
+                      Icons.shopping_bag,
+                      size: 100,
+                      color: Colors.white.withOpacity(0.15),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.inventory_2,
+                          color: Colors.white,
+                          size: 40,
+                        ),
+                        SizedBox(width: 20),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'COMBO PACK',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            Text(
+                              'Save more with our bundles!',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -105,7 +167,7 @@ class _ComboPackState extends State<ComboPack> {
                 crossAxisCount: 2,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
-                childAspectRatio: 0.79,
+                childAspectRatio: 0.72,
               ),
               itemBuilder: (context, index) {
                 final product = brandProducts[index];
@@ -121,6 +183,7 @@ class _ComboPackState extends State<ComboPack> {
                   videoLink: product['videoLink'] ?? 'No videoLink available',
                   brand: product['brand'] ?? 'no brand found ',
                   image5: product['image5'] ?? 'assets/demo_item_image/d1.jpg',
+                  goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
                 );
               },
             ),

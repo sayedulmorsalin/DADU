@@ -587,6 +587,21 @@ Future<double> getRewardAdSilverRate() async {
 }
 
 
+  Future<Timestamp?> getFlashSaleTimer() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('flash_sell_timer')
+          .doc('current')
+          .get();
+      if (doc.exists) {
+        return doc.data()?['time'] as Timestamp?;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<void> increaseGlobalMonthlyRewardAdCount() async {
 
     final now = DateTime.now();

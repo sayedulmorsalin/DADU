@@ -31,6 +31,7 @@ class HomeController extends GetxController {
   final RxInt cartCount = 0.obs;
   final RxInt timerTick = 0.obs;
   final RxDouble coinAmount = 0.0.obs;
+  final Rxn<Timestamp> flashSaleEndTime = Rxn<Timestamp>();
 
 
   final RxnString profileImageUrl = RxnString();
@@ -180,6 +181,7 @@ class HomeController extends GetxController {
   }
 
   Future<void> loadFlashSaleProducts() async {
+    flashSaleEndTime.value = await db.getFlashSaleTimer();
     final items = await db.getFlashSaleProducts();
     flashProducts.assignAll(items);
   }

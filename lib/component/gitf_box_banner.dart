@@ -65,28 +65,27 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: widget.onOpen,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: AnimatedBuilder(
-          animation: controller,
-          builder: (_, __) {
-            return Container(
-              height: 120,
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage("assets/banar/FreeBoot.gif"),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Stack(
-                alignment: Alignment.bottomLeft,
-                children: [
-                  Transform.translate(
+      child: Container(
+        height: 110,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          color: Colors.orange.shade50,
+          border: Border.all(color: Colors.orange.shade100, width: 2),
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: 15,
+              bottom: 10,
+              child: AnimatedBuilder(
+                animation: controller,
+                builder: (_, __) {
+                  return Transform.translate(
                     offset: Offset(0, floatAnim.value),
                     child: SizedBox(
-                      width: 90,
-                      height: 90,
+                      width: 80,
+                      height: 80,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
@@ -94,34 +93,27 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                             scale: popScale.value,
                             child: const Text(
                               "🎉",
-                              style: TextStyle(fontSize: 40),
+                              style: TextStyle(fontSize: 35),
                             ),
                           ),
-
                           Container(
-                            width: 65,
-                            height: 48,
+                            width: 55,
+                            height: 40,
                             decoration: BoxDecoration(
-                              color: AppColors.giftBoxBody,
-                              borderRadius: BorderRadius.circular(12),
+                              color: Colors.orange.shade400,
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
-
                           Transform.translate(
                             offset: Offset(0, lidSlide.value),
                             child: Transform.rotate(
                               angle: lidRotate.value,
                               child: Container(
-                                width: 72,
-                                height: 22,
+                                width: 62,
+                                height: 18,
                                 decoration: BoxDecoration(
-                                  color: const Color.fromARGB(
-                                    255,
-                                    255,
-                                    206,
-                                    59,
-                                  ),
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: Colors.orange.shade600,
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
                               ),
                             ),
@@ -129,11 +121,37 @@ class _GiftBoxBannerState extends State<GiftBoxBanner>
                         ],
                       ),
                     ),
+                  );
+                },
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'LUCKY DRAW',
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  Text(
+                    'Try your luck and win prizes!',
+                    style: TextStyle(
+                      color: Colors.black54,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );

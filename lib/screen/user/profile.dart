@@ -1271,79 +1271,107 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   }
 
   Widget _buildSettingsSection() {
-    final List<Map<String, dynamic>> accountSettings = [
-      {'icon': Icons.password, 'title': 'Change password'},
-      {'icon': Icons.help_outline, 'title': 'Help Center'},
-    ];
-
-    final List<Map<String, dynamic>> legalSettings = [
-      {'icon': Icons.privacy_tip, 'title': 'Privacy Policy'},
-      {'icon': Icons.description, 'title': 'Terms & Conditions'},
-      {'icon': Icons.person_outline, 'title': 'Developer Info'},
-    ];
-
-    final List<Map<String, dynamic>> dangerSettings = [
-      {
-        'icon': Icons.delete_forever,
-        'title': 'Delete Account',
-        'color': AppColors.error,
-      },
-      {'icon': Icons.logout, 'title': 'Logout', 'color': AppColors.error},
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Account Settings',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        ...accountSettings.map((item) => _buildSettingTile(item)),
-        const SizedBox(height: 20),
-        const Text(
-          'Legal',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textSecondary,
+        _buildCategoryTile(
+          icon: Icons.settings,
+          title: 'Account Settings',
+          onTap: () => _showSettingsCategory(
+            'Account Settings',
+            [
+              {'icon': Icons.password, 'title': 'Change password'},
+              {
+                'icon': Icons.delete_forever,
+                'title': 'Delete Account',
+                'color': AppColors.error,
+              },
+              {'icon': Icons.logout, 'title': 'Logout', 'color': AppColors.error},
+            ],
           ),
         ),
         const Divider(),
-        ...legalSettings.map((item) => _buildSettingTile(item)),
-        const SizedBox(height: 20),
-        const Text(
-          'Danger Zone',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.error,
+        _buildCategoryTile(
+          icon: Icons.gavel,
+          title: 'Legal Information',
+          onTap: () => _showSettingsCategory(
+            'Legal Information',
+            [
+              {'icon': Icons.privacy_tip, 'title': 'Privacy Policy'},
+              {'icon': Icons.description, 'title': 'Terms & Conditions'},
+              {'icon': Icons.android, 'title': 'Developer Info'},
+              {'icon': Icons.chat, 'title': 'WhatsApp Developer', 'color': Colors.green},
+              {'icon': Icons.support_agent, 'title': 'Help Center'},
+            ],
           ),
         ),
         const Divider(),
-        ...dangerSettings.map((item) => _buildSettingTile(item)),
+        _buildCategoryTile(
+          icon: Icons.support_agent,
+          title: 'Help Center',
+          onTap: _showHelpCenter,
+        ),
       ],
     );
   }
 
-  Widget _buildSettingTile(Map<String, dynamic> item) {
-    final Color? customColor = item['color'];
-
+  Widget _buildCategoryTile({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        item['icon'],
-        color: customColor ?? AppColors.profileAccent,
-      ),
+      leading: Icon(icon, color: AppColors.profileAccent),
       title: Text(
-        item['title'],
-        style: TextStyle(
-          color: customColor ?? AppColors.textPrimary,
-          fontWeight: customColor != null ? FontWeight.bold : FontWeight.normal,
-        ),
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () => _handleSettingsTap(item['title']),
+      onTap: onTap,
+    );
+  }
+
+  void _showSettingsCategory(String categoryTitle, List<Map<String, dynamic>> items) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text(categoryTitle)),
+          body: ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: items.length,
+            separatorBuilder: (context, index) => const Divider(),
+            itemBuilder: (context, index) {
+              final item = items[index];
+              final Color? customColor = item['color'];
+              return ListTile(
+                leading: Icon(
+                  item['icon'],
+                  color: customColor ?? AppColors.profileAccent,
+                ),
+                title: Text(
+                  item['title'],
+                  style: TextStyle(
+                    color: customColor ?? AppColors.textPrimary,
+                    fontWeight: customColor != null ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  // Important: Pop the category screen before handling actions like logout/delete
+                  // that might navigate away from the Profile screen entirely.
+                  if (item['title'] == 'Logout' || item['title'] == 'Delete Account' || item['title'] == 'Change password') {
+                    // For dialogs or navigation-heavy actions, stay or pop as needed.
+                    // Actually, most handlers use context, so better handle it here.
+                  }
+                  _handleSettingsTap(item['title']);
+                },
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 
@@ -1376,6 +1404,9 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         break;
       case 'Developer Info':
         _showDeveloperInfo();
+        break;
+      case 'WhatsApp Developer':
+        _launchUrl("https://wa.me/8801775876544");
         break;
     }
   }
@@ -1433,6 +1464,30 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              const Text(
+                "WhatsApp",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Row(
+                children: [
+                  const Expanded(child: Text("01775876544")),
+                  IconButton(
+                    tooltip: "WhatsApp",
+                    icon: const Icon(Icons.message, color: Colors.green),
+                    onPressed: () async {
+                      final Uri uri = Uri.parse("https://wa.me/8801775876544");
+                      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Could not launch WhatsApp")),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
             ],
           ),
           actions: [
@@ -1452,31 +1507,31 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         'title': 'How to place an order?',
         'icon': Icons.shopping_cart,
         'url':
-            'https://sites.google.com/view/dadu-help-center/home/how-to-place-order',
+            'https://dadufans.com/help/how-to-place-order',
       },
       {
         'title': 'Payment methods',
         'icon': Icons.payment,
         'url':
-            'https://sites.google.com/view/dadu-help-center/home/payment-methods',
+            'https://dadufans.com/help/payment-methods',
       },
       {
         'title': 'Delivery information',
         'icon': Icons.local_shipping,
         'url':
-            'https://sites.google.com/view/dadu-help-center/home/delivery-information',
+            'https://dadufans.com/help/delivery-information',
       },
       {
         'title': 'Return policy',
         'icon': Icons.assignment_return,
         'url':
-            'https://sites.google.com/view/dadu-help-center/home/return-policy',
+            'https://dadufans.com/help/return-policy',
       },
       {
         'title': 'Contact support',
         'icon': Icons.support_agent,
         'url':
-            'https://sites.google.com/view/dadu-help-center/home/contact-support',
+            'https://dadufans.com/help/contact-support',
       },
     ];
 

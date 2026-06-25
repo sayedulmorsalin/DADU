@@ -29,7 +29,7 @@ class AppColors {
   static const Color sizeSelected = Colors.green;
   static Color sizeUnselected = Colors.grey[300]!;
 
-  static const Color flashSaleBackground = Color(0xFFFFF3E0);
+  static const Color flashSaleBackground = Colors.blue;
   static const Color newArrivalBackground = Color.fromARGB(255, 245, 249, 241);
 
   static const Color rewardPrimary = Colors.deepPurple;
