@@ -124,6 +124,7 @@ class ProductItem extends StatelessWidget {
                   videoLink: videoLink,
                   brand: brand,
                   image5: image5,
+                  goldCoin: goldCoin,
                 ),
           ),
         );

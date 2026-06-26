@@ -55,7 +55,7 @@ class AppColors {
 
   static Color textMuted = Colors.grey[600]!;
 
-  static const Color unselectedNavItem = Colors.black54;
+  static const Color unselectedNavItem = Colors.black;
 
   static const Color disabledColor = Colors.grey;
 }

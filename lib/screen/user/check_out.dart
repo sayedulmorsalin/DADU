@@ -43,6 +43,8 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   String? paymentProof;
   double deliveryPoints = 0;
   bool _freeDeliverySelected = false;
+  bool _coinDiscountSelected = false;
+  double _coinDiscountAmount = 0;
   int baseDeliveryCharge = 0;
   int deliveryCharge = 0;
   double _total = 0;
@@ -225,7 +227,33 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     baseDeliveryCharge =
         calculatedCharge < minimumCharge ? minimumCharge : calculatedCharge;
     deliveryCharge = _freeDeliverySelected ? 0 : baseDeliveryCharge;
-    _total = widget.totalAmount + deliveryCharge;
+
+    double pointsForFreeDelivery =
+        _freeDeliverySelected ? _freeDeliveryCost : 0.0;
+    double availablePoints = (deliveryPoints - pointsForFreeDelivery).clamp(
+      0.0,
+      double.infinity,
+    );
+
+    if (_coinDiscountSelected && availablePoints >= 10) {
+      _coinDiscountAmount = availablePoints;
+    } else {
+      _coinDiscountAmount = 0;
+    }
+
+    // Cap discount at subtotal
+    if (_coinDiscountAmount > widget.totalAmount) {
+      _coinDiscountAmount = widget.totalAmount;
+    }
+
+    _total = widget.totalAmount + deliveryCharge - _coinDiscountAmount;
+  }
+
+  void _toggleCoinDiscount() {
+    setState(() {
+      _coinDiscountSelected = !_coinDiscountSelected;
+      _calculateDeliveryCharge();
+    });
   }
 
   void _toggleFreeDelivery() {
@@ -288,12 +316,13 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
         );
       }
 
-      final double remainingDeliveryPoints =
-          _freeDeliverySelected
-              ? (deliveryPoints - _freeDeliveryCost)
-                  .clamp(0.0, double.infinity)
-                  .toDouble()
-              : deliveryPoints;
+      final double usedPoints =
+          (_freeDeliverySelected ? _freeDeliveryCost : 0.0) +
+          (_coinDiscountSelected ? _coinDiscountAmount : 0.0);
+
+      final double remainingDeliveryPoints = (deliveryPoints - usedPoints)
+          .clamp(0.0, double.infinity)
+          .toDouble();
 
       final userUpdateData = {
         "to_verify": FieldValue.arrayUnion([
@@ -324,13 +353,14 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                     .toList(),
             'subtotal': widget.totalAmount,
             'deliveryCharge': deliveryCharge,
+            'coinDiscount': _coinDiscountAmount,
             'total': _total,
             'order_status': "verify",
             'freeDeliveryUsed': _freeDeliverySelected,
+            'coinDiscountUsed': _coinDiscountSelected,
             'baseDeliveryCharge': baseDeliveryCharge,
             'deliveryPoints': deliveryPoints,
-            'deliveryPointsUsed':
-                _freeDeliverySelected ? _freeDeliveryCost : 0.0,
+            'deliveryPointsUsed': usedPoints,
             'remainingDeliveryPoints': remainingDeliveryPoints,
             'order_date': DateTime.now().millisecondsSinceEpoch,
           },
@@ -490,6 +520,38 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+
+  bool get _canUseCoinDiscount => deliveryPoints >= 10;
+
+  Widget _buildCoinDiscountButton() {
+    if (_canUseCoinDiscount) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: ElevatedButton(
+          onPressed: _toggleCoinDiscount,
+          style: ElevatedButton.styleFrom(
+            backgroundColor:
+                _coinDiscountSelected
+                    ? AppColors.success
+                    : Theme.of(context).primaryColor,
+            minimumSize: const Size(double.infinity, 50),
+          ),
+          child: Text(
+            _coinDiscountSelected
+                ? 'Dadu Coin Discount Applied! (-৳${_coinDiscountAmount.toStringAsFixed(2)})'
+                : 'Use Dadu Coins for Discount (Balance: ${deliveryPoints.toStringAsFixed(0)} coins)',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textOnPrimary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    return const SizedBox();
   }
 
   Widget _buildFreeDeliveryButton() {
@@ -686,6 +748,8 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
             ...widget.cartItems.map(_buildOrderSummaryItem),
             const Divider(),
             _buildSummaryRow('Subtotal', widget.totalAmount),
+            if (_coinDiscountSelected)
+              _buildSummaryRow('Dadu Coin Discount', -_coinDiscountAmount),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
@@ -775,6 +839,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
             _buildUpdateBanner(),
 
             _buildFreeDeliveryButton(),
+            _buildCoinDiscountButton(),
 
             if (!_freeDeliverySelected) ...[
               const SizedBox(height: 24),

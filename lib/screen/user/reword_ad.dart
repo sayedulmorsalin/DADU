@@ -15,8 +15,8 @@ class RewordAd extends StatefulWidget {
 
 class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
   static const int _dailyAdLimit = 30;
-  static const int _adsPerRowLimit = 3;
-  static const Duration _cooldownDuration = Duration(minutes: 30);
+  static const int _adsPerRowLimit = 5;
+  static const Duration _cooldownDuration = Duration(minutes: 5);
 
   final dataBase db = dataBase();
 

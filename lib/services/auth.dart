@@ -22,6 +22,7 @@ class Auth {
           'uid': user.uid,
           'email': email,
           'name': name,
+          'free_delivery_info': 10,
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
@@ -198,7 +199,7 @@ Future<String?> deleteAccount() async {
       'district': district,
       'thana': thana,
       'address': address,
-      'free_delivery_info': 0,
+      'free_delivery_info': 10,
       'free_delivery_status': false,
       'cart_items': [],
       'to_verify': [],

@@ -1051,6 +1051,7 @@ class _FlashItem extends StatelessWidget {
                   videoLink: product['videoLink']?.toString() ?? '',
                   brand: product['brand']?.toString() ?? 'Others',
                   image5: product['image5']?.toString() ?? '',
+                  goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
                 ),
           ),
         );
@@ -1183,6 +1184,7 @@ class _ArrivalItem extends StatelessWidget {
                     videoLink: product['videoLink']?.toString() ?? '',
                     brand: product['brand']?.toString() ?? 'Others',
                     image5: product['image5']?.toString() ?? '',
+                    goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
                   ),
             ),
           );
