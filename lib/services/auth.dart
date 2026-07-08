@@ -134,7 +134,7 @@ Future<String?> deleteAccount() async {
 }
 
 
-  
+
   Future<void> anonymousLogin() async {
     try {
       final userCredential = await _auth.signInAnonymously();
@@ -143,7 +143,7 @@ Future<String?> deleteAccount() async {
       if (user != null) {
         final userDoc = _firestore.collection('anonymous_users').doc(user.uid);
 
-        
+
         await userDoc.set({
           'uid': user.uid,
           'createdAt': FieldValue.serverTimestamp(),
@@ -156,7 +156,7 @@ Future<String?> deleteAccount() async {
   }
 
 
-  
+
   String _handleAuthError(String code) {
     switch (code) {
       case 'invalid-email':

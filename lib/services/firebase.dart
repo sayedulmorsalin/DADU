@@ -9,7 +9,7 @@ class dataBase {
       Query query = FirebaseFirestore.instance
           .collection('products')
           .orderBy('createdAt', descending: true)
-          .limit(6);
+          .limit(20);
 
       if (startAfterDoc != null) {
         query = query.startAfterDocument(startAfterDoc);

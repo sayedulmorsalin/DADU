@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/services/auth.dart';
 import 'package:dadu/services/firebase.dart';
+import 'package:dadu/services/d1.dart'; // Added ApiService import
 import 'package:dadu/services/notification_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,12 +10,14 @@ import 'package:fuzzy/fuzzy.dart';
 import 'package:get/get.dart';
 
 class HomeController extends GetxController {
-  HomeController({dataBase? db, Auth? auth})
+  HomeController({dataBase? db, Auth? auth, ApiService? apiService})
     : db = db ?? dataBase(),
-      auth = auth ?? Auth();
+      auth = auth ?? Auth(),
+      apiService = apiService ?? ApiService(); // Added ApiService
 
   final dataBase db;
   final Auth auth;
+  final ApiService apiService; // Added ApiService
 
   late final NotificationService notificationService = NotificationService(db);
 
@@ -49,7 +52,7 @@ class HomeController extends GetxController {
   final PageController bannerPageController = PageController();
   final TextEditingController searchController = TextEditingController();
 
-  DocumentSnapshot? lastDocument;
+  int apiOffset = 0; // Track API pagination
   Fuzzy<String>? fuzzy;
 
   Timer? _bannerAutoScrollTimer;
@@ -139,14 +142,14 @@ class HomeController extends GetxController {
 
   Future<void> loadInitialProducts() async {
     isInitialLoading.value = true;
+    apiOffset = 0;
 
-    final initialProducts = await db.getProduct();
-    products.assignAll(initialProducts);
-
-    if (initialProducts.isNotEmpty) {
-      lastDocument = initialProducts.last['docSnapshot'] as DocumentSnapshot?;
-    } else {
-      lastDocument = null;
+    // Fetch products exclusively from API
+    final apiProducts = await apiService.fetchProducts(limit: 20, offset: apiOffset);
+    
+    products.assignAll(apiProducts);
+    if (apiProducts.isNotEmpty) {
+      apiOffset += apiProducts.length;
     }
 
     isInitialLoading.value = false;
@@ -154,18 +157,14 @@ class HomeController extends GetxController {
 
   Future<void> loadMoreProducts() async {
     if (isLoadingMore.value || isInitialLoading.value) return;
-    if (lastDocument == null) return;
     if (searchController.text.trim().isNotEmpty) return;
 
     isLoadingMore.value = true;
 
-    final moreProducts = await db.getProduct(startAfterDoc: lastDocument);
-
+    final moreProducts = await apiService.fetchProducts(limit: 20, offset: apiOffset);
     if (moreProducts.isNotEmpty) {
-      lastDocument = moreProducts.last['docSnapshot'] as DocumentSnapshot?;
       products.addAll(moreProducts);
-    } else {
-      lastDocument = null;
+      apiOffset += moreProducts.length;
     }
 
     isLoadingMore.value = false;

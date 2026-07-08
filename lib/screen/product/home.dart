@@ -305,13 +305,13 @@ class Home extends StatelessWidget {
       crossAxisCount: 2,
       childAspectRatio: 3.2,
       children: [
-        _buildBrandItem(context, 'Adidas', 'assets/icon/adidas.png'),
-        _buildBrandItem(context, 'Nike', 'assets/icon/Nike.png'),
-        _buildBrandItem(context, 'Puma', 'assets/icon/puma.png'),
+        _buildBrandItem(context, 'Boots', 'assets/icon/boots.png'),
         _buildBrandItem(context, 'Gloves', 'assets/icon/gloves.png'),
         _buildBrandItem(context, 'Jersey', 'assets/icon/jersey.png'),
         _buildBrandItem(context, 'Pant', 'assets/icon/pant.png'),
-        _buildBrandItem(context, 'Dadu', 'assets/logo/black_logo.png'),
+        _buildBrandItem(context, 'Bags', 'assets/icon/bag.png'),
+        _buildBrandItem(context, 'Safe Guard', 'assets/icon/safeguard.png'),
+        _buildBrandItem(context, 'Socks', 'assets/icon/socks.png'),
         _buildBrandItem(context, 'Others', 'assets/icon/other.png'),
       ],
     );

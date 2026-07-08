@@ -91,6 +91,7 @@ flutter:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
   assets:
+    - .env
     - assets/icon/adidas.png
     - assets/icon/other.png
     - assets/icon/Nike.png
@@ -100,12 +101,14 @@ flutter:
     - assets/icon/Logo.jpg
     - assets/icon/user_icon.png
     - assets/icon/banner.jpg
-    - .env
     - assets/icon/jersey.png
     - assets/icon/pant.png
     - assets/logo/black_logo.png
-    - assets/icon/gift.jpeg
     - assets/info_banner/infobanner.gif
+    - assets/icon/boots.png
+    - assets/icon/safeguard.png
+    - assets/icon/socks.png
+    - assets/icon/mizuno.png
 
 
 
