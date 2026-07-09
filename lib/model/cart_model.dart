@@ -5,7 +5,7 @@ class CartItem {
   final double price;
    int quantity;
   final String imageUrl;
-  final String brand;
+  final String catagory;
   final String size;
 
   CartItem({
@@ -14,7 +14,7 @@ class CartItem {
     required this.price,
     required this.quantity,
     required this.imageUrl,
-    required this.brand,
+    required this.catagory,
     required this.size,
   });
 }

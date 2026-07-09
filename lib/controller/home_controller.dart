@@ -52,7 +52,7 @@ class HomeController extends GetxController {
   final PageController bannerPageController = PageController();
   final TextEditingController searchController = TextEditingController();
 
-  int apiOffset = 0; // Track API pagination
+  int apiPage = 1; // Track API pagination
   Fuzzy<String>? fuzzy;
 
   Timer? _bannerAutoScrollTimer;
@@ -142,14 +142,14 @@ class HomeController extends GetxController {
 
   Future<void> loadInitialProducts() async {
     isInitialLoading.value = true;
-    apiOffset = 0;
+    apiPage = 1;
 
     // Fetch products exclusively from API
-    final apiProducts = await apiService.fetchProducts(limit: 20, offset: apiOffset);
+    final apiProducts = await apiService.fetchProducts(limit: 20, page: apiPage);
     
     products.assignAll(apiProducts);
     if (apiProducts.isNotEmpty) {
-      apiOffset += apiProducts.length;
+      apiPage++;
     }
 
     isInitialLoading.value = false;
@@ -161,10 +161,10 @@ class HomeController extends GetxController {
 
     isLoadingMore.value = true;
 
-    final moreProducts = await apiService.fetchProducts(limit: 20, offset: apiOffset);
+    final moreProducts = await apiService.fetchProducts(limit: 20, page: apiPage);
     if (moreProducts.isNotEmpty) {
       products.addAll(moreProducts);
-      apiOffset += moreProducts.length;
+      apiPage++;
     }
 
     isLoadingMore.value = false;

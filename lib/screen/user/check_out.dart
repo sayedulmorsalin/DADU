@@ -189,12 +189,12 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     return widget.cartItems.fold(0, (sum, item) => sum + item.quantity);
   }
 
-  int _countDiscountItems(String brandName) {
+  int _countDiscountItems(String catagoryName) {
     return widget.cartItems
         .where(
           (item) =>
               item.price >= 500 &&
-              item.brand.trim().toLowerCase() == brandName,
+              item.catagory.trim().toLowerCase() == catagoryName,
         )
         .fold(0, (sum, item) => sum + item.quantity);
   }
@@ -345,6 +345,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                         'price': item.price,
                         'quantity': item.quantity,
                         'imageUrl': item.imageUrl,
+                        'catagory': item.catagory,
                         'order_uid':
                             '${DateTime.now().millisecondsSinceEpoch}-${item.id}',
                         'size': item.size,

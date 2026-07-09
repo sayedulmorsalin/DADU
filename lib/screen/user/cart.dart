@@ -5,6 +5,7 @@ import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../../model/cart_model.dart';
+import '../../services/d1.dart';
 import '../../services/firebase.dart';
 import '../authentication/sign_up_2nd.dart';
 import '../authentication/sign_up_first.dart';
@@ -19,6 +20,7 @@ class Cart extends StatefulWidget {
 class _CartState extends State<Cart> {
   final Auth _auth = Auth();
   final dataBase db = dataBase();
+  final ApiService apiService = ApiService();
   Future<List<CartItem>>? _cartItemsFuture;
   String? _lastCartSignature;
 
@@ -34,9 +36,12 @@ class _CartState extends State<Cart> {
       final productId = entry.key;
       final value = entry.value;
 
-      if (value is int) {
-        final productData = await db.getProductById(productId);
-        if (productData != null) {
+      // Try Firestore first, then API
+      var productData = await db.getProductById(productId);
+      productData ??= await apiService.fetchProductById(productId);
+
+      if (productData != null) {
+        if (value is int) {
           loadedCartItems.add(
             CartItem(
               id: productId,
@@ -44,18 +49,15 @@ class _CartState extends State<Cart> {
               price: _parsePrice(productData['price']),
               quantity: value,
               imageUrl: productData['image5'] ?? '',
-              brand: productData['brand'] ?? '',
+              catagory: productData['catagory'] ?? '',
               size: "default",
             ),
           );
-        }
-      } else if (value is Map<String, dynamic>) {
-        for (var sizeEntry in value.entries) {
-          String size = sizeEntry.key;
-          int quantity = sizeEntry.value as int;
+        } else if (value is Map<String, dynamic>) {
+          for (var sizeEntry in value.entries) {
+            String size = sizeEntry.key;
+            int quantity = sizeEntry.value as int;
 
-          final productData = await db.getProductById(productId);
-          if (productData != null) {
             loadedCartItems.add(
               CartItem(
                 id: productId,
@@ -63,7 +65,7 @@ class _CartState extends State<Cart> {
                 price: _parsePrice(productData['price']),
                 quantity: quantity,
                 imageUrl: productData['image5'] ?? '',
-                brand: productData['brand'] ?? '',
+                catagory: productData['catagory'] ?? '',
                 size: size,
               ),
             );

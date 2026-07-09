@@ -17,7 +17,7 @@ class ProductItem extends StatelessWidget {
   final String image5;
   final String description;
   final String videoLink;
-  final String brand;
+  final String catagory;
   final double goldCoin;
   final dataBase db = dataBase();
 
@@ -30,7 +30,7 @@ class ProductItem extends StatelessWidget {
     required this.image20,
     required this.description,
     required this.videoLink,
-    required this.brand,
+    required this.catagory,
     required this.image5,
     this.goldCoin = 0.0,
   });
@@ -106,6 +106,52 @@ class ProductItem extends StatelessWidget {
     }
   }
 
+  Widget _buildImage(String path) {
+    if (path.isEmpty) {
+      return Container(
+        height: 135,
+        color: AppColors.placeholderBackground,
+        child: const Icon(Icons.image_not_supported),
+      );
+    }
+
+    if (path.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: path,
+        height: 135,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        placeholder:
+            (_, __) => Container(
+              height: 135,
+              alignment: Alignment.center,
+              color: AppColors.placeholderBackground,
+              child: const CircularProgressIndicator(),
+            ),
+        errorWidget:
+            (_, __, ___) => Container(
+              height: 135,
+              color: AppColors.placeholderBackground,
+              child: const Icon(Icons.broken_image),
+            ),
+      );
+    } else {
+      return Image.asset(
+        path,
+        height: 135,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            height: 135,
+            color: AppColors.placeholderBackground,
+            child: const Icon(Icons.broken_image),
+          );
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -122,7 +168,7 @@ class ProductItem extends StatelessWidget {
                   image20: image20,
                   description: description,
                   videoLink: videoLink,
-                  brand: brand,
+                  catagory: catagory,
                   image5: image5,
                   goldCoin: goldCoin,
                 ),
@@ -140,25 +186,7 @@ class ProductItem extends StatelessWidget {
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(10),
               ),
-              child: CachedNetworkImage(
-                imageUrl: imagePath,
-                height: 135,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder:
-                    (_, __) => Container(
-                      height: 135,
-                      alignment: Alignment.center,
-                      color: AppColors.placeholderBackground,
-                      child: const CircularProgressIndicator(),
-                    ),
-                errorWidget:
-                    (_, __, ___) => Container(
-                      height: 135,
-                      color: AppColors.placeholderBackground,
-                      child: const Icon(Icons.broken_image),
-                    ),
-              ),
+              child: _buildImage(imagePath),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -196,7 +224,7 @@ class ProductItem extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          'Free ${(goldCoin > 0 ? goldCoin + 10 : 10).toStringAsFixed(0)} Dadu coin',
+                          'Cash back ${goldCoin.toStringAsFixed(0)}',
                           style: const TextStyle(
                             fontSize: 10,
                             color: Colors.green,

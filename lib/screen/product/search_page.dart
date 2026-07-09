@@ -114,7 +114,7 @@ class SearchPage extends StatelessWidget {
                                     product['details']?.toString() ?? '',
                                 videoLink:
                                     product['videoLink']?.toString() ?? '',
-                                brand: product['brand']?.toString() ?? 'Others',
+                                catagory: product['catagory']?.toString() ?? 'Others',
                                 image5: product['image5']?.toString() ?? '',
                                 goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
                               ),

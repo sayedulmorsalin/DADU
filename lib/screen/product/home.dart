@@ -6,7 +6,7 @@ import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/services/app_version_service.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
-import 'package:dadu/screen/product/brands.dart';
+import 'package:dadu/screen/product/catagory.dart';
 import 'package:dadu/screen/product/combo_pack.dart';
 import 'package:dadu/screen/product/gift_box.dart';
 import 'package:dadu/screen/product/info_banner.dart';
@@ -90,7 +90,7 @@ class Home extends StatelessWidget {
         children: [
           _buildTopBar(context),
           _buildBannerSection(context),
-          _buildBrandGrid(context),
+          _buildCatagoryGrid(context),
           _buildComboPackBanner(context),
           _buildGiftBanner(context),
           _buildFlashSaleSection(context),
@@ -298,21 +298,21 @@ class Home extends StatelessWidget {
     });
   }
 
-  Widget _buildBrandGrid(BuildContext context) {
+  Widget _buildCatagoryGrid(BuildContext context) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
       childAspectRatio: 3.2,
       children: [
-        _buildBrandItem(context, 'Boots', 'assets/icon/boots.png'),
-        _buildBrandItem(context, 'Gloves', 'assets/icon/gloves.png'),
-        _buildBrandItem(context, 'Jersey', 'assets/icon/jersey.png'),
-        _buildBrandItem(context, 'Pant', 'assets/icon/pant.png'),
-        _buildBrandItem(context, 'Bags', 'assets/icon/bag.png'),
-        _buildBrandItem(context, 'Safe Guard', 'assets/icon/safeguard.png'),
-        _buildBrandItem(context, 'Socks', 'assets/icon/socks.png'),
-        _buildBrandItem(context, 'Others', 'assets/icon/other.png'),
+        _buildCatagoryItem(context, 'Boots', 'assets/icon/boots.png'),
+        _buildCatagoryItem(context, 'Gloves', 'assets/icon/gloves.png'),
+        _buildCatagoryItem(context, 'Jersey', 'assets/icon/jersey.png'),
+        _buildCatagoryItem(context, 'Pant', 'assets/icon/pant.png'),
+        _buildCatagoryItem(context, 'Bag', 'assets/icon/bag.png'),
+        _buildCatagoryItem(context, 'Safe Guard', 'assets/icon/safeguard.png'),
+        _buildCatagoryItem(context, 'Socks', 'assets/icon/socks.png'),
+        _buildCatagoryItem(context, 'Others', 'assets/icon/other.png'),
       ],
     );
   }
@@ -676,7 +676,7 @@ class Home extends StatelessWidget {
                 product['details']?.toString() ?? 'No details available',
             videoLink:
                 product['videoLink']?.toString() ?? 'No videoLink available',
-            brand: product['brand']?.toString() ?? 'Others',
+            catagory: product['catagory']?.toString() ?? 'Others',
             image5: product['image5']?.toString() ?? '',
             goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
           );
@@ -738,14 +738,14 @@ class Home extends StatelessWidget {
     );
   }
 
-  Widget _buildBrandItem(BuildContext context, String brand, String imagePath) {
+  Widget _buildCatagoryItem(BuildContext context, String catagory, String imagePath) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => Brands(brandName: brand, brandLogo: imagePath),
+            builder: (_) => Catagory(catagoryName: catagory, catagoryLogo: imagePath),
           ),
         );
       },
@@ -760,7 +760,7 @@ class Home extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              brand,
+              catagory,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
@@ -1049,7 +1049,7 @@ class _FlashItem extends StatelessWidget {
                   image20: product['image20']?.toString() ?? '',
                   description: product['details']?.toString() ?? '',
                   videoLink: product['videoLink']?.toString() ?? '',
-                  brand: product['brand']?.toString() ?? 'Others',
+                  catagory: product['catagory']?.toString() ?? 'Others',
                   image5: product['image5']?.toString() ?? '',
                   goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
                 ),
@@ -1182,7 +1182,7 @@ class _ArrivalItem extends StatelessWidget {
                     image20: product['image20']?.toString() ?? '',
                     description: product['details']?.toString() ?? '',
                     videoLink: product['videoLink']?.toString() ?? '',
-                    brand: product['brand']?.toString() ?? 'Others',
+                    catagory: product['catagory']?.toString() ?? 'Others',
                     image5: product['image5']?.toString() ?? '',
                     goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
                   ),

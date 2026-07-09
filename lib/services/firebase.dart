@@ -30,7 +30,7 @@ class dataBase {
               "videoLink": data['videoLink'],
               "image20": data['image20'],
               "image5": data['image5'],
-              "brand": data['brand'] ?? 'Others',
+              "catagory": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
               "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
               "createdAt": data['createdAt'],
@@ -44,14 +44,14 @@ class dataBase {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getBrandedProduct(
-    String brand, {
+  Future<List<Map<String, dynamic>>> getCatagoryProduct(
+    String catagory, {
     DocumentSnapshot? startAfterDoc,
   }) async {
     try {
       Query query = FirebaseFirestore.instance
           .collection('products')
-          .where('brand', isEqualTo: brand)
+          .where('brand', isEqualTo: catagory)
           .orderBy('createdAt', descending: true)
           .limit(6);
 
@@ -74,7 +74,7 @@ class dataBase {
               "videoLink": data['videoLink'],
               "image20": data['image20'],
               "image5": data['image5'],
-              "brand": data['brand'] ?? 'Others',
+              "catagory": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
               "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
               "createdAt": data['createdAt'],
@@ -119,11 +119,16 @@ class dataBase {
 
   Future<void> incrementClickCount(String productId) async {
     try {
+      // Check if productId looks like a Firestore ID (usually 20 chars)
+      // API IDs are usually UUIDs (36 chars)
+      if (productId.length != 20) return;
+
       await FirebaseFirestore.instance
           .collection('products')
           .doc(productId)
           .update({'clicked': FieldValue.increment(1)});
     } catch (e) {
+      // Silently fail for IDs not in Firestore
     }
   }
 
@@ -150,7 +155,7 @@ class dataBase {
               "videoLink": data['videoLink'],
               "image20": data['image20'],
               "image5": data['image5'],
-              "brand": data['brand'] ?? 'Others',
+              "catagory": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
               "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
             };
@@ -227,7 +232,11 @@ class dataBase {
               .get();
 
       if (snapshot.exists) {
-        return snapshot.data(); 
+        final data = snapshot.data();
+        if (data != null) {
+          data['catagory'] = data['brand'] ?? 'Others';
+        }
+        return data;
       } else {
         return null;
       }
@@ -326,7 +335,7 @@ class dataBase {
         "image20": data['image20'] ?? "",
         "details": data['details'] ?? "",
         "videoLink": data['videoLink'] ?? "",
-        "brand": data['brand'] ?? "Others",
+        "catagory": data['brand'] ?? "Others",
         "flashSell": data['flashSell'] ?? false,
         "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
         "flash-expire": data['flash-expire'], 
@@ -353,7 +362,7 @@ class dataBase {
         "image20": data['image20'] ?? "",
         "details": data['details'] ?? "",
         "videoLink": data['videoLink'] ?? "",
-        "brand": data['brand'] ?? "Others",
+        "catagory": data['brand'] ?? "Others",
         "freeGift": data['freeGift'] ?? false,
         "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
       };
@@ -379,7 +388,7 @@ class dataBase {
         "image20": data['image20'] ?? "",
         "details": data['details'] ?? "",
         "videoLink": data['videoLink'] ?? "",
-        "brand": data['brand'] ?? "Others",
+        "catagory": data['brand'] ?? "Others",
         "newArrival": data['newArrival'] ?? false,
         "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
       };

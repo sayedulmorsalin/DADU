@@ -20,7 +20,7 @@ class ProductDetails extends StatefulWidget {
   final String image20;
   final String description;
   final String videoLink;
-  final String brand;
+  final String catagory;
   final String productid;
   final double goldCoin;
 
@@ -31,7 +31,7 @@ class ProductDetails extends StatefulWidget {
     required this.image20,
     required this.description,
     required this.videoLink,
-    required this.brand,
+    required this.catagory,
     required this.productid,
     required this.image5,
     this.goldCoin = 0.0,
@@ -53,14 +53,14 @@ class _ProductDetailsState extends State<ProductDetails> {
   void initState() {
     super.initState();
 
-    if (widget.brand == "Puma" ||
-        widget.brand == "Nike" ||
-        widget.brand == "Others_boot" ||
-        widget.brand == "Adidas") {
+    if (widget.catagory == "Puma" ||
+        widget.catagory == "Nike" ||
+        widget.catagory == "Others_boot" ||
+        widget.catagory == "Adidas") {
       selectedSize = "40";
-    } else if (widget.brand == "Gloves") {
+    } else if (widget.catagory == "Gloves") {
       selectedSize = "9";
-    } else if (widget.brand == "Jersey") {
+    } else if (widget.catagory == "Jersey") {
       selectedSize = "L";
     } else {
       selectedSize = null;
@@ -395,7 +395,7 @@ class _ProductDetailsState extends State<ProductDetails> {
               price: priceValue,
               quantity: 1,
               imageUrl: widget.image5,
-              brand: widget.brand,
+              catagory: widget.catagory,
               size: selectedSize ?? "0",
             ),
           ];
@@ -526,7 +526,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                                   const Icon(Icons.stars, color: Colors.orange, size: 16),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${(widget.goldCoin > 0 ? widget.goldCoin + 10 : 10).toStringAsFixed(0)}',
+                                    'Cash back ${widget.goldCoin.toStringAsFixed(0)}',
                                     style: const TextStyle(
                                       fontSize: 14,
                                       color: Colors.orange,
@@ -560,14 +560,14 @@ class _ProductDetailsState extends State<ProductDetails> {
                         const SizedBox(height: 25),
                         _buildVideoSection(),
                         const SizedBox(height: 25),
-                        if (widget.brand == "Puma" ||
-                            widget.brand == "Nike" ||
-                            widget.brand == "Others_boot" ||
-                            widget.brand == "Adidas")
+                        if (widget.catagory == "Puma" ||
+                            widget.catagory == "Nike" ||
+                            widget.catagory == "Others_boot" ||
+                            widget.catagory == "Adidas")
                           _buildSizeSection(method1())
-                        else if (widget.brand == "Gloves")
+                        else if (widget.catagory == "Gloves")
                           _buildSizeSection(method2())
-                        else if (widget.brand == "Jersey")
+                        else if (widget.catagory == "Jersey")
                           _buildSizeSection(method3())
                         else
                           const SizedBox.shrink(),

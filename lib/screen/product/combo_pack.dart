@@ -1,9 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/product/product_item.dart';
-import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/firebase.dart';
+import '../../services/d1.dart';
 
 class ComboPack extends StatefulWidget {
   const ComboPack({super.key});
@@ -14,11 +14,12 @@ class ComboPack extends StatefulWidget {
 
 class _ComboPackState extends State<ComboPack> {
   String bundle = "Combo Pack";
-  final dataBase db = new dataBase();
-  List<Map<String, dynamic>> brandProducts = [];
+  final dataBase db = dataBase();
+  final ApiService apiService = ApiService();
+  List<Map<String, dynamic>> catagoryProducts = [];
   bool isLoading = true;
   bool isLoadingMore = false;
-  DocumentSnapshot? lastDocument;
+  int currentPage = 1;
   ScrollController scrollController = ScrollController();
 
   @override
@@ -37,28 +38,29 @@ class _ComboPackState extends State<ComboPack> {
   }
 
   Future<void> fetchInitialProducts() async {
-    final products = await db.getBrandedProduct(bundle);
-    brandProducts = products;
-
-    if (products.isNotEmpty) {
-      lastDocument = products.last['docSnapshot'];
-    }
+    currentPage = 1;
+    final products = await apiService.fetchProducts(
+      category: bundle,
+      limit: 20,
+      page: currentPage,
+    );
+    catagoryProducts = products;
+    if (products.isNotEmpty) currentPage++;
 
     setState(() => isLoading = false);
   }
 
   Future<void> fetchMoreProducts() async {
-    if (lastDocument == null) return;
-
     setState(() => isLoadingMore = true);
-    final moreProducts = await db.getBrandedProduct(
-      bundle,
-      startAfterDoc: lastDocument,
+    final moreProducts = await apiService.fetchProducts(
+      category: bundle,
+      limit: 20,
+      page: currentPage,
     );
 
     if (moreProducts.isNotEmpty) {
-      lastDocument = moreProducts.last['docSnapshot'];
-      brandProducts.addAll(moreProducts);
+      catagoryProducts.addAll(moreProducts);
+      currentPage++;
     }
 
     setState(() => isLoadingMore = false);
@@ -70,7 +72,7 @@ class _ComboPackState extends State<ComboPack> {
       appBar: AppBar(
         title: Text(
           bundle,
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
         ),
         backgroundColor: Colors.transparent,
         centerTitle: true,
@@ -93,7 +95,7 @@ class _ComboPackState extends State<ComboPack> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.orange.withOpacity(0.3),
+                    color: Colors.orange.withValues(alpha: 0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -107,7 +109,7 @@ class _ComboPackState extends State<ComboPack> {
                     child: Icon(
                       Icons.shopping_bag,
                       size: 100,
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                     ),
                   ),
                   const Padding(
@@ -155,14 +157,14 @@ class _ComboPackState extends State<ComboPack> {
 
           if (isLoading)
             const Center(child: CircularProgressIndicator())
-          else if (brandProducts.isEmpty)
+          else if (catagoryProducts.isEmpty)
             const Center(child: Text("No products found"))
           else
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: brandProducts.length,
+              itemCount: catagoryProducts.length,
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 mainAxisSpacing: 10,
@@ -170,9 +172,9 @@ class _ComboPackState extends State<ComboPack> {
                 childAspectRatio: 0.72,
               ),
               itemBuilder: (context, index) {
-                final product = brandProducts[index];
+                final product = catagoryProducts[index];
                 return ProductItem(
-                  productId: product['id'],
+                  productId: product['id'] ?? '',
                   title: product['name'] ?? 'No Title',
                   price: '৳${product['price']?.toString() ?? '0'}',
                   imagePath:
@@ -181,7 +183,7 @@ class _ComboPackState extends State<ComboPack> {
                       product['image20'] ?? 'assets/demo_item_image/d1.jpg',
                   description: product['details'] ?? 'No details available',
                   videoLink: product['videoLink'] ?? 'No videoLink available',
-                  brand: product['brand'] ?? 'no brand found ',
+                  catagory: product['catagory'] ?? 'no catagory found',
                   image5: product['image5'] ?? 'assets/demo_item_image/d1.jpg',
                   goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
                 );
