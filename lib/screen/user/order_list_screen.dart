@@ -229,6 +229,26 @@ class OrderListScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Coins',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      ((_safeGetNum(order, 'freeCoin') ?? 0) * quantity).toStringAsFixed(0),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ],

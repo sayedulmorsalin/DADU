@@ -19,6 +19,14 @@ class ProductItem extends StatelessWidget {
   final String videoLink;
   final String catagory;
   final double goldCoin;
+  final String brand;
+  final String imageTwo;
+  final String imageThree;
+  final String size;
+  final int stock;
+  final String deliveryFee;
+  final dynamic createdAt;
+
   final dataBase db = dataBase();
 
   ProductItem({
@@ -33,6 +41,13 @@ class ProductItem extends StatelessWidget {
     required this.catagory,
     required this.image5,
     this.goldCoin = 0.0,
+    this.brand = '',
+    this.imageTwo = '',
+    this.imageThree = '',
+    this.size = '',
+    this.stock = 0,
+    this.deliveryFee = '',
+    this.createdAt,
   });
 
   void _addToCart(BuildContext context) async {
@@ -74,18 +89,18 @@ class ProductItem extends StatelessWidget {
       final cartItems = Map<String, dynamic>.from(
         userDetails?['cart_item'] ?? {},
       );
-      const size = 'default';
+      const cartSize = 'default';
 
       if (cartItems.containsKey(productId)) {
         final productEntry = cartItems[productId];
         if (productEntry is int) {
           cartItems[productId] = {'default': productEntry + 1};
         } else if (productEntry is Map) {
-          final currentQty = (productEntry[size] as int?) ?? 0;
-          cartItems[productId][size] = currentQty + 1;
+          final currentQty = (productEntry[cartSize] as int?) ?? 0;
+          cartItems[productId][cartSize] = currentQty + 1;
         }
       } else {
-        cartItems[productId] = {size: 1};
+        cartItems[productId] = {cartSize: 1};
       }
 
       await db.updateUserDetails(currentUser.email!, {'cart_item': cartItems});
@@ -156,7 +171,6 @@ class ProductItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        db.incrementClickCount(productId);
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -171,6 +185,13 @@ class ProductItem extends StatelessWidget {
                   catagory: catagory,
                   image5: image5,
                   goldCoin: goldCoin,
+                  brand: brand,
+                  imageTwo: imageTwo,
+                  imageThree: imageThree,
+                  size: size,
+                  stock: stock,
+                  deliveryFee: deliveryFee,
+                  createdAt: createdAt,
                 ),
           ),
         );

@@ -31,16 +31,57 @@ class _CartState extends State<Cart> {
 
   Future<List<CartItem>> _processCartData(Map<String, dynamic> cartData) async {
     List<CartItem> loadedCartItems = [];
+    List<String> removedItemsNames = [];
+    bool needsSync = false;
+
+    // Collect all IDs
+    final List<String> allProductIds = cartData.keys.toList();
+    if (allProductIds.isEmpty) return [];
+
+    // Map to hold fetched product data
+    final Map<String, dynamic> productsDataMap = {};
+    final List<String> missingFromDbIds = [];
+
+    // First try fetching from local Firestore
+    for (var productId in allProductIds) {
+      final data = await db.getProductById(productId);
+      if (data != null) {
+        productsDataMap[productId] = data;
+      } else {
+        missingFromDbIds.add(productId);
+      }
+    }
+
+    // Batch fetch any missing items from API
+    if (missingFromDbIds.isNotEmpty) {
+      final apiProducts = await apiService.fetchProducts(
+        limit: missingFromDbIds.length,
+        ids: missingFromDbIds,
+      );
+      for (var product in apiProducts) {
+        productsDataMap[product['id']] = product;
+      }
+    }
 
     for (var entry in cartData.entries) {
       final productId = entry.key;
       final value = entry.value;
 
-      // Try Firestore first, then API
-      var productData = await db.getProductById(productId);
-      productData ??= await apiService.fetchProductById(productId);
+      var productData = productsDataMap[productId];
 
       if (productData != null) {
+        // Only remove if stock is explicitly 0. If null/missing, assume available.
+        dynamic rawStock = productData['stock'];
+        int? stock = rawStock != null ? int.tryParse(rawStock.toString()) : null;
+
+        if (stock != null && stock <= 0) {
+          removedItemsNames.add(productData['name'] ?? 'Unknown Product');
+          needsSync = true;
+          continue;
+        }
+
+        double freeCoinValue = double.tryParse(productData['gold_coin']?.toString() ?? productData['freeCoin']?.toString() ?? '0') ?? 0.0;
+
         if (value is int) {
           loadedCartItems.add(
             CartItem(
@@ -51,12 +92,16 @@ class _CartState extends State<Cart> {
               imageUrl: productData['image5'] ?? '',
               catagory: productData['catagory'] ?? '',
               size: "default",
+              deliveryFee: _parsePrice(productData['deliveryFee'] ?? '0'),
+              freeCoin: freeCoinValue,
             ),
           );
-        } else if (value is Map<String, dynamic>) {
+        } else if (value is Map) {
           for (var sizeEntry in value.entries) {
-            String size = sizeEntry.key;
-            int quantity = sizeEntry.value as int;
+            String size = sizeEntry.key.toString();
+            int quantity = int.tryParse(sizeEntry.value.toString()) ?? 0;
+
+            if (quantity <= 0) continue;
 
             loadedCartItems.add(
               CartItem(
@@ -67,12 +112,35 @@ class _CartState extends State<Cart> {
                 imageUrl: productData['image5'] ?? '',
                 catagory: productData['catagory'] ?? '',
                 size: size,
+                deliveryFee: _parsePrice(productData['deliveryFee'] ?? '0'),
+                freeCoin: freeCoinValue,
               ),
             );
           }
         }
+      } else {
+        // Product not found, should be removed
+        needsSync = true;
       }
     }
+
+    if (needsSync) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _updateCartInFirestore(loadedCartItems);
+        if (removedItemsNames.isNotEmpty && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Removed ${removedItemsNames.join(", ")} from cart as it is out of stock.',
+              ),
+              backgroundColor: AppColors.error,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      });
+    }
+
     return loadedCartItems;
   }
 
@@ -293,7 +361,7 @@ class _CartState extends State<Cart> {
                                           ),
                                         ),
                                         const SizedBox(height: 4),
-                                        if (item.size != "default")
+                                        if (item.size != "default" && item.size != "no size" && item.size != "0")
                                           Text(
                                             'Size: ${item.size}',
                                             style: TextStyle(

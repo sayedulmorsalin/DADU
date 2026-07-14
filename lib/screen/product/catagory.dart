@@ -31,6 +31,7 @@ class _CatagoryState extends State<Catagory> {
     'Boots Master Grade Copy',
     'Boots Copy 4 Grade',
     'Boots China Copy',
+    'Boots Turf',
   ];
 
   @override
@@ -121,6 +122,7 @@ class _CatagoryState extends State<Catagory> {
       ),
       body: ListView(
         controller: scrollController,
+        physics: const _SlowScrollPhysics(),
         children: [
           Container(
             padding: const EdgeInsets.all(24),
@@ -194,18 +196,25 @@ class _CatagoryState extends State<Catagory> {
               itemBuilder: (context, index) {
                 final product = catagoryProducts[index];
                 return ProductItem(
-                  productId: product['id'] ?? '',
-                  title: product['name'] ?? 'No Title',
+                  productId: product['id']?.toString() ?? '',
+                  title: product['name']?.toString() ?? 'No Title',
                   price: '৳${product['price']?.toString() ?? '0'}',
                   imagePath:
-                      product['image5'] ?? 'assets/demo_item_image/d1.jpg',
+                      product['image5']?.toString() ?? 'assets/demo_item_image/d1.jpg',
                   image20:
-                      product['image20'] ?? 'assets/demo_item_image/d1.jpg',
-                  description: product['details'] ?? 'No details available',
-                  videoLink: product['videoLink'] ?? 'No videoLink available',
-                  catagory: product['catagory'] ?? 'Others',
-                  image5: product['image5'] ?? 'assets/demo_item_image/d1.jpg',
-                  goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
+                      product['image20']?.toString() ?? 'assets/demo_item_image/d1.jpg',
+                  description: product['details']?.toString() ?? 'No details available',
+                  videoLink: product['videoLink']?.toString() ?? 'No videoLink available',
+                  catagory: product['catagory']?.toString() ?? 'Others',
+                  image5: product['image5']?.toString() ?? 'assets/demo_item_image/d1.jpg',
+                  goldCoin: double.tryParse(product['gold_coin']?.toString() ?? '0') ?? 0.0,
+                  brand: product['brand']?.toString() ?? '',
+                  imageTwo: product['imageTwo']?.toString() ?? '',
+                  imageThree: product['imageThree']?.toString() ?? '',
+                  size: product['size']?.toString() ?? '',
+                  stock: int.tryParse(product['stock']?.toString() ?? '0') ?? 0,
+                  deliveryFee: product['deliveryFee']?.toString() ?? '',
+                  createdAt: product['createdAt'],
                 );
               },
             ),
@@ -325,5 +334,22 @@ class _CatagoryState extends State<Catagory> {
         ),
       ),
     );
+  }
+}
+
+class _SlowScrollPhysics extends ScrollPhysics {
+  const _SlowScrollPhysics({super.parent});
+
+  @override
+  _SlowScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _SlowScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    return super.createBallisticSimulation(position, velocity * 0.5);
   }
 }

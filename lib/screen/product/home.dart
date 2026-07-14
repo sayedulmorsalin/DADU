@@ -6,6 +6,7 @@ import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/services/app_version_service.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
+import 'package:dadu/screen/product/brand.dart';
 import 'package:dadu/screen/product/catagory.dart';
 import 'package:dadu/screen/product/combo_pack.dart';
 import 'package:dadu/screen/product/gift_box.dart';
@@ -85,33 +86,40 @@ class Home extends StatelessWidget {
 
   Widget _buildHomeContent(BuildContext context) {
     return SafeArea(
-      child: ListView(
-        controller: controller.scrollController,
-        children: [
-          _buildTopBar(context),
-          _buildBannerSection(context),
-          _buildCatagoryGrid(context),
-          _buildComboPackBanner(context),
-          _buildGiftBanner(context),
-          _buildFlashSaleSection(context),
-          //_buildNewArrivalSection(context),
-          const _VersionUpdateBanner(),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: InfoBanner(),
-          ),
-          _buildProductGrid(),
-          Obx(
-            () =>
-                controller.isLoadingMore.value
-                    ? const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                    : const SizedBox.shrink(),
-          ),
-          const SizedBox(height: 12),
-        ],
+      child: RefreshIndicator(
+        onRefresh: controller.refreshData,
+        child: ListView(
+          controller: controller.scrollController,
+          physics: const _SlowScrollPhysics(), // Applying custom slow physics
+          children: [
+            _buildTopBar(context),
+            _buildBannerSection(context),
+            _buildSectionTitle('Brand'),
+            _buildBrandGrid(context),
+            _buildSectionTitle('Catagory'),
+            _buildCatagoryGrid(context),
+            _buildComboPackBanner(context),
+            _buildGiftBanner(context),
+            _buildFlashSaleSection(context),
+            //_buildNewArrivalSection(context),
+            const _VersionUpdateBanner(),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: InfoBanner(),
+            ),
+            _buildProductGrid(),
+            Obx(
+              () =>
+                  controller.isLoadingMore.value
+                      ? const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                      : const SizedBox.shrink(),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
       ),
     );
   }
@@ -298,22 +306,141 @@ class Home extends StatelessWidget {
     });
   }
 
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textPrimary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBrandGrid(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          _buildBrandItem(context, 'Adidas', 'assets/icon/adidas.png'),
+          _buildBrandItem(context, 'Nike', 'assets/icon/Nike.png'),
+          _buildBrandItem(context, 'Puma', 'assets/icon/puma.png'),
+          _buildBrandItem(context, 'Dadu', 'assets/logo/black_logo.png'),
+          _buildBrandItem(context, 'Mizuno', 'assets/icon/mizuno.png'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBrandItem(BuildContext context, String brand, String imagePath) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => Brand(brandName: brand, brandLogo: imagePath),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 16),
+        child: Column(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Image.asset(imagePath, fit: BoxFit.contain),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              brand,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCatagoryGrid(BuildContext context) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      childAspectRatio: 3.2,
-      children: [
-        _buildCatagoryItem(context, 'Boots', 'assets/icon/boots.png'),
-        _buildCatagoryItem(context, 'Gloves', 'assets/icon/gloves.png'),
-        _buildCatagoryItem(context, 'Jersey', 'assets/icon/jersey.png'),
-        _buildCatagoryItem(context, 'Pant', 'assets/icon/pant.png'),
-        _buildCatagoryItem(context, 'Bag', 'assets/icon/bag.png'),
-        _buildCatagoryItem(context, 'Safe Guard', 'assets/icon/safeguard.png'),
-        _buildCatagoryItem(context, 'Socks', 'assets/icon/socks.png'),
-        _buildCatagoryItem(context, 'Others', 'assets/icon/other.png'),
-      ],
+    return Obx(() {
+      return Column(
+        children: [
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            childAspectRatio: 3.2,
+            children: [
+              _buildCatagoryItem(context, 'Boots', 'assets/icon/boots.png'),
+              _buildCatagoryItem(context, 'Gloves', 'assets/icon/gloves.png'),
+              _buildCatagoryItem(context, 'Jersey', 'assets/icon/jersey.png'),
+              _buildCatagoryItem(context, 'Pant', 'assets/icon/pant.png'),
+              _buildCatagoryItem(context, 'Bag', 'assets/icon/bag.png'),
+              _buildCatagoryItem(context, 'Safe Guard', 'assets/icon/safeguard.png'),
+              if (controller.showAllCategories.value) ...[
+                _buildCatagoryItem(context, 'Socks', 'assets/icon/socks.png'),
+                _buildCatagoryItem(context, 'Others', 'assets/icon/other.png'),
+              ],
+            ],
+          ),
+          _buildMoreCategoryButton(),
+        ],
+      );
+    });
+  }
+
+  Widget _buildMoreCategoryButton() {
+    final bool isExpanded = controller.showAllCategories.value;
+    return GestureDetector(
+      onTap: () => controller.showAllCategories.value = !isExpanded,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceGrey.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              isExpanded ? 'Hide' : 'More',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+            Icon(
+              isExpanded ? Icons.expand_less : Icons.expand_more,
+              color: Colors.blue,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -515,6 +642,7 @@ class Home extends StatelessWidget {
                 height: 180,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
+                  physics: const _SlowScrollPhysics(),
                   itemCount: controller.flashProducts.length,
                   itemBuilder: (context, index) {
                     final product = controller.flashProducts[index];
@@ -559,8 +687,8 @@ class Home extends StatelessWidget {
         onTap: () {
           controller.scrollController.animateTo(
             controller.scrollController.offset + 400,
-            duration: const Duration(milliseconds: 500),
-            curve: Curves.easeInOut,
+            duration: const Duration(milliseconds: 1200), // Slower animation
+            curve: Curves.easeOutCubic,
           );
         },
         borderRadius: BorderRadius.circular(30),
@@ -678,7 +806,14 @@ class Home extends StatelessWidget {
                 product['videoLink']?.toString() ?? 'No videoLink available',
             catagory: product['catagory']?.toString() ?? 'Others',
             image5: product['image5']?.toString() ?? '',
-            goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
+            goldCoin: double.tryParse(product['gold_coin']?.toString() ?? '0') ?? 0.0,
+            brand: product['brand']?.toString() ?? '',
+            imageTwo: product['imageTwo']?.toString() ?? '',
+            imageThree: product['imageThree']?.toString() ?? '',
+            size: product['size']?.toString() ?? '',
+            stock: int.tryParse(product['stock']?.toString() ?? '0') ?? 0,
+            deliveryFee: product['deliveryFee']?.toString() ?? '',
+            createdAt: product['createdAt'],
           );
         },
       );
@@ -877,6 +1012,25 @@ class Home extends StatelessWidget {
   }
 }
 
+/// Custom ScrollPhysics to decrease manual scroll speed by increasing friction
+class _SlowScrollPhysics extends ScrollPhysics {
+  const _SlowScrollPhysics({super.parent});
+
+  @override
+  _SlowScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _SlowScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    // Reduce the velocity by 50% to make the scroll slower/more damped
+    return super.createBallisticSimulation(position, velocity * 0.5);
+  }
+}
+
 class _VersionUpdateBanner extends StatefulWidget {
   const _VersionUpdateBanner();
 
@@ -1051,7 +1205,14 @@ class _FlashItem extends StatelessWidget {
                   videoLink: product['videoLink']?.toString() ?? '',
                   catagory: product['catagory']?.toString() ?? 'Others',
                   image5: product['image5']?.toString() ?? '',
-                  goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
+                  goldCoin: double.tryParse(product['gold_coin']?.toString() ?? '0') ?? 0.0,
+                  brand: product['brand']?.toString() ?? '',
+                  imageTwo: product['imageTwo']?.toString() ?? '',
+                  imageThree: product['imageThree']?.toString() ?? '',
+                  size: product['size']?.toString() ?? '',
+                  stock: int.tryParse(product['stock']?.toString() ?? '0') ?? 0,
+                  deliveryFee: product['deliveryFee']?.toString() ?? '',
+                  createdAt: product['createdAt'],
                 ),
           ),
         );
@@ -1184,7 +1345,7 @@ class _ArrivalItem extends StatelessWidget {
                     videoLink: product['videoLink']?.toString() ?? '',
                     catagory: product['catagory']?.toString() ?? 'Others',
                     image5: product['image5']?.toString() ?? '',
-                    goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
+                    goldCoin: double.tryParse(product['gold_coin']?.toString() ?? '0') ?? 0.0,
                   ),
             ),
           );

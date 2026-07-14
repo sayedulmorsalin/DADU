@@ -4,7 +4,6 @@ import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/services/firebase.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class Product {
@@ -40,70 +39,10 @@ class _GiftBoxState extends State<GiftBox> {
   bool _isCurrentUserWinner = false;
   bool _loadingWinner = true;
 
-  BannerAd? _bannerAd;
-  bool _isBannerReady = false;
-
-  void _loadBannerAd() {
-    _bannerAd = BannerAd(
-      size: AdSize.banner,
-      adUnitId: 'ca-app-pub-3831772617470767/2220866700',
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (_) {
-          if (!mounted) return;
-          setState(() => _isBannerReady = true);
-        },
-        onAdFailedToLoad: (ad, error) {
-          ad.dispose();
-        },
-      ),
-    );
-    _bannerAd!.load();
-  }
-
-  InterstitialAd? _interstitialAd;
-
-  void _loadInterstitialAd() {
-    InterstitialAd.load(
-      adUnitId: 'ca-app-pub-3831772617470767/3557999103',
-      request: const AdRequest(),
-      adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) {
-          _interstitialAd = ad;
-          _showInterstitialAd();
-        },
-        onAdFailedToLoad: (error) {
-          _initializePage();
-        },
-      ),
-    );
-  }
-
-  void _showInterstitialAd() {
-    if (_interstitialAd == null) {
-      _initializePage();
-      return;
-    }
-
-    _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) {
-        ad.dispose();
-        _initializePage();
-      },
-      onAdFailedToShowFullScreenContent: (ad, error) {
-        ad.dispose();
-        _initializePage();
-      },
-    );
-
-    _interstitialAd!.show();
-  }
-
   @override
   void initState() {
     super.initState();
-    _loadBannerAd();
-    _loadInterstitialAd();
+    _initializePage();
   }
 
   Future<void> _initializePage() async {
@@ -266,8 +205,6 @@ class _GiftBoxState extends State<GiftBox> {
 
   @override
   void dispose() {
-    _bannerAd?.dispose();
-    _interstitialAd?.dispose();
     super.dispose();
   }
 
@@ -395,12 +332,6 @@ class _GiftBoxState extends State<GiftBox> {
                       ],
                     ),
           ),
-          if (_isBannerReady)
-            SizedBox(
-              width: _bannerAd!.size.width.toDouble(),
-              height: _bannerAd!.size.height.toDouble(),
-              child: AdWidget(ad: _bannerAd!),
-            ),
         ],
       ),
     );

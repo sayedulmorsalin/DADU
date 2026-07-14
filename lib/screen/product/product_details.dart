@@ -5,7 +5,6 @@ import 'package:dadu/services/auth.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../model/cart_model.dart';
@@ -23,6 +22,13 @@ class ProductDetails extends StatefulWidget {
   final String catagory;
   final String productid;
   final double goldCoin;
+  final String brand;
+  final String imageTwo;
+  final String imageThree;
+  final String size;
+  final int stock;
+  final String deliveryFee;
+  final dynamic createdAt;
 
   const ProductDetails({
     super.key,
@@ -35,6 +41,13 @@ class ProductDetails extends StatefulWidget {
     required this.productid,
     required this.image5,
     this.goldCoin = 0.0,
+    this.brand = '',
+    this.imageTwo = '',
+    this.imageThree = '',
+    this.size = '',
+    this.stock = 0,
+    this.deliveryFee = '',
+    this.createdAt,
   });
 
   @override
@@ -48,23 +61,19 @@ class _ProductDetailsState extends State<ProductDetails> {
   final Auth _auth = Auth();
   String Address = "";
   List<CartItem> cartItems = [];
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
+    selectedSize = null;
+  }
 
-    if (widget.catagory == "Puma" ||
-        widget.catagory == "Nike" ||
-        widget.catagory == "Others_boot" ||
-        widget.catagory == "Adidas") {
-      selectedSize = "40";
-    } else if (widget.catagory == "Gloves") {
-      selectedSize = "9";
-    } else if (widget.catagory == "Jersey") {
-      selectedSize = "L";
-    } else {
-      selectedSize = null;
-    }
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   void _launchURL(String url) async {
@@ -108,100 +117,19 @@ class _ProductDetailsState extends State<ProductDetails> {
     );
   }
 
-  Widget method1() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List.generate(6, (index) {
-          final size = (39 + index).toString();
-          final isSelected = selectedSize == size;
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedSize = size;
-                });
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.black : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected ? Colors.black : Colors.grey.shade300,
-                    width: 1.5,
-                  ),
-                ),
-                child: Text(
-                  size,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
+  Widget _buildDynamicSizeButtons() {
+    if (widget.size.isEmpty || widget.size == "no size") {
+      return const SizedBox.shrink();
+    }
 
-  Widget method2() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List.generate(3, (index) {
-          final size = (8 + index).toString();
-          final isSelected = selectedSize == size;
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedSize = size;
-                });
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.black : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected ? Colors.black : Colors.grey.shade300,
-                    width: 1.5,
-                  ),
-                ),
-                child: Text(
-                  size,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget method3() {
-    List<String> sizes = ["M", "L", "XL", "XXL"];
+    List<String> sizes = widget.size.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    if (sizes.isEmpty) return const SizedBox.shrink();
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: List.generate(sizes.length, (index) {
-          final size = sizes[index];
+        children: sizes.map((size) {
           final isSelected = selectedSize == size;
-
           return Padding(
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(
@@ -232,13 +160,9 @@ class _ProductDetailsState extends State<ProductDetails> {
               ),
             ),
           );
-        }),
+        }).toList(),
       ),
     );
-  }
-
-  Widget method4() {
-    return const SizedBox.shrink();
   }
 
   void _toggleFabMenu() {
@@ -273,7 +197,19 @@ class _ProductDetailsState extends State<ProductDetails> {
     }
   }
 
+  bool get _isSizeRequired => widget.size.isNotEmpty && widget.size.toLowerCase() != "no size";
+
   void _addToCart() async {
+    if (_isSizeRequired && selectedSize == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a size first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     final currentUser = _auth.currentUser;
     if (currentUser != null) {
       if (currentUser.isAnonymous) {
@@ -306,7 +242,7 @@ class _ProductDetailsState extends State<ProductDetails> {
           );
 
           String productId = widget.productid;
-          String size = selectedSize ?? "no size";
+          String size = selectedSize ?? "default";
 
           if (cartItems.containsKey(productId)) {
             if (cartItems[productId] is int) {
@@ -315,14 +251,15 @@ class _ProductDetailsState extends State<ProductDetails> {
           }
 
           if (cartItems.containsKey(productId)) {
-            Map<String, dynamic> sizeMap = cartItems[productId];
+            Map<String, dynamic> sizeMap = Map<String, dynamic>.from(cartItems[productId] is Map ? cartItems[productId] : {});
 
             if (sizeMap.containsKey(size)) {
-              int currentQty = (sizeMap[size] is int) ? sizeMap[size] : 0;
+              int currentQty = int.tryParse(sizeMap[size].toString()) ?? 0;
               sizeMap[size] = currentQty + 1;
             } else {
               sizeMap[size] = 1;
             }
+            cartItems[productId] = sizeMap;
           } else {
             cartItems[productId] = {size: 1};
           }
@@ -360,6 +297,16 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   void _buyNow() async {
+    if (_isSizeRequired && selectedSize == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a size first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     final currentUser = _auth.currentUser;
     if (currentUser != null) {
       if (currentUser.isAnonymous) {
@@ -388,6 +335,7 @@ class _ProductDetailsState extends State<ProductDetails> {
           return;
         } else {
           double priceValue = _parsePrice(widget.price);
+          double deliveryFeeValue = double.tryParse(widget.deliveryFee.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
           List<CartItem> checkoutItems = [
             CartItem(
               id: widget.productid,
@@ -396,7 +344,9 @@ class _ProductDetailsState extends State<ProductDetails> {
               quantity: 1,
               imageUrl: widget.image5,
               catagory: widget.catagory,
-              size: selectedSize ?? "0",
+              size: selectedSize ?? "default",
+              deliveryFee: deliveryFeeValue,
+              freeCoin: widget.goldCoin,
             ),
           ];
 
@@ -429,6 +379,22 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   @override
   Widget build(BuildContext context) {
+    List<String> images = [];
+
+    // Adding images in order: Image Three, Two, One (image20)
+    // This handles the user's request to "reverse it" while maintaining 
+    // the exclusion of the primary image (image5).
+    if (widget.imageThree.isNotEmpty) images.add(widget.imageThree);
+    if (widget.imageTwo.isNotEmpty) images.add(widget.imageTwo);
+    if (widget.image20.isNotEmpty && widget.image20 != widget.image5) {
+      images.add(widget.image20);
+    }
+
+    // If no specific details images are found, we follow the user's rule:
+    // "don't show primary image on product details page".
+    // However, for UX, if absolutely nothing else exists, we might want a placeholder
+    // but here we strictly follow the instruction of showing imageOne, Two, Three.
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       extendBodyBehindAppBar: true,
@@ -480,9 +446,103 @@ class _ProductDetailsState extends State<ProductDetails> {
                         ),
                       ],
                     ),
-                    child: Image.network(widget.image20, fit: BoxFit.cover),
+                    child: Stack(
+                      children: [
+                        images.isNotEmpty
+                            ? (images.length > 1
+                                ? PageView.builder(
+                                    controller: _pageController,
+                                    itemCount: images.length,
+                                    onPageChanged: (index) {
+                                      setState(() {
+                                        _currentPage = index;
+                                      });
+                                    },
+                                    itemBuilder: (context, index) {
+                                      return Image.network(images[index], fit: BoxFit.cover);
+                                    },
+                                  )
+                                : Image.network(
+                                    images[0],
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ))
+                            : Container(
+                                color: Colors.grey[200],
+                                child: const Center(
+                                  child: Icon(Icons.image, size: 100, color: Colors.grey),
+                                ),
+                              ),
+                        if (images.length > 1)
+                          Positioned(
+                            top: 100,
+                            right: 20,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.4),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                "${_currentPage + 1} / ${images.length}",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
+                if (images.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10, bottom: 5),
+                    child: SizedBox(
+                      height: 70,
+                      child: Center(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          scrollDirection: Axis.horizontal,
+                          itemCount: images.length,
+                          itemBuilder: (context, index) {
+                            bool isSelected = _currentPage == index;
+                            return GestureDetector(
+                              onTap: () {
+                                _pageController.animateToPage(
+                                  index,
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeInOut,
+                                );
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 8),
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: isSelected ? Colors.black : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.network(
+                                    images[index],
+                                    width: 60,
+                                    height: 60,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
                 Transform.translate(
                   offset: const Offset(0, -30),
                   child: Container(
@@ -500,14 +560,47 @@ class _ProductDetailsState extends State<ProductDetails> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              child: Text(
-                                widget.title,
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black,
-                                  fontFamily: 'Georgia',
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.title,
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                      fontFamily: 'Georgia',
+                                    ),
+                                  ),
+                                  if (widget.brand.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Brand: ${widget.brand}",
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                  if ([
+                                    'Boots Master Grade',
+                                    'Boots Master Grade Copy',
+                                    'Boots Copy 4 Grade',
+                                    'Boots China Copy',
+                                    'Boots Turf'
+                                  ].contains(widget.catagory)) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Category: ${widget.catagory}",
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        color: Colors.black87,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -539,38 +632,37 @@ class _ProductDetailsState extends State<ProductDetails> {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        Text(
-                          widget.price,
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.success,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              widget.price,
+                              style: const TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.success,
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
                         _buildSectionTitle("Availability"),
                         const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            _buildFeatureChip(Icons.check_circle_outline, "In Stock"),
-                            const SizedBox(width: 10),
-                            _buildFeatureChip(Icons.local_shipping_outlined, "Fast Delivery"),
-                          ],
+                        Text(
+                          widget.stock > 0 ? "Available" : "Not Available",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: widget.stock > 0 ? Colors.green : Colors.red,
+                          ),
                         ),
                         const SizedBox(height: 25),
                         _buildVideoSection(),
                         const SizedBox(height: 25),
-                        if (widget.catagory == "Puma" ||
-                            widget.catagory == "Nike" ||
-                            widget.catagory == "Others_boot" ||
-                            widget.catagory == "Adidas")
-                          _buildSizeSection(method1())
-                        else if (widget.catagory == "Gloves")
-                          _buildSizeSection(method2())
-                        else if (widget.catagory == "Jersey")
-                          _buildSizeSection(method3())
-                        else
-                          const SizedBox.shrink(),
+                        if (widget.size.isNotEmpty && widget.size != "no size") ...[
+                          const SizedBox(height: 25),
+                          _buildSizeSection(_buildDynamicSizeButtons()),
+                        ],
                         const SizedBox(height: 25),
                         _buildSectionTitle("Description"),
                         const SizedBox(height: 10),
@@ -582,6 +674,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                             color: Colors.grey.shade800,
                           ),
                         ),
+                        const SizedBox(height: 10),
                       ],
                     ),
                   ),
@@ -607,30 +700,10 @@ class _ProductDetailsState extends State<ProductDetails> {
     );
   }
 
-  Widget _buildFeatureChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: Colors.blueGrey),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildVideoSection() {
     return InkWell(
       onTap: () {
-        if (widget.videoLink == "No videoLink available") {
+        if (widget.videoLink == "No videoLink available" || widget.videoLink.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Video is not available now')),
           );
@@ -722,7 +795,7 @@ class _ProductDetailsState extends State<ProductDetails> {
             Expanded(
               flex: 2,
               child: ElevatedButton(
-                onPressed: _addToCart,
+                onPressed: (widget.stock > 0) ? _addToCart : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange.shade400,
                   foregroundColor: Colors.white,
@@ -737,7 +810,7 @@ class _ProductDetailsState extends State<ProductDetails> {
             Expanded(
               flex: 3,
               child: ElevatedButton(
-                onPressed: _buyNow,
+                onPressed: (widget.stock > 0) ? _buyNow : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black,
                   foregroundColor: Colors.white,

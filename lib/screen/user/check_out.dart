@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dadu/screen/user/order_list_screen.dart';
 import 'package:dadu/screen/user/profile.dart';
 import 'package:dadu/services/api.dart';
 import 'package:dadu/services/app_version_service.dart';
@@ -189,43 +190,35 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     return widget.cartItems.fold(0, (sum, item) => sum + item.quantity);
   }
 
-  int _countDiscountItems(String catagoryName) {
-    return widget.cartItems
-        .where(
-          (item) =>
-              item.price >= 500 &&
-              item.catagory.trim().toLowerCase() == catagoryName,
-        )
-        .fold(0, (sum, item) => sum + item.quantity);
-  }
-
-  int get _chargeableQuantity {
-    return widget.cartItems
-        .where((item) => item.price >= 500)
-        .fold(0, (sum, item) => sum + item.quantity);
-  }
-
   double get _freeDeliveryCost => baseDeliveryCharge.toDouble();
 
   bool get _canUseFreeDelivery =>
       baseDeliveryCharge > 0 && deliveryPoints >= _freeDeliveryCost;
 
   void _calculateDeliveryCharge() {
-    int glovesCount = _countDiscountItems('gloves');
-    int jerseyCount = _countDiscountItems('jersey');
-    int pantCount = _countDiscountItems('pant');
-    int othersCount = _countDiscountItems('others');
+    double maxSingleFee = 0;
+    double totalAllFees = 0;
 
-    int discountItems = glovesCount + othersCount + jerseyCount + pantCount;
-    int normalItems = _chargeableQuantity - discountItems;
+    for (var item in widget.cartItems) {
+      if (item.deliveryFee > maxSingleFee) {
+        maxSingleFee = item.deliveryFee;
+      }
+      totalAllFees += (item.deliveryFee * item.quantity);
+    }
+
+    int minimumCharge = 130;
     bool isNaogaon = selectedDistrict?.trim().toLowerCase() == 'naogaon';
-    int baseCharge = isNaogaon ? 40 : 100;
-    int minimumCharge = isNaogaon ? 70 : 130;
+    bool isNiamatpur = selectedThana?.trim().toLowerCase() == 'niamatpur';
 
-    int calculatedCharge =
-        baseCharge + (normalItems * 30) + (discountItems * 10);
-    baseDeliveryCharge =
-        calculatedCharge < minimumCharge ? minimumCharge : calculatedCharge;
+    if (isNaogaon) {
+      minimumCharge = isNiamatpur ? 30 : 70;
+    }
+
+    // Logic: Max(minimumCharge, highest single delivery fee) + (Sum of all fees - that highest single fee)
+    double baseFee = (maxSingleFee > minimumCharge) ? maxSingleFee : minimumCharge.toDouble();
+    double extraFees = totalAllFees - maxSingleFee;
+    
+    baseDeliveryCharge = (baseFee + extraFees).toInt();
     deliveryCharge = _freeDeliverySelected ? 0 : baseDeliveryCharge;
 
     double pointsForFreeDelivery =
@@ -346,6 +339,8 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                         'quantity': item.quantity,
                         'imageUrl': item.imageUrl,
                         'catagory': item.catagory,
+                        'deliveryFee': item.deliveryFee,
+                        'freeCoin': item.freeCoin,
                         'order_uid':
                             '${DateTime.now().millisecondsSinceEpoch}-${item.id}',
                         'size': item.size,
@@ -356,6 +351,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
             'deliveryCharge': deliveryCharge,
             'coinDiscount': _coinDiscountAmount,
             'total': _total,
+            'totalFreeCoins': widget.cartItems.fold(0.0, (sum, item) => sum + (item.freeCoin * item.quantity)),
             'order_status': "verify",
             'freeDeliveryUsed': _freeDeliverySelected,
             'coinDiscountUsed': _coinDiscountSelected,
@@ -373,7 +369,13 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
 
       await db.updateUserDetailsAfterBuy(currentUser.email!, userUpdateData);
 
-      _showConfirmationDialog();
+      // Fetch updated user details to get the to_verify list for the next screen
+      final updatedDetails = await db.getUserDetails(currentUser.email!);
+      final toVerifyOrders = updatedDetails?['to_verify'] as List<dynamic>?;
+
+      if (mounted) {
+        _showConfirmationDialog(toVerifyOrders);
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -386,29 +388,43 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     }
   }
 
-  void _showConfirmationDialog() {
+  void _showConfirmationDialog(List<dynamic>? toVerifyOrders) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder:
           (context) => AlertDialog(
             title: const Text('Order Confirmed'),
-            content: const Text('Your order has been placed successfully!'),
+            content: const Text(
+              'Your order has been placed successfully!\n\nPlease wait until owner verify your payment information.',
+            ),
             actions: [
               TextButton(
-                onPressed:
-                    () => Navigator.popUntil(context, (route) => route.isFirst),
-                child: const Text('Continue Shopping'),
-              ),
-              TextButton(
                 onPressed: () {
+                  // First close the dialog
                   Navigator.pop(context);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => Profile()),
+
+                  // Then navigate: Home -> Profile -> OrderListScreen
+                  // This ensures the back button behavior is correct
+                  Navigator.popUntil(this.context, (route) => route.isFirst);
+
+                  Navigator.push(
+                    this.context,
+                    MaterialPageRoute(builder: (context) => const Profile()),
+                  );
+
+                  Navigator.push(
+                    this.context,
+                    MaterialPageRoute(
+                      builder:
+                          (context) => OrderListScreen(
+                            status: 'To Verify',
+                            orders: toVerifyOrders,
+                          ),
+                    ),
                   );
                 },
-                child: const Text('View Orders'),
+                child: const Text('OK'),
               ),
             ],
           ),
@@ -502,6 +518,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
               onChanged:
                   (newValue) => setState(() {
                     selectedThana = newValue;
+                    _calculateDeliveryCharge();
                   }),
             ),
           const SizedBox(height: 12),

@@ -5,29 +5,38 @@ import 'package:firebase_auth/firebase_auth.dart';
 class ApiService {
   static const String _baseUrl = 'https://api.dadubd.com';
 
+  // In-memory cache to reduce network requests
+  final Map<String, List<Map<String, dynamic>>> _productsCache = {};
+  final Map<String, Map<String, dynamic>> _productDetailsCache = {};
+
   /// Fetches products from the API and maps them to the app's internal format.
-  /// Based on the provided products table schema.
   Future<List<Map<String, dynamic>>> fetchProducts({
     int limit = 20,
     int page = 1,
     String? category,
     String? brand,
     String? search,
+    List<String>? ids,
   }) async {
+    final String idsKey = ids != null ? ids.join(',') : '';
+    final String cacheKey = 'products_$limit\_$page\_$category\_$brand\_$search\_$idsKey';
+    
+    // Return from cache if available
+    if (_productsCache.containsKey(cacheKey)) {
+      return _productsCache[cacheKey]!;
+    }
+
     try {
-      // 1. Get the current authenticated user
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('User is not authenticated');
       }
 
-      // 2. Retrieve the ID token (JWT)
       final String? token = await user.getIdToken();
       if (token == null) {
         throw Exception('Failed to get auth token');
       }
 
-      // 3. Perform GET request with Authorization header and pagination parameters
       String url = '$_baseUrl/products?limit=$limit&page=$page';
       if (category != null) {
         url += '&catagory=${Uri.encodeComponent(category)}';
@@ -37,6 +46,9 @@ class ApiService {
       }
       if (search != null) {
         url += '&q=${Uri.encodeComponent(search)}';
+      }
+      if (ids != null && ids.isNotEmpty) {
+        url += '&ids=${Uri.encodeComponent(ids.join(','))}';
       }
 
       final response = await http.get(
@@ -57,10 +69,8 @@ class ApiService {
           productList = jsonData['data'] ?? jsonData['products'] ?? jsonData['items'] ?? [];
         }
 
-        // 4. Map API response to internal product format expected by the UI
-        return productList.map((item) {
+        final results = productList.map((item) {
           return {
-            // Core fields used by ProductItem and ProductDetails
             "id": item['id']?.toString() ?? '',
             "name": item['name'] ?? 'No Name',
             "price": item['price']?.toString() ?? '0',
@@ -69,28 +79,35 @@ class ApiService {
             "image5": (item['imagePrimary'] != null && item['imagePrimary'].toString().isNotEmpty) ? item['imagePrimary'] : null,
             "image20": (item['imageOne'] != null && item['imageOne'].toString().isNotEmpty) ? item['imageOne'] : ((item['imagePrimary'] != null && item['imagePrimary'].toString().isNotEmpty) ? item['imagePrimary'] : null),
             "catagory": item['catagory'] ?? item['brand'] ?? 'Others',
-            "gold_coin": (item['freeCoin'] as num?)?.toDouble() ?? 0.0,
+            "gold_coin": double.tryParse(item['freeCoin']?.toString() ?? '0') ?? 0.0,
             "createdAt": item['createdAt'],
-
-            // Additional fields from the API schema
             "brand": item['brand'] ?? '',
             "imageTwo": item['imageTwo'] ?? '',
             "imageThree": item['imageThree'] ?? '',
             "size": item['size'] ?? '',
-            "stock": item['stock'] ?? 0,
+            "stock": item['stock'] != null ? (int.tryParse(item['stock'].toString()) ?? 1) : null,
             "deliveryFee": item['deliveryFee'] ?? '',
           };
         }).toList();
+
+        // Save to cache
+        _productsCache[cacheKey] = results;
+        return results;
       } else {
         throw Exception('Server Error: ${response.statusCode}');
       }
     } catch (e) {
       print('ApiService fetchProducts Error: $e');
-      return []; // Return empty list on error to prevent UI crash
+      return [];
     }
   }
 
   Future<Map<String, dynamic>?> fetchProductById(String id) async {
+    // Return from cache if available
+    if (_productDetailsCache.containsKey(id)) {
+      return _productDetailsCache[id];
+    }
+
     try {
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) return null;
@@ -110,7 +127,7 @@ class ApiService {
         final item = jsonData['product'];
         if (item == null) return null;
 
-        return {
+        final result = {
           "id": item['id']?.toString() ?? '',
           "name": item['name'] ?? 'No Name',
           "price": item['price']?.toString() ?? '0',
@@ -119,20 +136,30 @@ class ApiService {
           "image5": (item['imagePrimary'] != null && item['imagePrimary'].toString().isNotEmpty) ? item['imagePrimary'] : null,
           "image20": (item['imageOne'] != null && item['imageOne'].toString().isNotEmpty) ? item['imageOne'] : ((item['imagePrimary'] != null && item['imagePrimary'].toString().isNotEmpty) ? item['imagePrimary'] : null),
           "catagory": item['catagory'] ?? item['brand'] ?? 'Others',
-          "gold_coin": (item['freeCoin'] as num?)?.toDouble() ?? 0.0,
+          "gold_coin": double.tryParse(item['freeCoin']?.toString() ?? '0') ?? 0.0,
           "brand": item['brand'] ?? '',
           "size": item['size'] ?? '',
           "imageTwo": item['imageTwo'] ?? '',
           "imageThree": item['imageThree'] ?? '',
-          "stock": item['stock'] ?? 0,
+          "stock": item['stock'] != null ? (int.tryParse(item['stock'].toString()) ?? 1) : null,
           "deliveryFee": item['deliveryFee'] ?? '',
           "createdAt": item['createdAt'],
         };
+
+        // Save to cache
+        _productDetailsCache[id] = result;
+        return result;
       }
       return null;
     } catch (e) {
       print('ApiService fetchProductById Error: $e');
       return null;
     }
+  }
+
+  /// Clears all in-memory caches.
+  void clearCache() {
+    _productsCache.clear();
+    _productDetailsCache.clear();
   }
 }

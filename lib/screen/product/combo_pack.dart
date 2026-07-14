@@ -185,7 +185,7 @@ class _ComboPackState extends State<ComboPack> {
                   videoLink: product['videoLink'] ?? 'No videoLink available',
                   catagory: product['catagory'] ?? 'no catagory found',
                   image5: product['image5'] ?? 'assets/demo_item_image/d1.jpg',
-                  goldCoin: (product['gold_coin'] as num?)?.toDouble() ?? 0.0,
+                  goldCoin: double.tryParse(product['gold_coin']?.toString() ?? '0') ?? 0.0,
                 );
               },
             ),

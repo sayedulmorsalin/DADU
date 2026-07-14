@@ -3,10 +3,12 @@ class CartItem {
   final String id;
   final String name;
   final double price;
-   int quantity;
+  int quantity;
   final String imageUrl;
   final String catagory;
   final String size;
+  final double deliveryFee;
+  final double freeCoin;
 
   CartItem({
     required this.id,
@@ -16,5 +18,7 @@ class CartItem {
     required this.imageUrl,
     required this.catagory,
     required this.size,
+    this.deliveryFee = 0.0,
+    this.freeCoin = 0.0,
   });
 }

@@ -32,7 +32,7 @@ class dataBase {
               "image5": data['image5'],
               "catagory": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
-              "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
+              "gold_coin": double.tryParse(data['gold_coin']?.toString() ?? '0') ?? 0.0,
               "createdAt": data['createdAt'],
               "docSnapshot": doc,
             };
@@ -76,7 +76,7 @@ class dataBase {
               "image5": data['image5'],
               "catagory": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
-              "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
+              "gold_coin": double.tryParse(data['gold_coin']?.toString() ?? '0') ?? 0.0,
               "createdAt": data['createdAt'],
               "docSnapshot": doc,
             };
@@ -118,18 +118,8 @@ class dataBase {
   }
 
   Future<void> incrementClickCount(String productId) async {
-    try {
-      // Check if productId looks like a Firestore ID (usually 20 chars)
-      // API IDs are usually UUIDs (36 chars)
-      if (productId.length != 20) return;
-
-      await FirebaseFirestore.instance
-          .collection('products')
-          .doc(productId)
-          .update({'clicked': FieldValue.increment(1)});
-    } catch (e) {
-      // Silently fail for IDs not in Firestore
-    }
+    // Click tracking disabled to reduce Firebase write requests.
+    // Will be implemented via API later.
   }
 
   Future<List<Map<String, dynamic>>> getSearchedProduct(
@@ -157,7 +147,7 @@ class dataBase {
               "image5": data['image5'],
               "catagory": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
-              "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
+              "gold_coin": double.tryParse(data['gold_coin']?.toString() ?? '0') ?? 0.0,
             };
           }).toList();
 
@@ -169,18 +159,35 @@ class dataBase {
 
   Future<Map<String, dynamic>?> getUserDetails(String email) async {
     try {
-      final querySnapshot =
-          await FirebaseFirestore.instance
+      // Try cache first for user details
+      QuerySnapshot<Map<String, dynamic>> querySnapshot;
+      try {
+        querySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: email)
+            .limit(1)
+            .get(const GetOptions(source: Source.cache));
+            
+        if (querySnapshot.docs.isEmpty) {
+          querySnapshot = await FirebaseFirestore.instance
               .collection('users')
               .where('email', isEqualTo: email)
               .limit(1)
-              .get();
+              .get(const GetOptions(source: Source.server));
+        }
+      } catch (_) {
+        querySnapshot = await FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: email)
+            .limit(1)
+            .get();
+      }
 
       if (querySnapshot.docs.isNotEmpty) {
         return querySnapshot.docs.first.data();
       }
 
-      return null; 
+      return null;
     } catch (e) {
       return null;
     }
@@ -287,8 +294,23 @@ class dataBase {
   
   Future<List<Map<String, dynamic>>> getBanners() async {
     try {
-      QuerySnapshot querySnapshot =
-          await FirebaseFirestore.instance.collection('banners').get();
+      // Try to get from cache first to save on server requests
+      QuerySnapshot querySnapshot;
+      try {
+        querySnapshot = await FirebaseFirestore.instance
+            .collection('banners')
+            .get(const GetOptions(source: Source.cache));
+        
+        if (querySnapshot.docs.isEmpty) {
+          querySnapshot = await FirebaseFirestore.instance
+              .collection('banners')
+              .get(const GetOptions(source: Source.server));
+        }
+      } catch (_) {
+        querySnapshot = await FirebaseFirestore.instance
+            .collection('banners')
+            .get();
+      }
 
       return querySnapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
@@ -317,30 +339,36 @@ class dataBase {
   }
 
   Future<List<Map<String, dynamic>>> getFlashSaleProducts() async {
-    final snapshot =
-        await FirebaseFirestore.instance
-            .collection('products')
-            .where("flashSell", isEqualTo: true)
+    try {
+      QuerySnapshot<Map<String, dynamic>> snapshot;
+      try {
+        snapshot = await FirebaseFirestore.instance
+            .collection('flash_sell_products')
+            .get(const GetOptions(source: Source.cache));
+        if (snapshot.docs.isEmpty) {
+          snapshot = await FirebaseFirestore.instance
+              .collection('flash_sell_products')
+              .get(const GetOptions(source: Source.server));
+        }
+      } catch (_) {
+        snapshot = await FirebaseFirestore.instance
+            .collection('flash_sell_products')
             .get();
+      }
 
-    return snapshot.docs.map((doc) {
-      final data = doc.data();
-
-      return {
-        "id": doc.id,
-        "name": data['name'] ?? "",
-        "price": data['price'] ?? "",
-        "oldPrice": data['oldPrice'] ?? "",
-        "image5": data['image5'] ?? "",
-        "image20": data['image20'] ?? "",
-        "details": data['details'] ?? "",
-        "videoLink": data['videoLink'] ?? "",
-        "catagory": data['brand'] ?? "Others",
-        "flashSell": data['flashSell'] ?? false,
-        "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
-        "flash-expire": data['flash-expire'], 
-      };
-    }).toList();
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          "id": data['id']?.toString() ?? '',
+          "price": data['price']?.toString() ?? '',
+          "oldPrice": data['oldPrice']?.toString() ?? '',
+          "flashSell": data['flashSell'] ?? false,
+        };
+      }).toList();
+    } catch (e) {
+      print('Error fetching flash_sell_products: $e');
+      return [];
+    }
   }
 
   Future<List<Map<String, dynamic>>> getFreeGiftProducts() async {
@@ -364,7 +392,7 @@ class dataBase {
         "videoLink": data['videoLink'] ?? "",
         "catagory": data['brand'] ?? "Others",
         "freeGift": data['freeGift'] ?? false,
-        "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
+        "gold_coin": double.tryParse(data['gold_coin']?.toString() ?? '0') ?? 0.0,
       };
     }).toList();
   }
@@ -390,7 +418,7 @@ class dataBase {
         "videoLink": data['videoLink'] ?? "",
         "catagory": data['brand'] ?? "Others",
         "newArrival": data['newArrival'] ?? false,
-        "gold_coin": (data['gold_coin'] as num?)?.toDouble() ?? 0.0,
+        "gold_coin": double.tryParse(data['gold_coin']?.toString() ?? '0') ?? 0.0,
       };
     }).toList();
   }
@@ -598,10 +626,25 @@ Future<double> getRewardAdSilverRate() async {
 
   Future<Timestamp?> getFlashSaleTimer() async {
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('flash_sell_timer')
-          .doc('current')
-          .get();
+      DocumentSnapshot<Map<String, dynamic>> doc;
+      try {
+        doc = await FirebaseFirestore.instance
+            .collection('flash_sell_timer')
+            .doc('current')
+            .get(const GetOptions(source: Source.cache));
+        if (!doc.exists) {
+          doc = await FirebaseFirestore.instance
+              .collection('flash_sell_timer')
+              .doc('current')
+              .get(const GetOptions(source: Source.server));
+        }
+      } catch (_) {
+        doc = await FirebaseFirestore.instance
+            .collection('flash_sell_timer')
+            .doc('current')
+            .get();
+      }
+
       if (doc.exists) {
         return doc.data()?['time'] as Timestamp?;
       }

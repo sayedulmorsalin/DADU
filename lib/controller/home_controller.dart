@@ -6,7 +6,6 @@ import 'package:dadu/services/d1.dart'; // Added ApiService import
 import 'package:dadu/services/notification_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:fuzzy/fuzzy.dart';
 import 'package:get/get.dart';
 
 class HomeController extends GetxController {
@@ -26,8 +25,10 @@ class HomeController extends GetxController {
   final RxBool loggedIn = false.obs;
   final RxBool profileImageLoading = false.obs;
   final RxBool showSearchResults = false.obs;
+  final RxBool isSearching = false.obs;
   final RxBool isSearchReady = false.obs;
   final RxBool giftBannerVisible = false.obs;
+  final RxBool showAllCategories = false.obs;
 
   final RxInt selectedIndex = 0.obs;
   final RxInt currentBannerIndex = 0.obs;
@@ -45,7 +46,7 @@ class HomeController extends GetxController {
   final RxList<Map<String, dynamic>> newArrivalProducts =
       <Map<String, dynamic>>[].obs;
 
-  final RxList<String> searchResults = <String>[].obs;
+  final RxList<Map<String, dynamic>> searchResults = <Map<String, dynamic>>[].obs;
   final RxString searchQuery = ''.obs;
 
   final ScrollController scrollController = ScrollController();
@@ -53,7 +54,6 @@ class HomeController extends GetxController {
   final TextEditingController searchController = TextEditingController();
 
   int apiPage = 1; // Track API pagination
-  Fuzzy<String>? fuzzy;
 
   Timer? _bannerAutoScrollTimer;
   Timer? _flashTimer;
@@ -90,7 +90,10 @@ class HomeController extends GetxController {
     unawaited(notificationService.init());
     unawaited(_recordLoginTime());
 
-    await loadInitialProducts();
+    // Only load if data is empty to save requests
+    if (products.isEmpty) {
+      await loadInitialProducts();
+    }
 
     giftBannerVisible.value = true;
 
@@ -108,7 +111,10 @@ class HomeController extends GetxController {
     if (user != null && !user.isAnonymous) {
       loggedIn.value = true;
       if (user.email != null) {
-        unawaited(_loadProfileImage(user.email!));
+        // Only fetch profile if not already loaded
+        if (profileImageUrl.value == null) {
+          unawaited(_loadProfileImage(user.email!));
+        }
         _listenToCartCount(user.email!);
       }
     } else {
@@ -128,16 +134,31 @@ class HomeController extends GetxController {
 
   Future<void> _loadSecondaryDataStaggered() async {
     await Future<void>.delayed(const Duration(milliseconds: 150));
-    await loadBanners();
+    if (banners.isEmpty) await loadBanners();
 
     await Future<void>.delayed(const Duration(milliseconds: 220));
-    await loadFlashSaleProducts();
+    if (flashProducts.isEmpty) await loadFlashSaleProducts();
 
     await Future<void>.delayed(const Duration(milliseconds: 220));
-    await loadNewArrivalProducts();
+    if (newArrivalProducts.isEmpty) await loadNewArrivalProducts();
 
     await Future<void>.delayed(const Duration(milliseconds: 280));
-    await _loadSearchIndex();
+    isSearchReady.value = true;
+  }
+
+  Future<void> refreshData() async {
+    // Clear API cache and local lists to force a fresh fetch
+    apiService.clearCache();
+    products.clear();
+    banners.clear();
+    flashProducts.clear();
+    newArrivalProducts.clear();
+
+    // Force reload everything
+    await loadInitialProducts();
+    await loadBanners();
+    await loadFlashSaleProducts();
+    await loadNewArrivalProducts();
   }
 
   Future<void> loadInitialProducts() async {
@@ -180,20 +201,60 @@ class HomeController extends GetxController {
   }
 
   Future<void> loadFlashSaleProducts() async {
-    flashSaleEndTime.value = await db.getFlashSaleTimer();
-    final items = await db.getFlashSaleProducts();
-    flashProducts.assignAll(items);
+    final timer = await db.getFlashSaleTimer();
+    flashSaleEndTime.value = timer;
+
+    if (timer == null || timer.toDate().isBefore(DateTime.now())) {
+      flashProducts.clear();
+      return;
+    }
+
+    final flashItemsData = await db.getFlashSaleProducts();
+    final List<Map<String, dynamic>> enrichedProducts = [];
+
+    // Collect all valid product IDs
+    final List<String> productIds = [];
+    for (var item in flashItemsData) {
+      final productId = item['id'];
+      if (productId.isNotEmpty) {
+        productIds.add(productId);
+      }
+    }
+
+    if (productIds.isNotEmpty) {
+      // Fetch all products in one batch request
+      final apiProducts = await apiService.fetchProducts(
+        limit: productIds.length,
+        ids: productIds,
+      );
+
+      // Create a map for quick lookup
+      final productMap = {for (var p in apiProducts) p['id']: p};
+
+      // Enrich products with flash sale specific data (price overrides)
+      for (var item in flashItemsData) {
+        final productId = item['id'];
+        if (productMap.containsKey(productId)) {
+          final apiDetails = Map<String, dynamic>.from(productMap[productId]!);
+          
+          if (item['price'].toString().isNotEmpty) {
+            apiDetails['price'] = item['price'];
+          }
+          if (item['oldPrice'].toString().isNotEmpty) {
+            apiDetails['oldPrice'] = item['oldPrice'];
+          }
+          apiDetails['flashSell'] = true;
+          enrichedProducts.add(apiDetails);
+        }
+      }
+    }
+
+    flashProducts.assignAll(enrichedProducts);
   }
 
   Future<void> loadNewArrivalProducts() async {
     final items = await db.getNewArrivalProducts();
     newArrivalProducts.assignAll(items);
-  }
-
-  Future<void> _loadSearchIndex() async {
-    final names = await db.getProductNames();
-    fuzzy = Fuzzy<String>(names, options: FuzzyOptions(threshold: 0.3));
-    isSearchReady.value = true;
   }
 
   void onSearchChanged(String value) {
@@ -211,23 +272,27 @@ class HomeController extends GetxController {
     showSearchResults.value = false;
   }
 
-  void _runSearch(String rawQuery) {
+  Future<void> _runSearch(String rawQuery) async {
     final query = rawQuery.trim();
 
-    if (query.length < 2 || fuzzy == null) {
+    if (query.length < 2) {
       searchResults.clear();
       showSearchResults.value = false;
       return;
     }
 
-    final results = fuzzy!
-        .search(query)
-        .map((result) => result.item)
-        .take(6)
-        .toList();
+    isSearching.value = true;
+    showSearchResults.value = true;
 
-    searchResults.assignAll(results);
-    showSearchResults.value = results.isNotEmpty;
+    try {
+      final results = await apiService.fetchProducts(search: query, limit: 10);
+      searchResults.assignAll(results);
+    } catch (e) {
+      debugPrint('Search error: $e');
+      searchResults.clear();
+    } finally {
+      isSearching.value = false;
+    }
   }
 
   void onBannerChanged(int index) {
@@ -294,7 +359,7 @@ class HomeController extends GetxController {
       final next = (currentBannerIndex.value + 1) % banners.length;
       bannerPageController.animateToPage(
         next,
-        duration: const Duration(milliseconds: 450),
+        duration: const Duration(milliseconds: 1000), // Slower banner transition
         curve: Curves.easeInOut,
       );
     });
