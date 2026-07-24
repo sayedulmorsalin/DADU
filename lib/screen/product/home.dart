@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/component/gitf_box_banner.dart';
+import 'package:dadu/component/notification_sheet.dart';
 import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/services/app_version_service.dart';
+import 'package:dadu/services/local_notification_db.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/screen/product/brand.dart';
@@ -19,6 +20,7 @@ import 'package:dadu/screen/user/profile.dart';
 import 'package:dadu/screen/user/reword_ad.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Home extends StatelessWidget {
@@ -194,10 +196,40 @@ class Home extends StatelessWidget {
               ),
             );
           }),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () => _showNotificationDialog(context),
-          ),
+          Obx(() => Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () => NotificationSheet.show(context, controller),
+              ),
+              if (controller.unreadNotificationCount.value > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      '${controller.unreadNotificationCount.value}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          )),
         ],
       ),
     );
@@ -923,92 +955,6 @@ class Home extends StatelessWidget {
     }
 
     await launchUrl(webUri, mode: LaunchMode.externalApplication);
-  }
-
-  void _showNotificationDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.notifications, color: AppColors.warning),
-              SizedBox(width: 8),
-              Text('Notifications'),
-            ],
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 350,
-            child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance
-                      .collection('notifications')
-                      .orderBy('createdAt', descending: true)
-                      .snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final docs = snapshot.data!.docs;
-                if (docs.isEmpty) {
-                  return const Center(child: Text('No notifications yet'));
-                }
-
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    final ts = data['createdAt'] as Timestamp?;
-                    final time =
-                        ts != null
-                            ? TimeOfDay.fromDateTime(
-                              ts.toDate(),
-                            ).format(context)
-                            : '';
-
-                    return Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        leading: Icon(
-                          data['highPriority'] == true
-                              ? Icons.priority_high
-                              : Icons.notifications,
-                          color:
-                              data['highPriority'] == true
-                                  ? AppColors.error
-                                  : AppColors.iconAccent,
-                        ),
-                        title: Text(
-                          data['title']?.toString() ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(data['body']?.toString() ?? ''),
-                        trailing: Text(
-                          time,
-                          style: const TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
-    );
   }
 }
 

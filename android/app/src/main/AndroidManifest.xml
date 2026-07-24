@@ -45,6 +45,23 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
+            <intent-filter>
+                <action android:name="FLUTTER_NOTIFICATION_CLICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+
+            <!-- Deep linking intent filter -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="https" android:host="dadubd.com" android:pathPrefix="/product" />
+                <data android:scheme="http" android:host="dadubd.com" android:pathPrefix="/product" />
+                <data android:scheme="https" android:host="www.dadubd.com" android:pathPrefix="/product" />
+                <data android:scheme="http" android:host="www.dadubd.com" android:pathPrefix="/product" />
+            </intent-filter>
+
         </activity>
 
         <meta-data

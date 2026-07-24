@@ -16,7 +16,7 @@ publish_to: 'Googole play store' # Remove this line if you wish to publish to pu
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.3+26
+version: 1.0.3+28
 
 environment:
   sdk: ^3.7.0
@@ -55,9 +55,12 @@ dependencies:
   flutter_file_downloader: ^2.1.0
   firebase_messaging: ^15.2.10
   google_mobile_ads: ^9.0.0
+  sqflite: ^2.4.2+1
   get: ^4.7.3
   package_info_plus: ^10.1.0
   in_app_update: ^4.2.5
+  app_links: ^6.3.2
+  share_plus: ^13.2.0
 
 
 

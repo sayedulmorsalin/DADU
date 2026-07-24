@@ -4,6 +4,7 @@ import 'package:dadu/services/auth.dart';
 import 'package:dadu/services/firebase.dart';
 import 'package:dadu/services/d1.dart'; // Added ApiService import
 import 'package:dadu/services/notification_service.dart';
+import 'package:dadu/services/local_notification_db.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -33,9 +34,10 @@ class HomeController extends GetxController {
   final RxInt selectedIndex = 0.obs;
   final RxInt currentBannerIndex = 0.obs;
   final RxInt cartCount = 0.obs;
+  final RxInt unreadNotificationCount = 0.obs;
   final RxInt timerTick = 0.obs;
   final RxDouble coinAmount = 0.0.obs;
-  final Rxn<Timestamp> flashSaleEndTime = Rxn<Timestamp>();
+  final Rxn<dynamic> flashSaleEndTime = Rxn<dynamic>();
 
 
   final RxnString profileImageUrl = RxnString();
@@ -88,6 +90,7 @@ class HomeController extends GetxController {
   Future<void> _bootstrap() async {
     await _ensureAuthState();
     unawaited(notificationService.init());
+    unawaited(updateUnreadCount());
     unawaited(_recordLoginTime());
 
     // Only load if data is empty to save requests
@@ -137,7 +140,7 @@ class HomeController extends GetxController {
     if (banners.isEmpty) await loadBanners();
 
     await Future<void>.delayed(const Duration(milliseconds: 220));
-    if (flashProducts.isEmpty) await loadFlashSaleProducts();
+    await loadFlashSaleProducts(forceRefresh: true);
 
     await Future<void>.delayed(const Duration(milliseconds: 220));
     if (newArrivalProducts.isEmpty) await loadNewArrivalProducts();
@@ -156,8 +159,8 @@ class HomeController extends GetxController {
 
     // Force reload everything
     await loadInitialProducts();
-    await loadBanners();
-    await loadFlashSaleProducts();
+    await loadBanners(forceRefresh: true);
+    await loadFlashSaleProducts(forceRefresh: true);
     await loadNewArrivalProducts();
   }
 
@@ -191,8 +194,8 @@ class HomeController extends GetxController {
     isLoadingMore.value = false;
   }
 
-  Future<void> loadBanners() async {
-    final bannerData = await db.getBanners();
+  Future<void> loadBanners({bool forceRefresh = false}) async {
+    final bannerData = await db.getBanners(forceRefresh: forceRefresh);
     banners.assignAll(bannerData);
 
     if (banners.length > 1) {
@@ -200,16 +203,25 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> loadFlashSaleProducts() async {
-    final timer = await db.getFlashSaleTimer();
+  Future<void> loadFlashSaleProducts({bool forceRefresh = false}) async {
+    final timer = await db.getFlashSaleTimer(forceRefresh: forceRefresh);
     flashSaleEndTime.value = timer;
 
-    if (timer == null || timer.toDate().isBefore(DateTime.now())) {
+    DateTime? end;
+    if (timer is Timestamp) {
+      end = timer.toDate();
+    } else if (timer is String) {
+      end = DateTime.tryParse(timer);
+    } else if (timer is DateTime) {
+      end = timer;
+    }
+
+    if (end == null || end.isBefore(DateTime.now())) {
       flashProducts.clear();
       return;
     }
 
-    final flashItemsData = await db.getFlashSaleProducts();
+    final flashItemsData = await db.getFlashSaleProducts(forceRefresh: forceRefresh);
     final List<Map<String, dynamic>> enrichedProducts = [];
 
     // Collect all valid product IDs
@@ -363,6 +375,10 @@ class HomeController extends GetxController {
         curve: Curves.easeInOut,
       );
     });
+  }
+
+  Future<void> updateUnreadCount() async {
+    unreadNotificationCount.value = await LocalNotificationDb().getUnreadCount();
   }
 
   Future<void> _loadProfileImage(String email) async {

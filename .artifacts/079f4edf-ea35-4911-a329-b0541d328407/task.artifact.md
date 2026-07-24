@@ -1,0 +1,16 @@
+- [x] Add `sqflite` dependency to `pubspec.yaml`
+- [x] Create `LocalNotificationDb` service in `lib/services/local_notification_db.dart`
+- [x] Update `NotificationService` to store incoming notifications
+- [x] Implement background notification handler in `main.dart`
+- [x] Update `home.dart` UI to display local notifications with read/unread status
+- [x] Remove old Firestore notification logic
+- [x] Add `deleteAllNotifications` to `LocalNotificationDb`
+- [x] Implement "Clear All" button in `home.dart` notification dialog
+- [x] Implement swipe-to-delete in `home.dart` notification list
+- [x] Add `markAllAsRead` to `LocalNotificationDb`
+- [x] Redesign Notification UI (Bottom Sheet, Rich Items)
+- [x] Refactor `DeepLinkService` to handle manual link navigation
+- [x] Create `NotificationSheet` component in `lib/component/notification_sheet.dart`
+- [x] Update `Home` to use the new `NotificationSheet` and remove old logic
+- [x] Change Notification Sheet to slide from top
+- [x] Verify functionality

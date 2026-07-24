@@ -292,24 +292,30 @@ class dataBase {
   }
 
   
-  Future<List<Map<String, dynamic>>> getBanners() async {
+  Future<List<Map<String, dynamic>>> getBanners({bool forceRefresh = false}) async {
     try {
-      // Try to get from cache first to save on server requests
       QuerySnapshot querySnapshot;
-      try {
+      
+      if (forceRefresh) {
         querySnapshot = await FirebaseFirestore.instance
             .collection('banners')
-            .get(const GetOptions(source: Source.cache));
-        
-        if (querySnapshot.docs.isEmpty) {
+            .get(const GetOptions(source: Source.server));
+      } else {
+        try {
           querySnapshot = await FirebaseFirestore.instance
               .collection('banners')
-              .get(const GetOptions(source: Source.server));
+              .get(const GetOptions(source: Source.cache));
+          
+          if (querySnapshot.docs.isEmpty) {
+            querySnapshot = await FirebaseFirestore.instance
+                .collection('banners')
+                .get(const GetOptions(source: Source.server));
+          }
+        } catch (_) {
+          querySnapshot = await FirebaseFirestore.instance
+              .collection('banners')
+              .get();
         }
-      } catch (_) {
-        querySnapshot = await FirebaseFirestore.instance
-            .collection('banners')
-            .get();
       }
 
       return querySnapshot.docs.map((doc) {
@@ -338,28 +344,34 @@ class dataBase {
         });
   }
 
-  Future<List<Map<String, dynamic>>> getFlashSaleProducts() async {
+  Future<List<Map<String, dynamic>>> getFlashSaleProducts({bool forceRefresh = false}) async {
     try {
       QuerySnapshot<Map<String, dynamic>> snapshot;
-      try {
+      if (forceRefresh) {
         snapshot = await FirebaseFirestore.instance
             .collection('flash_sell_products')
-            .get(const GetOptions(source: Source.cache));
-        if (snapshot.docs.isEmpty) {
+            .get(const GetOptions(source: Source.server));
+      } else {
+        try {
           snapshot = await FirebaseFirestore.instance
               .collection('flash_sell_products')
-              .get(const GetOptions(source: Source.server));
+              .get(const GetOptions(source: Source.cache));
+          if (snapshot.docs.isEmpty) {
+            snapshot = await FirebaseFirestore.instance
+                .collection('flash_sell_products')
+                .get(const GetOptions(source: Source.server));
+          }
+        } catch (_) {
+          snapshot = await FirebaseFirestore.instance
+              .collection('flash_sell_products')
+              .get();
         }
-      } catch (_) {
-        snapshot = await FirebaseFirestore.instance
-            .collection('flash_sell_products')
-            .get();
       }
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return {
-          "id": data['id']?.toString() ?? '',
+          "id": (data['id'] ?? doc.id).toString(),
           "price": data['price']?.toString() ?? '',
           "oldPrice": data['oldPrice']?.toString() ?? '',
           "flashSell": data['flashSell'] ?? false,
@@ -624,29 +636,36 @@ Future<double> getRewardAdSilverRate() async {
 }
 
 
-  Future<Timestamp?> getFlashSaleTimer() async {
+  Future<dynamic> getFlashSaleTimer({bool forceRefresh = false}) async {
     try {
       DocumentSnapshot<Map<String, dynamic>> doc;
-      try {
+      if (forceRefresh) {
         doc = await FirebaseFirestore.instance
             .collection('flash_sell_timer')
             .doc('current')
-            .get(const GetOptions(source: Source.cache));
-        if (!doc.exists) {
+            .get(const GetOptions(source: Source.server));
+      } else {
+        try {
           doc = await FirebaseFirestore.instance
               .collection('flash_sell_timer')
               .doc('current')
-              .get(const GetOptions(source: Source.server));
+              .get(const GetOptions(source: Source.cache));
+          if (!doc.exists) {
+            doc = await FirebaseFirestore.instance
+                .collection('flash_sell_timer')
+                .doc('current')
+                .get(const GetOptions(source: Source.server));
+          }
+        } catch (_) {
+          doc = await FirebaseFirestore.instance
+              .collection('flash_sell_timer')
+              .doc('current')
+              .get();
         }
-      } catch (_) {
-        doc = await FirebaseFirestore.instance
-            .collection('flash_sell_timer')
-            .doc('current')
-            .get();
       }
 
       if (doc.exists) {
-        return doc.data()?['time'] as Timestamp?;
+        return doc.data()?['time'];
       }
       return null;
     } catch (e) {
