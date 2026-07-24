@@ -186,6 +186,13 @@ class _ComboPackState extends State<ComboPack> {
                   catagory: product['catagory'] ?? 'no catagory found',
                   image5: product['image5'] ?? 'assets/demo_item_image/d1.jpg',
                   goldCoin: double.tryParse(product['gold_coin']?.toString() ?? '0') ?? 0.0,
+                  brand: product['brand']?.toString() ?? '',
+                  imageTwo: product['imageTwo']?.toString() ?? '',
+                  imageThree: product['imageThree']?.toString() ?? '',
+                  size: product['size']?.toString() ?? '',
+                  stock: int.tryParse(product['stock']?.toString() ?? '1') ?? 1,
+                  deliveryFee: product['deliveryFee']?.toString() ?? '',
+                  createdAt: product['createdAt'],
                 );
               },
             ),

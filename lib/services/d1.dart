@@ -85,7 +85,7 @@ class ApiService {
             "imageTwo": item['imageTwo'] ?? '',
             "imageThree": item['imageThree'] ?? '',
             "size": item['size'] ?? '',
-            "stock": item['stock'] != null ? (int.tryParse(item['stock'].toString()) ?? 1) : null,
+            "stock": item['stock'] != null ? (int.tryParse(item['stock'].toString()) ?? 1) : 1,
             "deliveryFee": item['deliveryFee'] ?? '',
           };
         }).toList();
@@ -141,7 +141,7 @@ class ApiService {
           "size": item['size'] ?? '',
           "imageTwo": item['imageTwo'] ?? '',
           "imageThree": item['imageThree'] ?? '',
-          "stock": item['stock'] != null ? (int.tryParse(item['stock'].toString()) ?? 1) : null,
+          "stock": item['stock'] != null ? (int.tryParse(item['stock'].toString()) ?? 1) : 1,
           "deliveryFee": item['deliveryFee'] ?? '',
           "createdAt": item['createdAt'],
         };

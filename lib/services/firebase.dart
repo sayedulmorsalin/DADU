@@ -33,6 +33,12 @@ class dataBase {
               "catagory": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
               "gold_coin": double.tryParse(data['gold_coin']?.toString() ?? '0') ?? 0.0,
+              "brand": data['brand'] ?? '',
+              "size": data['size'] ?? '',
+              "imageTwo": data['imageTwo'] ?? '',
+              "imageThree": data['imageThree'] ?? '',
+              "stock": int.tryParse(data['stock']?.toString() ?? '0') ?? 0,
+              "deliveryFee": data['deliveryFee'] ?? '',
               "createdAt": data['createdAt'],
               "docSnapshot": doc,
             };
@@ -77,6 +83,12 @@ class dataBase {
               "catagory": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
               "gold_coin": double.tryParse(data['gold_coin']?.toString() ?? '0') ?? 0.0,
+              "brand": data['brand'] ?? '',
+              "size": data['size'] ?? '',
+              "imageTwo": data['imageTwo'] ?? '',
+              "imageThree": data['imageThree'] ?? '',
+              "stock": int.tryParse(data['stock']?.toString() ?? '0') ?? 0,
+              "deliveryFee": data['deliveryFee'] ?? '',
               "createdAt": data['createdAt'],
               "docSnapshot": doc,
             };
@@ -148,6 +160,12 @@ class dataBase {
               "catagory": data['brand'] ?? 'Others',
               "clicked": data['clicked'] ?? 0,
               "gold_coin": double.tryParse(data['gold_coin']?.toString() ?? '0') ?? 0.0,
+              "brand": data['brand'] ?? '',
+              "size": data['size'] ?? '',
+              "imageTwo": data['imageTwo'] ?? '',
+              "imageThree": data['imageThree'] ?? '',
+              "stock": int.tryParse(data['stock']?.toString() ?? '0') ?? 0,
+              "deliveryFee": data['deliveryFee'] ?? '',
             };
           }).toList();
 
@@ -405,6 +423,12 @@ class dataBase {
         "catagory": data['brand'] ?? "Others",
         "freeGift": data['freeGift'] ?? false,
         "gold_coin": double.tryParse(data['gold_coin']?.toString() ?? '0') ?? 0.0,
+        "brand": data['brand'] ?? '',
+        "size": data['size'] ?? '',
+        "imageTwo": data['imageTwo'] ?? '',
+        "imageThree": data['imageThree'] ?? '',
+        "stock": int.tryParse(data['stock']?.toString() ?? '0') ?? 0,
+        "deliveryFee": data['deliveryFee'] ?? '',
       };
     }).toList();
   }
@@ -431,6 +455,12 @@ class dataBase {
         "catagory": data['brand'] ?? "Others",
         "newArrival": data['newArrival'] ?? false,
         "gold_coin": double.tryParse(data['gold_coin']?.toString() ?? '0') ?? 0.0,
+        "brand": data['brand'] ?? '',
+        "size": data['size'] ?? '',
+        "imageTwo": data['imageTwo'] ?? '',
+        "imageThree": data['imageThree'] ?? '',
+        "stock": int.tryParse(data['stock']?.toString() ?? '0') ?? 0,
+        "deliveryFee": data['deliveryFee'] ?? '',
       };
     }).toList();
   }

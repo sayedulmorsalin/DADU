@@ -339,17 +339,8 @@ class HomeController extends GetxController {
     return '$hours:$minutes:$seconds left';
   }
 
-  void onBottomNavTap(int tappedIndex, {required VoidCallback onMessageTap}) {
-    if (tappedIndex == 3) {
-      onMessageTap();
-      return;
-    }
-
-    if (tappedIndex < 3) {
-      selectedIndex.value = tappedIndex;
-    } else {
-      selectedIndex.value = tappedIndex - 1;
-    }
+  void onBottomNavTap(int tappedIndex) {
+    selectedIndex.value = tappedIndex;
   }
 
   void _attachPaginationListener() {
