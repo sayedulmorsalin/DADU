@@ -9,7 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-class HomeController extends GetxController {
+class HomeController extends GetxController with WidgetsBindingObserver {
   HomeController({dataBase? db, Auth? auth, ApiService? apiService})
     : db = db ?? dataBase(),
       auth = auth ?? Auth(),
@@ -35,6 +35,7 @@ class HomeController extends GetxController {
   final RxInt currentBannerIndex = 0.obs;
   final RxInt cartCount = 0.obs;
   final RxInt unreadNotificationCount = 0.obs;
+  final RxInt unreadMessageCount = 0.obs;
   final RxInt timerTick = 0.obs;
   final RxDouble coinAmount = 0.0.obs;
   final Rxn<dynamic> flashSaleEndTime = Rxn<dynamic>();
@@ -67,6 +68,7 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
 
     _flashTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       timerTick.value++;
@@ -300,7 +302,6 @@ class HomeController extends GetxController {
       final results = await apiService.fetchProducts(search: query, limit: 10);
       searchResults.assignAll(results);
     } catch (e) {
-      debugPrint('Search error: $e');
       searchResults.clear();
     } finally {
       isSearching.value = false;
@@ -341,6 +342,9 @@ class HomeController extends GetxController {
 
   void onBottomNavTap(int tappedIndex) {
     selectedIndex.value = tappedIndex;
+    if (tappedIndex == 3) {
+      markMessagesAsRead();
+    }
   }
 
   void _attachPaginationListener() {
@@ -368,8 +372,25 @@ class HomeController extends GetxController {
     });
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      updateUnreadCount();
+    }
+  }
+
   Future<void> updateUnreadCount() async {
-    unreadNotificationCount.value = await LocalNotificationDb().getUnreadCount();
+    final db = LocalNotificationDb();
+    final generalCount = await db.getUnreadCount();
+    final messageCount = await db.getUnreadMessageCount();
+    
+    unreadNotificationCount.value = generalCount;
+    unreadMessageCount.value = messageCount;
+  }
+
+  Future<void> markMessagesAsRead() async {
+    await LocalNotificationDb().markMessagesAsRead();
+    await updateUnreadCount();
   }
 
   Future<void> _loadProfileImage(String email) async {
@@ -421,6 +442,7 @@ class HomeController extends GetxController {
 
   @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     _bannerAutoScrollTimer?.cancel();
     _flashTimer?.cancel();
     _authSubscription?.cancel();

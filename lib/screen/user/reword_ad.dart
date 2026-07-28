@@ -218,8 +218,6 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
           }
         },
         onAdFailedToLoad: (error) {
-          print("Rewarded failed: ${error.code} ${error.message}");
-
           if (!completer.isCompleted) {
             completer.complete(null);
           }
@@ -437,7 +435,6 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
           });
         },
         onAdFailedToLoad: (ad, error) {
-          print("Banner failed: ${error.code} ${error.message}");
           ad.dispose();
         },
       ),

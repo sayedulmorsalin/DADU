@@ -52,17 +52,17 @@ class Home extends StatelessWidget {
                 icon: Icon(Icons.home),
                 label: 'Home',
               ),
-              BottomNavigationBarItem(icon: _buildCartNavIcon(), label: 'Cart'),
+              BottomNavigationBarItem(icon: Obx(() => _buildCartNavIcon()), label: 'Cart'),
               const BottomNavigationBarItem(
                 icon: Icon(Icons.search),
                 label: 'Search',
               ),
-              const BottomNavigationBarItem(
-                icon: Icon(Icons.message),
+              BottomNavigationBarItem(
+                icon: Obx(() => _buildMessageNavIcon()),
                 label: 'Message',
               ),
               BottomNavigationBarItem(
-                icon: _buildProfileNavIcon(),
+                icon: Obx(() => _buildProfileNavIcon()),
                 label: 'Profile',
               ),
             ],
@@ -897,6 +897,39 @@ class Home extends StatelessWidget {
                 totalItems > 99 ? '99+' : totalItems.toString(),
                 style: const TextStyle(
                   color: AppColors.textOnPrimary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMessageNavIcon() {
+    final unreadMessages = controller.unreadMessageCount.value;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.message),
+        if (unreadMessages > 0)
+          Positioned(
+            right: -6,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.error,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              child: Text(
+                unreadMessages > 99 ? '99+' : unreadMessages.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                 ),

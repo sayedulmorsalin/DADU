@@ -98,7 +98,6 @@ class ApiService {
         throw Exception('Server Error: ${response.statusCode}');
       }
     } catch (e) {
-      print('ApiService fetchProducts Error: $e');
       return [];
     }
   }
@@ -153,7 +152,6 @@ class ApiService {
       }
       return null;
     } catch (e) {
-      print('ApiService fetchProductById Error: $e');
       return null;
     }
   }
@@ -166,7 +164,7 @@ class ApiService {
 
   // --- Messaging Methods ---
 
-  Future<List<Map<String, dynamic>>> fetchMessages(String userId) async {
+  Future<List<Map<String, dynamic>>> fetchMessages(String userId, {int limit = 20, int page = 1}) async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) return [];
@@ -174,15 +172,14 @@ class ApiService {
       if (token == null) return [];
 
       final response = await http.get(
-        Uri.parse('$_baseUrl/messages/$userId'),
+        Uri.parse('$_baseUrl/messages/$userId?limit=$limit&page=$page'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
       );
 
-      print('ApiService fetchMessages Status: ${response.statusCode}');
-      print('ApiService fetchMessages Body: ${response.body}');
+
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = jsonDecode(response.body);
@@ -192,17 +189,26 @@ class ApiService {
       }
       return [];
     } catch (e) {
-      print('ApiService fetchMessages Error: $e');
       return [];
     }
   }
 
-  Future<bool> sendMessage(String userId, String message) async {
+  Future<bool> sendMessage(String userId, String message, {String? imageUrl}) async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) return false;
       final String? token = await user.getIdToken();
       if (token == null) return false;
+
+      final Map<String, dynamic> body = {
+        'userId': userId,
+        'message': message,
+      };
+      if (imageUrl != null) {
+        body['imageUrl'] = imageUrl;
+      }
+
+
 
       final response = await http.post(
         Uri.parse('$_baseUrl/messages'),
@@ -210,14 +216,10 @@ class ApiService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'userId': userId,
-          'message': message,
-        }),
+        body: jsonEncode(body),
       );
 
-      print('ApiService sendMessage Status: ${response.statusCode}');
-      print('ApiService sendMessage Body: ${response.body}');
+
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> jsonData = jsonDecode(response.body);
@@ -225,7 +227,6 @@ class ApiService {
       }
       return false;
     } catch (e) {
-      print('ApiService sendMessage Error: $e');
       return false;
     }
   }

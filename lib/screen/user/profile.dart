@@ -157,16 +157,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
           _isLoading = false;
           freeDelivery = (freeDeliveryInfo / 130);
         });
-        // Debug logging
-        print('\n===== ORDER DATA LOADED =====');
-        print('toVerify (${toVerify?.runtimeType}): $toVerify');
-        print('toShip (${toShip?.runtimeType}): $toShip');
-        print('toReceive (${toReceive?.runtimeType}): $toReceive');
-        print('Completed (${Completed?.runtimeType}): $Completed');
-        print('=============================\n');
       }
     } catch (e) {
-      print("Error loading profile: $e");
       if (mounted) {
         setState(() {
           _error = "Failed to load profile: $e";
@@ -221,7 +213,6 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
 
       return newUrl;
     } catch (e) {
-      print("Error updating profile picture: $e");
       return null;
     }
   }
@@ -1019,18 +1010,6 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
     String status,
     List<dynamic>? orders,
   ) {
-    // Debug logging
-    print('\n===== NAVIGATING TO ORDER PAGE =====');
-    print('Status: $status');
-    print('Orders count: ${orders?.length ?? 0}');
-    if (orders != null && orders.isNotEmpty) {
-      print('First order: ${orders[0]}');
-      print('All orders: $orders');
-    } else {
-      print('No orders found for status: $status');
-    }
-    print('=====================================\n');
-
     Navigator.push(
       context,
       MaterialPageRoute(

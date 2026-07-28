@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -15,9 +16,6 @@ class ImageService {
   static final String apiSecret = dotenv.env['API_SECRET'] ?? '';
   static final Uri _uploadUrl =
   Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/upload');
-  static final Uri _deleteUrl =
-  Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/image/destroy');
-
 
   Future<Uint8List> compressProfileImage(File file) async {
     try {
@@ -71,55 +69,35 @@ class ImageService {
     if (!imageUrl.contains('cloudinary.com')) return;
 
     try {
-      if (apiKey.isEmpty || apiSecret.isEmpty) {
-        print("Cloudinary API credentials missing. Deletion skipped.");
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
         return;
       }
 
-      // Extract public_id from URL
-      // Example: https://res.cloudinary.com/demo/image/upload/v1571218039/sample.jpg
-      final uri = Uri.parse(imageUrl);
-      final pathSegments = uri.pathSegments;
-      if (pathSegments.isEmpty) return;
-
-      // The public_id is usually the last segment without extension
-      String publicIdWithExt = pathSegments.last;
-      String publicId = publicIdWithExt.split('.').first;
-
-      // Handle folders if present (segments after 'upload/' or version 'vXXXX/')
-      int uploadIndex = pathSegments.indexOf('upload');
-      if (uploadIndex != -1 && pathSegments.length > uploadIndex + 1) {
-        // Skip 'upload' and potentially 'vXXXX'
-        int startIndex = uploadIndex + 1;
-        if (pathSegments[startIndex].startsWith('v') && pathSegments[startIndex].length > 1) {
-          startIndex++;
-        }
-        if (startIndex < pathSegments.length - 1) {
-          publicId = pathSegments.sublist(startIndex, pathSegments.length - 1).join('/') + '/' + publicId;
-        }
+      final String? token = await user.getIdToken();
+      if (token == null) {
+        return;
       }
 
-      final timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      final signatureData = "public_id=$publicId&timestamp=$timestamp$apiSecret";
-      final signature = sha1.convert(utf8.encode(signatureData)).toString();
+      final String baseUrl = dotenv.get('API_BASE_URL', fallback: 'https://api.dadubd.com');
+      final Uri deleteEndpoint = Uri.parse('$baseUrl/images');
 
-      final response = await http.post(
-        _deleteUrl,
-        body: {
-          'public_id': publicId,
-          'timestamp': timestamp.toString(),
-          'api_key': apiKey,
-          'signature': signature,
+      final response = await http.delete(
+        deleteEndpoint,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
         },
+        body: jsonEncode({'imageUrl': imageUrl}),
       );
 
-      if (response.statusCode == 200) {
-        print("Image deleted successfully: $publicId");
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        // Image deleted successfully
       } else {
-        print("Failed to delete image: ${response.body}");
+        // Failed to delete image
       }
     } catch (e) {
-      print("Error deleting image: $e");
+      // Error deleting image
     }
   }
 
@@ -151,6 +129,35 @@ class ImageService {
         ..fields['upload_preset'] = uploadPreset
         ..files.add(http.MultipartFile.fromBytes('file', compressedBytes,
             filename: 'payment.jpg'));
+
+      final response = await request.send().timeout(
+          const Duration(seconds: 30));
+
+      if (response.statusCode == 200) {
+        final res = await http.Response.fromStream(response);
+        final data = jsonDecode(res.body);
+        return data['secure_url'];
+      } else {
+        throw Exception("Upload failed: ${response.statusCode}");
+      }
+    } on TimeoutException {
+      throw Exception("Upload timed out");
+    } on SocketException {
+      throw Exception("No internet connection");
+    } catch (e) {
+      throw Exception("Upload error: $e");
+    }
+  }
+
+  Future<String> uploadChatImage(File image) async {
+    try {
+      // Reusing payment compression or we can define a chat-specific one
+      final compressedBytes = await compressPaymentImage(image);
+
+      final request = http.MultipartRequest('POST', _uploadUrl)
+        ..fields['upload_preset'] = uploadPreset
+        ..files.add(http.MultipartFile.fromBytes('file', compressedBytes,
+            filename: 'chat_image.jpg'));
 
       final response = await request.send().timeout(
           const Duration(seconds: 30));

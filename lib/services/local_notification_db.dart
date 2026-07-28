@@ -18,7 +18,7 @@ class LocalNotificationDb {
     String path = join(await getDatabasesPath(), 'notifications.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 4,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE notifications (
@@ -28,9 +28,31 @@ class LocalNotificationDb {
             image TEXT,
             link TEXT,
             createdAt TEXT,
-            isRead INTEGER DEFAULT 0
+            isRead INTEGER DEFAULT 0,
+            type TEXT DEFAULT 'general'
           )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute("ALTER TABLE notifications ADD COLUMN type TEXT DEFAULT 'general'");
+        }
+        
+        // Final broad migration for Admin messages
+        if (oldVersion < 4) {
+          await db.execute('''
+            UPDATE notifications 
+            SET type = 'chat' 
+            WHERE isRead = 0 AND (
+              LOWER(title) LIKE '%message%' OR 
+              LOWER(title) LIKE '%chat%' OR 
+              LOWER(title) LIKE '%admin%' OR
+              LOWER(body) LIKE '%message%' OR
+              LOWER(body) LIKE '%chat%' OR
+              LOWER(link) LIKE '%/message%'
+            )
+          ''');
+        }
       },
     );
   }
@@ -44,6 +66,7 @@ class LocalNotificationDb {
       'link': notification['link'],
       'createdAt': notification['createdAt'] ?? DateTime.now().toIso8601String(),
       'isRead': 0,
+      'type': notification['type'] ?? 'general',
     });
   }
 
@@ -71,6 +94,16 @@ class LocalNotificationDb {
     );
   }
 
+  Future<int> markMessagesAsRead() async {
+    final db = await database;
+    return await db.update(
+      'notifications',
+      {'isRead': 1},
+      where: 'isRead = 0 AND type = ?',
+      whereArgs: ['chat'],
+    );
+  }
+
   Future<int> deleteNotification(int id) async {
     final db = await database;
     return await db.delete(
@@ -87,7 +120,13 @@ class LocalNotificationDb {
 
   Future<int> getUnreadCount() async {
     final db = await database;
-    final result = await db.rawQuery('SELECT COUNT(*) FROM notifications WHERE isRead = 0');
+    final result = await db.rawQuery('SELECT COUNT(*) FROM notifications WHERE isRead = 0 AND type != ?', ['chat']);
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<int> getUnreadMessageCount() async {
+    final db = await database;
+    final result = await db.rawQuery('SELECT COUNT(*) FROM notifications WHERE isRead = 0 AND type = ?', ['chat']);
     return Sqflite.firstIntValue(result) ?? 0;
   }
 }

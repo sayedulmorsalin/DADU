@@ -59,17 +59,12 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
             }
           }
         } catch (e) {
-          debugPrint('Error processing order entry: $e');
+          // Error processing order entry
         }
       }
     }
 
-    // Debug logging
-    debugPrint('\n===== ORDER LIST SCREEN RECEIVED DATA =====');
-    debugPrint('Status: ${widget.status}');
-    debugPrint('Original Orders Count: ${widget.orders?.length ?? 0}');
-    debugPrint('Flattened Items Count: ${displayedItems.length}');
-    debugPrint('===========================================\n');
+
 
     return Scaffold(
       appBar: AppBar(title: Text('${widget.status} Orders')),
@@ -186,11 +181,6 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
   }
 
   Widget _buildOrderCard(Map<String, dynamic> order, int index) {
-    // Debug individual order
-    print('Order $index: $order');
-    print('Order $index type: ${order.runtimeType}');
-    print('Order $index keys: ${order.keys.toList()}');
-
     // Safely extract data with type checking
     final imageUrl = _safeGetString(order, 'imageUrl');
     final name = _safeGetString(order, 'name') ?? 'Unknown Product';
@@ -365,7 +355,6 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
       if (value == null) return null;
       return value.toString();
     } catch (e) {
-      print('Error getting string $key: $e');
       return null;
     }
   }
@@ -378,7 +367,6 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
       if (value is String) return num.tryParse(value);
       return null;
     } catch (e) {
-      print('Error getting number $key: $e');
       return null;
     }
   }

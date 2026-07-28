@@ -137,7 +137,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
         });
       }
     } catch (e) {
-      debugPrint('Failed to load checkout user data: $e');
+      // Failed to load checkout user data
     }
   }
 

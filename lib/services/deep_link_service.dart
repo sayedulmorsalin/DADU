@@ -25,7 +25,6 @@ class DeepLinkService {
     // 1. Handle Deep Links from Notifications (when app is terminated)
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) async {
       if (message != null) {
-        debugPrint('Notification received while terminated: ${message.data}');
         final link = message.data['link'] ?? message.data['deepLink'];
         if (link != null) {
           await _waitForNavigator(navigatorKey);
@@ -36,7 +35,6 @@ class DeepLinkService {
 
     // 2. Handle Deep Links from Notifications (when app is in background)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
-      debugPrint('Notification received while in background: ${message.data}');
       final link = message.data['link'] ?? message.data['deepLink'];
       if (link != null) {
         await _waitForNavigator(navigatorKey);
@@ -52,14 +50,14 @@ class DeepLinkService {
         _handleDeepLink(initialLink, navigatorKey);
       }
     } catch (e) {
-      debugPrint('Failed to get initial link: $e');
+      // Failed to get initial link
     }
 
     // 4. Listen for links when app is in background/foreground (Standard deep link)
     _linkSubscription = _appLinks.uriLinkStream.listen((uri) {
       _handleDeepLink(uri, navigatorKey);
     }, onError: (err) {
-      debugPrint('Deep link stream error: $err');
+      // Deep link stream error
     });
   }
 
@@ -69,29 +67,25 @@ class DeepLinkService {
       final uri = Uri.parse(link);
       _handleDeepLink(uri, _navigatorKey!);
     } catch (e) {
-      debugPrint('Error parsing manual link: $e');
+      // Error parsing manual link
     }
   }
 
   Future<void> _waitForNavigator(GlobalKey<NavigatorState> navigatorKey) async {
     int attempts = 0;
     while (navigatorKey.currentState == null && attempts < 10) {
-      debugPrint('Waiting for navigator state... attempt $attempts');
       await Future.delayed(const Duration(milliseconds: 500));
       attempts++;
     }
   }
 
   void _handleDeepLink(Uri uri, GlobalKey<NavigatorState> navigatorKey) async {
-    debugPrint('Received deep link: $uri');
     final segments = uri.pathSegments;
     if (segments.isEmpty) {
-      debugPrint('Deep link has no path segments');
       return;
     }
 
     final firstSegment = segments.first.toLowerCase();
-    debugPrint('Parsing first path segment: $firstSegment');
     
     // 1. Product Details: /product?id=...
     if (firstSegment == 'product') {
@@ -128,7 +122,7 @@ class DeepLinkService {
     } else if (firstSegment == 'profile') {
       _switchToTab(4);
     } else {
-      debugPrint('Unrecognized deep link segment: $firstSegment');
+      // Unrecognized deep link segment
     }
   }
 
@@ -142,7 +136,7 @@ class DeepLinkService {
         _navigatorKey?.currentState?.popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      debugPrint('Error switching tab: $e');
+      // Error switching tab
     }
   }
 
@@ -189,7 +183,6 @@ class DeepLinkService {
   }
 
   Future<void> _navigateToProduct(String productId, GlobalKey<NavigatorState> navigatorKey) async {
-    debugPrint('Navigating to product: $productId');
     try {
       final productData = await _apiService.fetchProductById(productId);
       
@@ -218,7 +211,7 @@ class DeepLinkService {
         ),
       );
     } catch (e) {
-      debugPrint('Error during navigation to product: $e');
+      // Error during navigation to product
     }
   }
 

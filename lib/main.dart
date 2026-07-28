@@ -35,7 +35,7 @@ void main() async {
   try {
     await FirebaseMessaging.instance.subscribeToTopic("allUsers");
   } catch (e) {
-    debugPrint("Warning: Firebase Messaging topic subscription failed: $e");
+    // Topic subscription failed
   }
 
   runApp(const MyApp());

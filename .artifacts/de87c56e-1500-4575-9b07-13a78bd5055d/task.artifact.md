@@ -1,8 +1,0 @@
-- [x] Implement `_waitForNavigator` in `DeepLinkService`
-- [x] Update `initDeepLinks` to wait for navigator before handling messages
-- [x] Enhance payload parsing to handle multiple possible keys (`link`, `deepLink`)
-- [x] Add debug logging for better traceability
-- [x] Fix app opening issue (Cloud Functions + AndroidManifest)
-- [x] Fix navigation data source (switched to `ApiService`)
-- [x] Refine notification image payload (Cloud Functions)
-- [x] Create walkthrough documentation

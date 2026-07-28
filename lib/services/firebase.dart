@@ -396,7 +396,6 @@ class dataBase {
         };
       }).toList();
     } catch (e) {
-      print('Error fetching flash_sell_products: $e');
       return [];
     }
   }

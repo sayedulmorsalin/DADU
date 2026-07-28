@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dadu/controller/chat_controller.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -49,10 +51,21 @@ class Chat extends StatelessWidget {
 
               return ListView.builder(
                 controller: controller.scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),
-                itemCount: controller.messages.length,
+                itemCount: controller.messages.length + (controller.isLoadingMore.value ? 1 : 0),
                 itemBuilder: (context, index) {
-                  final msg = controller.messages[index];
+                  if (index == 0 && controller.isLoadingMore.value) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+
+                  final messageIndex = controller.isLoadingMore.value ? index - 1 : index;
+                  final msg = controller.messages[messageIndex];
                   final isMe = msg['senderRole'] == 'user';
                   final timeStr = msg['createdAt'] ?? '';
                   String displayTime = '';
@@ -68,6 +81,7 @@ class Chat extends StatelessWidget {
                     context,
                     isMe: isMe,
                     message: msg['message'] ?? '',
+                    imageUrl: msg['image'] ?? msg['imageUrl'] ?? msg['img_url'],
                     time: displayTime,
                   );
                 },
@@ -80,7 +94,7 @@ class Chat extends StatelessWidget {
     );
   }
 
-  Widget _buildChatBubble(BuildContext context, {required bool isMe, required String message, required String time}) {
+  Widget _buildChatBubble(BuildContext context, {required bool isMe, required String message, String? imageUrl, required String time}) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -99,13 +113,29 @@ class Chat extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              message,
-              style: TextStyle(
-                color: isMe ? Colors.white : AppColors.textPrimary,
-                fontSize: 15,
+            if (imageUrl != null && imageUrl.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  placeholder: (context, url) => const SizedBox(
+                    height: 150,
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+                  errorWidget: (context, url, error) => const Icon(Icons.error),
+                  fit: BoxFit.cover,
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+            ],
+            if (message.isNotEmpty)
+              Text(
+                message,
+                style: TextStyle(
+                  color: isMe ? Colors.white : AppColors.textPrimary,
+                  fontSize: 15,
+                ),
+              ),
             if (time.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
@@ -136,46 +166,95 @@ class Chat extends StatelessWidget {
         ],
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceGrey,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: TextField(
-                  controller: controller.messageController,
-                  decoration: const InputDecoration(
-                    hintText: 'Type a message...',
-                    border: InputBorder.none,
-                    hintStyle: TextStyle(color: AppColors.textSecondary),
-                  ),
-                  onSubmitted: (_) => controller.sendMessage(),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Obx(() => Container(
-              decoration: const BoxDecoration(
-                color: AppColors.selectedNavItem,
-                shape: BoxShape.circle,
-              ),
-              child: controller.isSending.value
-                  ? const Padding(
-                      padding: EdgeInsets.all(12),
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            Obx(() {
+              if (controller.selectedImage.value == null) return const SizedBox.shrink();
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                height: 100,
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        controller.selectedImage.value!,
+                        height: 100,
+                        width: 100,
+                        fit: BoxFit.cover,
                       ),
-                    )
-                  : IconButton(
-                      icon: const Icon(Icons.send, color: Colors.white),
-                      onPressed: controller.sendMessage,
                     ),
-            )),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: GestureDetector(
+                        onTap: controller.removeSelectedImage,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.close, color: Colors.white, size: 16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.image, color: AppColors.selectedNavItem),
+                  onPressed: controller.pickImage,
+                ),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceGrey,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: TextField(
+                      controller: controller.messageController,
+                      focusNode: controller.focusNode,
+                      decoration: const InputDecoration(
+                        hintText: 'Type a message...',
+                        border: InputBorder.none,
+                        hintStyle: TextStyle(color: AppColors.textSecondary),
+                      ),
+                      onTap: () {
+                        // Scroll when the field is tapped, even if already focused
+                        controller.handleTextFieldTap();
+                      },
+                      onSubmitted: (_) => controller.sendMessage(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Obx(() => Container(
+                  decoration: const BoxDecoration(
+                    color: AppColors.selectedNavItem,
+                    shape: BoxShape.circle,
+                  ),
+                  child: controller.isSending.value
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          ),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.send, color: Colors.white),
+                          onPressed: controller.sendMessage,
+                        ),
+                )),
+              ],
+            ),
           ],
         ),
       ),

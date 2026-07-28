@@ -1,4 +1,0 @@
-- [x] Update `ApiService` in `d1.dart` to default stock to 1
-- [x] Update `combo_pack.dart` to handle stock default correctly
-- [x] Update `home.dart` (and any other API-driven screens) to handle stock default
-- [x] Verify stock status on Combo Pack screen
