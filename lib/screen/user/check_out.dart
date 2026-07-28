@@ -33,6 +33,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _noteController = TextEditingController();
   String _paymentMethod = 'bkash';
   bool _isProcessing = false;
   String? selectedDistrict;
@@ -266,6 +267,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     _nameController.dispose();
     _phoneController.dispose();
     _addressController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
@@ -325,6 +327,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
             'customerEmail': currentUser.email,
             'phone': _phoneController.text,
             'address': _addressController.text,
+            'note': _noteController.text.trim(),
             'district': selectedDistrict ?? '',
             'thana': selectedThana ?? '',
             'paymentMethod': _paymentMethod,
@@ -535,6 +538,17 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                         ? 'Please enter your address'
                         : null,
           ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _noteController,
+            decoration: const InputDecoration(
+              labelText: 'Order Note (Optional)',
+              prefixIcon: Icon(Icons.note_add),
+              border: OutlineInputBorder(),
+              hintText: 'Add instructions (e.g., color, preferred time)',
+            ),
+            maxLines: 3,
+          ),
         ],
       ),
     );
@@ -668,17 +682,53 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                 ),
               ],
             )
-            : ElevatedButton(
-              onPressed: _pickPaymentProof,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                minimumSize: const Size(double.infinity, 50),
+            : GestureDetector(
+                onTap: _pickPaymentProof,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 30),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceGrey, // Changed to a lighter theme-consistent color
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: AppColors.textSecondary.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.placeholderBackground,
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        child: const Icon(
+                          Icons.file_upload_outlined,
+                          color: AppColors.iconAccent,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Upload Image',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'PNG, JPG, WebP supported',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: const Text(
-                'Upload Screenshot',
-                style: TextStyle(color: AppColors.textOnPrimary),
-              ),
-            ),
         const SizedBox(height: 16),
       ],
     );

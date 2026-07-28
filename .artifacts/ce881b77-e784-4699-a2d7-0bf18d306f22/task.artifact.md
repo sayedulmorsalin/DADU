@@ -1,6 +1,7 @@
-# Task: Implement Chat UI and Navigation
+# Task: Update Web Project for Deep Linking
 
-- [x] Create Chat screen UI (`lib/screen/user/chat.dart`)
-- [x] Update `HomeController` navigation logic (`lib/controller/home_controller.dart`)
-- [x] Update `Home` screen to include Chat in page switching (`lib/screen/product/home.dart`)
-- [x] Verify navigation and UI appearance
+- [x] Create reusable App Redirect component (`app/AppRedirect.tsx`)
+- [x] Create catch-all route in web project (`app/[...slug]/page.tsx`)
+- [x] Create custom 404 page for extra safety (`app/not-found.tsx`)
+- [x] Update `/product` page to use unified redirect (`app/product/page.tsx`)
+- [x] Verify `assetlinks.json` is correctly served

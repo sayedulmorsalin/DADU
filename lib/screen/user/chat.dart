@@ -1,15 +1,20 @@
+import 'package:dadu/controller/chat_controller.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 
 class Chat extends StatelessWidget {
   const Chat({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final ChatController controller = Get.put(ChatController());
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Chat',
+          'Chat with DADU',
           style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.scaffoldBackground,
@@ -20,23 +25,56 @@ class Chat extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: 5, // Placeholder
-              itemBuilder: (context, index) {
-                final isMe = index % 2 == 0;
-                return _buildChatBubble(
-                  context,
-                  isMe: isMe,
-                  message: isMe 
-                      ? "Hello! I'm interested in the latest football boots." 
-                      : "Hi! We have some great new arrivals from Nike and Adidas. Would you like to see them?",
-                  time: "10:30 AM",
+            child: Obx(() {
+              if (controller.isLoading.value) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (controller.messages.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.chat_bubble_outline, size: 64, color: AppColors.textSecondary.withOpacity(0.5)),
+                      const SizedBox(height: 16),
+                      Text(
+                        "No messages yet.\nStart a conversation with us!",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
                 );
-              },
-            ),
+              }
+
+              return ListView.builder(
+                controller: controller.scrollController,
+                padding: const EdgeInsets.all(16),
+                itemCount: controller.messages.length,
+                itemBuilder: (context, index) {
+                  final msg = controller.messages[index];
+                  final isMe = msg['senderRole'] == 'user';
+                  final timeStr = msg['createdAt'] ?? '';
+                  String displayTime = '';
+                  
+                  try {
+                    if (timeStr.isNotEmpty) {
+                      final date = DateTime.parse(timeStr);
+                      displayTime = DateFormat('hh:mm a').format(date.toLocal());
+                    }
+                  } catch (_) {}
+
+                  return _buildChatBubble(
+                    context,
+                    isMe: isMe,
+                    message: msg['message'] ?? '',
+                    time: displayTime,
+                  );
+                },
+              );
+            }),
           ),
-          _buildMessageInput(context),
+          _buildMessageInput(context, controller),
         ],
       ),
     );
@@ -68,21 +106,23 @@ class Chat extends StatelessWidget {
                 fontSize: 15,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              time,
-              style: TextStyle(
-                color: isMe ? Colors.white70 : AppColors.textSecondary,
-                fontSize: 10,
+            if (time.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                time,
+                style: TextStyle(
+                  color: isMe ? Colors.white70 : AppColors.textSecondary,
+                  fontSize: 10,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMessageInput(BuildContext context) {
+  Widget _buildMessageInput(BuildContext context, ChatController controller) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -105,28 +145,37 @@ class Chat extends StatelessWidget {
                   color: AppColors.surfaceGrey,
                   borderRadius: BorderRadius.circular(24),
                 ),
-                child: const TextField(
-                  decoration: InputDecoration(
+                child: TextField(
+                  controller: controller.messageController,
+                  decoration: const InputDecoration(
                     hintText: 'Type a message...',
                     border: InputBorder.none,
                     hintStyle: TextStyle(color: AppColors.textSecondary),
                   ),
+                  onSubmitted: (_) => controller.sendMessage(),
                 ),
               ),
             ),
             const SizedBox(width: 8),
-            Container(
+            Obx(() => Container(
               decoration: const BoxDecoration(
                 color: AppColors.selectedNavItem,
                 shape: BoxShape.circle,
               ),
-              child: IconButton(
-                icon: const Icon(Icons.send, color: Colors.white),
-                onPressed: () {
-                  // TODO: Implement send functionality
-                },
-              ),
-            ),
+              child: controller.isSending.value
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      ),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.send, color: Colors.white),
+                      onPressed: controller.sendMessage,
+                    ),
+            )),
           ],
         ),
       ),

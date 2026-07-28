@@ -1,6 +1,7 @@
 import 'package:dadu/screen/product/product_item.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../services/d1.dart';
 
 class Brand extends StatefulWidget {
@@ -82,6 +83,18 @@ class _BrandState extends State<Brand> {
         backgroundColor: Colors.transparent,
         centerTitle: true,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () {
+              final String link = "https://dadubd.com/brand?name=${Uri.encodeComponent(widget.brandName)}";
+              Share.share(
+                "Check out all products from ${widget.brandName} on Dadu!\n$link",
+                subject: "${widget.brandName} Products",
+              );
+            },
+          ),
+        ],
       ),
       body: ListView(
         controller: scrollController,

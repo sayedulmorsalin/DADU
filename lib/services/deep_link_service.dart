@@ -1,9 +1,14 @@
 import 'dart:async';
 import 'package:app_links/app_links.dart';
+import 'package:dadu/controller/home_controller.dart';
+import 'package:dadu/screen/product/brand.dart';
+import 'package:dadu/screen/product/catagory.dart';
 import 'package:dadu/screen/product/product_details.dart';
+import 'package:dadu/screen/user/reword_ad.dart';
 import 'package:dadu/services/d1.dart'; // Import ApiService
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 class DeepLinkService {
   static final DeepLinkService _instance = DeepLinkService._internal();
@@ -21,9 +26,6 @@ class DeepLinkService {
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) async {
       if (message != null) {
         debugPrint('Notification received while terminated: ${message.data}');
-        if (message.notification != null) {
-          debugPrint('Notification Details: Title: ${message.notification?.title}, Body: ${message.notification?.body}, Image: ${message.notification?.android?.imageUrl ?? message.notification?.apple?.imageUrl}');
-        }
         final link = message.data['link'] ?? message.data['deepLink'];
         if (link != null) {
           await _waitForNavigator(navigatorKey);
@@ -35,9 +37,6 @@ class DeepLinkService {
     // 2. Handle Deep Links from Notifications (when app is in background)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
       debugPrint('Notification received while in background: ${message.data}');
-      if (message.notification != null) {
-        debugPrint('Notification Details: Title: ${message.notification?.title}, Body: ${message.notification?.body}, Image: ${message.notification?.android?.imageUrl ?? message.notification?.apple?.imageUrl}');
-      }
       final link = message.data['link'] ?? message.data['deepLink'];
       if (link != null) {
         await _waitForNavigator(navigatorKey);
@@ -49,6 +48,7 @@ class DeepLinkService {
     try {
       final initialLink = await _appLinks.getInitialLink();
       if (initialLink != null) {
+        await _waitForNavigator(navigatorKey);
         _handleDeepLink(initialLink, navigatorKey);
       }
     } catch (e) {
@@ -84,38 +84,117 @@ class DeepLinkService {
 
   void _handleDeepLink(Uri uri, GlobalKey<NavigatorState> navigatorKey) async {
     debugPrint('Received deep link: $uri');
+    final segments = uri.pathSegments;
+    if (segments.isEmpty) {
+      debugPrint('Deep link has no path segments');
+      return;
+    }
+
+    final firstSegment = segments.first.toLowerCase();
+    debugPrint('Parsing first path segment: $firstSegment');
     
-    // Expected format: https://dadubd.com/product?id=PRODUCT_ID
-    if (uri.path.contains('/product')) {
+    // 1. Product Details: /product?id=...
+    if (firstSegment == 'product') {
       final productId = uri.queryParameters['id'];
-      debugPrint('Parsed Product ID: $productId');
       if (productId != null && productId.isNotEmpty) {
         _navigateToProduct(productId, navigatorKey);
-      } else {
-        debugPrint('Product ID is null or empty');
       }
-    } else {
-      debugPrint('Path does not contain /product: ${uri.path}');
+    } 
+    // 2. Brand Page: /brand?name=...
+    else if (firstSegment == 'brand') {
+      final brandName = uri.queryParameters['name'];
+      if (brandName != null && brandName.isNotEmpty) {
+        _navigateToBrand(brandName, navigatorKey);
+      }
     }
+    // 3. Category Page: /category?name=...
+    else if (firstSegment == 'category') {
+      final catName = uri.queryParameters['name'];
+      if (catName != null && catName.isNotEmpty) {
+        _navigateToCategory(catName, navigatorKey);
+      }
+    }
+    // 4. Earn Coins: /earn-coins
+    else if (firstSegment == 'earn-coins') {
+      _navigateToEarnCoins(navigatorKey);
+    }
+    // 5. Tab Switching: /cart, /search, /message, /profile
+    else if (firstSegment == 'cart') {
+      _switchToTab(1);
+    } else if (firstSegment == 'search') {
+      _switchToTab(2);
+    } else if (firstSegment == 'message') {
+      _switchToTab(3);
+    } else if (firstSegment == 'profile') {
+      _switchToTab(4);
+    } else {
+      debugPrint('Unrecognized deep link segment: $firstSegment');
+    }
+  }
+
+  void _switchToTab(int index) {
+    try {
+      final homeController = Get.find<HomeController>();
+      homeController.selectedIndex.value = index;
+      
+      // If we are deep into a navigation stack, we might want to pop to top
+      if (_navigatorKey?.currentState?.canPop() ?? false) {
+        _navigatorKey?.currentState?.popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      debugPrint('Error switching tab: $e');
+    }
+  }
+
+  void _navigateToBrand(String name, GlobalKey<NavigatorState> navigatorKey) {
+    final logoMap = {
+      'adidas': 'assets/icon/adidas.png',
+      'nike': 'assets/icon/Nike.png',
+      'puma': 'assets/icon/puma.png',
+      'dadu': 'assets/logo/black_logo.png',
+      'mizuno': 'assets/icon/mizuno.png',
+      'others': 'assets/icon/other.png',
+    };
+    
+    final logo = logoMap[name.toLowerCase()] ?? 'assets/icon/other.png';
+    
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => Brand(brandName: name, brandLogo: logo))
+    );
+  }
+
+  void _navigateToCategory(String name, GlobalKey<NavigatorState> navigatorKey) {
+    final logoMap = {
+      'boots': 'assets/icon/boots.png',
+      'gloves': 'assets/icon/gloves.png',
+      'jersey': 'assets/icon/jersey.png',
+      'pant': 'assets/icon/pant.png',
+      'bag': 'assets/icon/bag.png',
+      'safe guard': 'assets/icon/safeguard.png',
+      'socks': 'assets/icon/socks.png',
+      'others': 'assets/icon/other.png',
+    };
+    
+    final logo = logoMap[name.toLowerCase()] ?? 'assets/icon/other.png';
+    
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => Catagory(catagoryName: name, catagoryLogo: logo))
+    );
+  }
+
+  void _navigateToEarnCoins(GlobalKey<NavigatorState> navigatorKey) {
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => const RewordAd())
+    );
   }
 
   Future<void> _navigateToProduct(String productId, GlobalKey<NavigatorState> navigatorKey) async {
     debugPrint('Navigating to product: $productId');
-    // Show a loading indicator or just fetch data
     try {
       final productData = await _apiService.fetchProductById(productId);
       
-      if (productData == null) {
-        debugPrint('Product data not found in API for ID: $productId');
-        return;
-      }
+      if (productData == null || navigatorKey.currentState == null) return;
 
-      if (navigatorKey.currentState == null) {
-        debugPrint('Navigator state is still null in _navigateToProduct');
-        return;
-      }
-
-      debugPrint('Pushing ProductDetails page for: ${productData['name']}');
       navigatorKey.currentState!.push(
         MaterialPageRoute(
           builder: (context) => ProductDetails(
@@ -138,7 +217,6 @@ class DeepLinkService {
           ),
         ),
       );
-      debugPrint('Navigation successful');
     } catch (e) {
       debugPrint('Error during navigation to product: $e');
     }

@@ -12,7 +12,8 @@
     <application
         android:label="Dadu"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -56,10 +57,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="https" android:host="dadubd.com" android:pathPrefix="/product" />
-                <data android:scheme="http" android:host="dadubd.com" android:pathPrefix="/product" />
-                <data android:scheme="https" android:host="www.dadubd.com" android:pathPrefix="/product" />
-                <data android:scheme="http" android:host="www.dadubd.com" android:pathPrefix="/product" />
+                <!-- Supported Schemes -->
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+
+                <!-- Supported Hosts -->
+                <data android:host="dadubd.com" />
+                <data android:host="www.dadubd.com" />
+
+                <!-- Catch everything on these domains -->
+                <data android:pathPrefix="/" />
             </intent-filter>
 
         </activity>
