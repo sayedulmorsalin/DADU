@@ -16,6 +16,7 @@ import 'package:dadu/screen/product/product_details.dart';
 import 'package:dadu/screen/product/product_item.dart';
 import 'package:dadu/screen/product/search_page.dart';
 import 'package:dadu/screen/user/cart.dart';
+import 'package:dadu/screen/user/chat.dart';
 import 'package:dadu/screen/user/profile.dart';
 import 'package:dadu/screen/user/reword_ad.dart';
 import 'package:flutter/material.dart';
@@ -30,42 +31,42 @@ class Home extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      body: Obx(() => _buildCurrentPage(context)),
-      bottomNavigationBar: Obx(
-        () => BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex:
-              controller.selectedIndex.value >= 3
-                  ? controller.selectedIndex.value + 1
-                  : controller.selectedIndex.value,
-          selectedItemColor: AppColors.selectedNavItem,
-          unselectedItemColor: AppColors.unselectedNavItem,
-          onTap:
-              (index) => controller.onBottomNavTap(
-                index,
-                onMessageTap: _sendMessageToWhatsApp,
+    return Obx(
+      () => PopScope(
+        canPop: controller.selectedIndex.value == 0,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          controller.selectedIndex.value = 0;
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.scaffoldBackground,
+          body: _buildCurrentPage(context),
+          bottomNavigationBar: BottomNavigationBar(
+            type: BottomNavigationBarType.fixed,
+            currentIndex: controller.selectedIndex.value,
+            selectedItemColor: AppColors.selectedNavItem,
+            unselectedItemColor: AppColors.unselectedNavItem,
+            onTap: (index) => controller.onBottomNavTap(index),
+            items: [
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: 'Home',
               ),
-          items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(icon: _buildCartNavIcon(), label: 'Cart'),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.search),
-              label: 'Search',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.message),
-              label: 'Message',
-            ),
-            BottomNavigationBarItem(
-              icon: _buildProfileNavIcon(),
-              label: 'Profile',
-            ),
-          ],
+              BottomNavigationBarItem(icon: Obx(() => _buildCartNavIcon()), label: 'Cart'),
+              const BottomNavigationBarItem(
+                icon: Icon(Icons.search),
+                label: 'Search',
+              ),
+              BottomNavigationBarItem(
+                icon: Obx(() => _buildMessageNavIcon()),
+                label: 'Message',
+              ),
+              BottomNavigationBarItem(
+                icon: Obx(() => _buildProfileNavIcon()),
+                label: 'Profile',
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -80,6 +81,8 @@ class Home extends StatelessWidget {
       case 2:
         return const SearchPage();
       case 3:
+        return controller.loggedIn.value ? const Chat() : SignUpScreen();
+      case 4:
         return controller.loggedIn.value ? const Profile() : SignUpScreen();
       default:
         return _buildHomeContent(context);
@@ -843,7 +846,7 @@ class Home extends StatelessWidget {
             imageTwo: product['imageTwo']?.toString() ?? '',
             imageThree: product['imageThree']?.toString() ?? '',
             size: product['size']?.toString() ?? '',
-            stock: int.tryParse(product['stock']?.toString() ?? '0') ?? 0,
+            stock: int.tryParse(product['stock']?.toString() ?? '1') ?? 1,
             deliveryFee: product['deliveryFee']?.toString() ?? '',
             createdAt: product['createdAt'],
           );
@@ -905,6 +908,39 @@ class Home extends StatelessWidget {
     );
   }
 
+  Widget _buildMessageNavIcon() {
+    final unreadMessages = controller.unreadMessageCount.value;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.message),
+        if (unreadMessages > 0)
+          Positioned(
+            right: -6,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.error,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              child: Text(
+                unreadMessages > 99 ? '99+' : unreadMessages.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _buildCatagoryItem(BuildContext context, String catagory, String imagePath) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -939,23 +975,6 @@ class Home extends StatelessWidget {
     );
   }
 
-  Future<void> _sendMessageToWhatsApp() async {
-    final message = Uri.encodeComponent(
-      'Hey I want to order something from your Apps',
-    );
-
-    final appUri = Uri.parse(
-      'whatsapp://send?phone=8801782124891&text=$message',
-    );
-    final webUri = Uri.parse('https://wa.me/8801782124891?text=$message');
-
-    if (await canLaunchUrl(appUri)) {
-      await launchUrl(appUri);
-      return;
-    }
-
-    await launchUrl(webUri, mode: LaunchMode.externalApplication);
-  }
 }
 
 /// Custom ScrollPhysics to decrease manual scroll speed by increasing friction
@@ -1156,7 +1175,7 @@ class _FlashItem extends StatelessWidget {
                   imageTwo: product['imageTwo']?.toString() ?? '',
                   imageThree: product['imageThree']?.toString() ?? '',
                   size: product['size']?.toString() ?? '',
-                  stock: int.tryParse(product['stock']?.toString() ?? '0') ?? 0,
+                  stock: int.tryParse(product['stock']?.toString() ?? '1') ?? 1,
                   deliveryFee: product['deliveryFee']?.toString() ?? '',
                   createdAt: product['createdAt'],
                 ),
@@ -1292,6 +1311,13 @@ class _ArrivalItem extends StatelessWidget {
                     catagory: product['catagory']?.toString() ?? 'Others',
                     image5: product['image5']?.toString() ?? '',
                     goldCoin: double.tryParse(product['gold_coin']?.toString() ?? '0') ?? 0.0,
+                    brand: product['brand']?.toString() ?? '',
+                    imageTwo: product['imageTwo']?.toString() ?? '',
+                    imageThree: product['imageThree']?.toString() ?? '',
+                    size: product['size']?.toString() ?? '',
+                    stock: int.tryParse(product['stock']?.toString() ?? '1') ?? 1,
+                    deliveryFee: product['deliveryFee']?.toString() ?? '',
+                    createdAt: product['createdAt'],
                   ),
             ),
           );

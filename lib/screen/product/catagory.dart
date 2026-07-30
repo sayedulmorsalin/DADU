@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/product/product_item.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../services/firebase.dart';
 import '../../services/d1.dart';
 
@@ -119,6 +120,19 @@ class _CatagoryState extends State<Catagory> {
         backgroundColor: Colors.transparent,
         centerTitle: true,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            onPressed: () {
+              final String name = selectedSubCatagory ?? selectedBrand ?? widget.catagoryName;
+              final String link = "https://dadubd.com/category?name=${Uri.encodeComponent(name)}";
+              Share.share(
+                "Check out the $name collection on Dadu!\n$link",
+                subject: "$name Category",
+              );
+            },
+          ),
+        ],
       ),
       body: ListView(
         controller: scrollController,
@@ -212,7 +226,7 @@ class _CatagoryState extends State<Catagory> {
                   imageTwo: product['imageTwo']?.toString() ?? '',
                   imageThree: product['imageThree']?.toString() ?? '',
                   size: product['size']?.toString() ?? '',
-                  stock: int.tryParse(product['stock']?.toString() ?? '0') ?? 0,
+                  stock: int.tryParse(product['stock']?.toString() ?? '1') ?? 1,
                   deliveryFee: product['deliveryFee']?.toString() ?? '',
                   createdAt: product['createdAt'],
                 );

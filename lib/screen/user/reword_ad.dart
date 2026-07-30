@@ -4,6 +4,7 @@ import 'package:dadu/services/app_version_service.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../services/firebase.dart';
 
 class RewordAd extends StatefulWidget {
@@ -217,8 +218,6 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
           }
         },
         onAdFailedToLoad: (error) {
-          print("Rewarded failed: ${error.code} ${error.message}");
-
           if (!completer.isCompleted) {
             completer.complete(null);
           }
@@ -436,7 +435,6 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
           });
         },
         onAdFailedToLoad: (ad, error) {
-          print("Banner failed: ${error.code} ${error.message}");
           ad.dispose();
         },
       ),
@@ -615,12 +613,24 @@ class _RewordAdState extends State<RewordAd> with WidgetsBindingObserver {
           "Earn Coins",
           style: TextStyle(
             color: AppColors.textOnPrimary,
-            fontSize: 30,
+            fontSize: 25,
             fontWeight: FontWeight.bold,
           ),
         ),
         centerTitle: true,
         backgroundColor: AppColors.rewardPrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share, color: Colors.white),
+            onPressed: () {
+              const String link = "https://dadubd.com/earn-coins";
+              Share.share(
+                "Earn free gold coins by watching ads on Dadu! Download the app and start earning now.\n$link",
+                subject: "Earn Free Coins on Dadu",
+              );
+            },
+          ),
+        ],
       ),
       body:
           _versionCheckLoading

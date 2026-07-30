@@ -23,7 +23,7 @@ class Profile extends StatefulWidget {
   State<Profile> createState() => _ProfileState();
 }
 
-class _ProfileState extends State<Profile> with WidgetsBindingObserver {
+class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerProviderStateMixin {
   String Name = '';
   String Phone = '';
   String Email = '';
@@ -42,6 +42,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   int completedCount = 0;
   double freeDelivery = 0;
 
+  late AnimationController _waitAnimController;
+
   final DistrictUpozila districtUpozila = DistrictUpozila();
   final Auth _auth = Auth();
   final ImageService imageService = ImageService();
@@ -58,6 +60,12 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    _waitAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
     _loadProfileData();
     _refreshVersionRequirement();
   }
@@ -97,6 +105,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _waitAnimController.dispose();
     super.dispose();
   }
 
@@ -148,16 +157,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
           _isLoading = false;
           freeDelivery = (freeDeliveryInfo / 130);
         });
-        // Debug logging
-        print('\n===== ORDER DATA LOADED =====');
-        print('toVerify (${toVerify?.runtimeType}): $toVerify');
-        print('toShip (${toShip?.runtimeType}): $toShip');
-        print('toReceive (${toReceive?.runtimeType}): $toReceive');
-        print('Completed (${Completed?.runtimeType}): $Completed');
-        print('=============================\n');
       }
     } catch (e) {
-      print("Error loading profile: $e");
       if (mounted) {
         setState(() {
           _error = "Failed to load profile: $e";
@@ -196,16 +197,22 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     }
   }
 
-  Future<String?> _updateProfilePicture() async {
+  Future<String?> _updateProfilePicture(String? oldUrl) async {
     try {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
       if (pickedFile == null) return null;
 
       File imageFile = File(pickedFile.path);
-      return await imageService.uploadProfileImage(imageFile);
+      final newUrl = await imageService.uploadProfileImage(imageFile);
+
+      if (newUrl != null && oldUrl != null && oldUrl.isNotEmpty) {
+        // Deletion is asynchronous and doesn't block the UI update
+        imageService.deleteImage(oldUrl);
+      }
+
+      return newUrl;
     } catch (e) {
-      print("Error updating profile picture: $e");
       return null;
     }
   }
@@ -233,9 +240,9 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     GestureDetector(
-                      onTap: () async {
+                      onTap: _isUpdatingProfilePic ? null : () async {
                         setDialogState(() => _isUpdatingProfilePic = true);
-                        final newUrl = await _updateProfilePicture();
+                        final newUrl = await _updateProfilePicture(tempProfilePic);
                         setDialogState(() {
                           _isUpdatingProfilePic = false;
                           if (newUrl != null) {
@@ -252,7 +259,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
                         child: Column(
                           children: [
                             Stack(
-                              alignment: Alignment.bottomRight,
+                              alignment: Alignment.center,
                               children: [
                                 CircleAvatar(
                                   radius: 50,
@@ -262,19 +269,21 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
                                           ? NetworkImage(tempProfilePic)
                                           : null,
                                   child:
-                                      tempProfilePic.isEmpty
+                                      tempProfilePic.isEmpty && !_isUpdatingProfilePic
                                           ? const Icon(Icons.person, size: 50)
                                           : null,
                                 ),
+                                if (_isUpdatingProfilePic)
+                                  const CircularProgressIndicator(),
                               ],
                             ),
                             const SizedBox(height: 10),
                             TextButton(
-                              onPressed: () async {
+                              onPressed: _isUpdatingProfilePic ? null : () async {
                                 setDialogState(
                                   () => _isUpdatingProfilePic = true,
                                 );
-                                final newUrl = await _updateProfilePicture();
+                                final newUrl = await _updateProfilePicture(tempProfilePic);
                                 setDialogState(() {
                                   _isUpdatingProfilePic = false;
                                   if (newUrl != null) {
@@ -282,10 +291,12 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
                                   }
                                 });
                               },
-                              child: const Text(
-                                'Change Profile Picture',
-                                style: TextStyle(color: AppColors.textLink),
-                              ),
+                              child: _isUpdatingProfilePic
+                                  ? const Text('Uploading...', style: TextStyle(color: AppColors.textSecondary))
+                                  : const Text(
+                                      'Change Profile Picture',
+                                      style: TextStyle(color: AppColors.textLink),
+                                    ),
                             ),
                           ],
                         ),
@@ -855,6 +866,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
             _buildProfileHeader(),
             const SizedBox(height: 24),
             _buildOrderSection(),
+            _buildOrderNotices(),
             const SizedBox(height: 24),
             _buildAddressSection(),
             const SizedBox(height: 24),
@@ -998,18 +1010,6 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
     String status,
     List<dynamic>? orders,
   ) {
-    // Debug logging
-    print('\n===== NAVIGATING TO ORDER PAGE =====');
-    print('Status: $status');
-    print('Orders count: ${orders?.length ?? 0}');
-    if (orders != null && orders.isNotEmpty) {
-      print('First order: ${orders[0]}');
-      print('All orders: $orders');
-    } else {
-      print('No orders found for status: $status');
-    }
-    print('=====================================\n');
-
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1048,6 +1048,85 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
         const SizedBox(height: 8),
         Text(title, style: const TextStyle(fontSize: 13)),
       ],
+    );
+  }
+
+  Widget _buildOrderNotices() {
+    List<Widget> notices = [];
+
+    if (toVerifyCount > 0) {
+      notices.add(_buildStatusNotice(
+        'An admin will verify your order within 24 hours. Please wait until then.',
+        '২৪ ঘণ্টার মধ্যে একজন অ্যাডমিন আপনার অর্ডার যাচাই করবেন, অনুগ্রহ করে ততক্ষণ অপেক্ষা করুন।',
+      ));
+    }
+
+    if (toShipCount > 0) {
+      notices.add(Padding(
+        padding: EdgeInsets.only(top: toVerifyCount > 0 ? 8 : 0),
+        child: _buildStatusNotice(
+          'Your order has been accepted. Your product has been handed over to the Steadfast courier service and will take 3-4 days to arrive. Please wait until then.',
+          'আপনার অর্ডারটি গ্রহণ করা হয়েছে। আপনার পণ্যটি স্টিডফাস্ট কুরিয়ার সার্ভিসে হস্তান্তর করা হয়েছে এবং পৌঁছাতে ৩-৪ দিন সময় লাগবে। অনুগ্রহ করে ততক্ষণ অপেক্ষা করুন।',
+        ),
+      ));
+    }
+
+    if (notices.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: notices,
+    );
+  }
+
+  Widget _buildStatusNotice(String englishText, String banglaText) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          AnimatedBuilder(
+            animation: _waitAnimController,
+            builder: (context, child) {
+              return Transform.rotate(
+                angle: _waitAnimController.value * 2 * 3.14159,
+                child: const Icon(
+                  Icons.hourglass_empty,
+                  color: AppColors.warning,
+                  size: 28,
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  englishText,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Color(0xFFE65100), // Deep orange
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  banglaText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFEF6C00), // Slightly lighter orange
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1300,7 +1379,6 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver {
               {'icon': Icons.privacy_tip, 'title': 'Privacy Policy'},
               {'icon': Icons.description, 'title': 'Terms & Conditions'},
               {'icon': Icons.android, 'title': 'Developer Info'},
-              {'icon': Icons.chat, 'title': 'WhatsApp Developer', 'color': Colors.green},
               {'icon': Icons.support_agent, 'title': 'Help Center'},
             ],
           ),

@@ -140,7 +140,7 @@ class SearchPage extends StatelessWidget {
                     imageTwo: product['imageTwo']?.toString() ?? '',
                     imageThree: product['imageThree']?.toString() ?? '',
                     size: product['size']?.toString() ?? '',
-                    stock: int.tryParse(product['stock']?.toString() ?? '0') ?? 0,
+                    stock: int.tryParse(product['stock']?.toString() ?? '1') ?? 1,
                     deliveryFee: product['deliveryFee']?.toString() ?? '',
                     createdAt: product['createdAt'],
                   ),

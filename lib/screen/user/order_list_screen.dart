@@ -1,11 +1,33 @@
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 
-class OrderListScreen extends StatelessWidget {
+class OrderListScreen extends StatefulWidget {
   final String status;
   final List<dynamic>? orders;
 
   const OrderListScreen({super.key, required this.status, this.orders});
+
+  @override
+  State<OrderListScreen> createState() => _OrderListScreenState();
+}
+
+class _OrderListScreenState extends State<OrderListScreen> with TickerProviderStateMixin {
+  late AnimationController _waitAnimController;
+
+  @override
+  void initState() {
+    super.initState();
+    _waitAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _waitAnimController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -13,8 +35,8 @@ class OrderListScreen extends StatelessWidget {
     // coming from check_out.dart (where each order has an 'items' list)
     final List<Map<String, dynamic>> displayedItems = [];
 
-    if (orders != null) {
-      for (var orderEntry in orders!) {
+    if (widget.orders != null) {
+      for (var orderEntry in widget.orders!) {
         try {
           if (orderEntry is Map) {
             final orderMap = Map<String, dynamic>.from(orderEntry);
@@ -37,59 +59,128 @@ class OrderListScreen extends StatelessWidget {
             }
           }
         } catch (e) {
-          debugPrint('Error processing order entry: $e');
+          // Error processing order entry
         }
       }
     }
 
-    // Debug logging
-    debugPrint('\n===== ORDER LIST SCREEN RECEIVED DATA =====');
-    debugPrint('Status: $status');
-    debugPrint('Original Orders Count: ${orders?.length ?? 0}');
-    debugPrint('Flattened Items Count: ${displayedItems.length}');
-    debugPrint('===========================================\n');
+
 
     return Scaffold(
-      appBar: AppBar(title: Text('$status Orders')),
-      body:
-          displayedItems.isEmpty
-              ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.shopping_bag_outlined,
-                      size: 48,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No $status orders found',
-                      style: const TextStyle(
-                        fontSize: 16,
+      appBar: AppBar(title: Text('${widget.status} Orders')),
+      body: Column(
+        children: [
+          _buildTopNotice(),
+          Expanded(
+            child: displayedItems.isEmpty
+                ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.shopping_bag_outlined,
+                        size: 48,
                         color: AppColors.textSecondary,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      Text(
+                        'No ${widget.status} orders found',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: displayedItems.length,
+                  itemBuilder: (context, index) {
+                    final item = displayedItems[index];
+                    return _buildOrderCard(item, index);
+                  },
                 ),
-              )
-              : ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: displayedItems.length,
-                itemBuilder: (context, index) {
-                  final item = displayedItems[index];
-                  return _buildOrderCard(item, index);
-                },
-              ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopNotice() {
+    if (widget.status == 'To Verify') {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: _buildStatusNotice(
+          'An admin will verify your order within 24 hours. Please wait until then.',
+          '২৪ ঘণ্টার মধ্যে একজন অ্যাডমিন আপনার অর্ডার যাচাই করবেন, অনুগ্রহ করে ততক্ষণ অপেক্ষা করুন।',
+        ),
+      );
+    } else if (widget.status == 'To Ship') {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: _buildStatusNotice(
+          'Your order has been accepted. Your product has been handed over to the Steadfast courier service and will take 3-4 days to arrive. Please wait until then.',
+          'আপনার অর্ডারটি গ্রহণ করা হয়েছে। আপনার পণ্যটি স্টিডফাস্ট কুরিয়ার সার্ভিসে হস্তান্তর করা হয়েছে এবং পৌঁছাতে ৩-৪ দিন সময় লাগবে। অনুগ্রহ করে ততক্ষণ অপেক্ষা করুন।',
+        ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildStatusNotice(String englishText, String banglaText) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          AnimatedBuilder(
+            animation: _waitAnimController,
+            builder: (context, child) {
+              return Transform.rotate(
+                angle: _waitAnimController.value * 2 * 3.14159,
+                child: const Icon(
+                  Icons.hourglass_empty,
+                  color: AppColors.warning,
+                  size: 28,
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  englishText,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Color(0xFFE65100),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  banglaText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFEF6C00),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildOrderCard(Map<String, dynamic> order, int index) {
-    // Debug individual order
-    print('Order $index: $order');
-    print('Order $index type: ${order.runtimeType}');
-    print('Order $index keys: ${order.keys.toList()}');
-
     // Safely extract data with type checking
     final imageUrl = _safeGetString(order, 'imageUrl');
     final name = _safeGetString(order, 'name') ?? 'Unknown Product';
@@ -264,7 +355,6 @@ class OrderListScreen extends StatelessWidget {
       if (value == null) return null;
       return value.toString();
     } catch (e) {
-      print('Error getting string $key: $e');
       return null;
     }
   }
@@ -277,7 +367,6 @@ class OrderListScreen extends StatelessWidget {
       if (value is String) return num.tryParse(value);
       return null;
     } catch (e) {
-      print('Error getting number $key: $e');
       return null;
     }
   }
