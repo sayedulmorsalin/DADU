@@ -1,4 +1,5 @@
 
+import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/screen/user/cart.dart';
 import 'package:dadu/screen/user/check_out.dart';
 import 'package:dadu/services/auth.dart';
@@ -6,6 +7,7 @@ import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_file_downloader/flutter_file_downloader.dart';
+import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -58,7 +60,6 @@ class ProductDetails extends StatefulWidget {
 
 class _ProductDetailsState extends State<ProductDetails> {
   final dataBase db = new dataBase();
-  bool _isFabMenuOpen = false;
   String? selectedSize;
   final Auth _auth = Auth();
   String Address = "";
@@ -167,36 +168,10 @@ class _ProductDetailsState extends State<ProductDetails> {
     );
   }
 
-  void _toggleFabMenu() {
-    setState(() {
-      _isFabMenuOpen = !_isFabMenuOpen;
-    });
-  }
-
-  void sendMessageToWhatsApp(String number) async {
-    final cleanedNumber = number.replaceAll(RegExp(r'[+\s]'), '');
-    final sizeInfo = selectedSize != null ? " Size $selectedSize" : "";
-    final message = Uri.encodeComponent(
-      'Hey I want to order ${widget.title} Price ${widget.price}$sizeInfo Image URL ${widget.image20}',
-    );
-
-    final whatsappAppUrl = Uri.parse(
-      'whatsapp://send?phone=$cleanedNumber&text=$message',
-    );
-
-    final whatsappWebUrl = Uri.parse('https://wa.me/$number?text=$message');
-
-    try {
-      if (await canLaunchUrl(whatsappAppUrl)) {
-        await launchUrl(whatsappAppUrl);
-      } else {
-        await launchUrl(whatsappWebUrl);
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Failed to open WhatsApp')));
-    }
+  void _navigateToChat() {
+    final HomeController homeController = Get.find<HomeController>();
+    homeController.onBottomNavTap(3); // Index 3 is Message tab
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   bool get _isSizeRequired => widget.size.isNotEmpty && widget.size.toLowerCase() != "no size";
@@ -892,54 +867,10 @@ class _ProductDetailsState extends State<ProductDetails> {
     return Positioned(
       bottom: 100,
       right: 16,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (_isFabMenuOpen) ...[
-            _buildContactOption(name: "Rimon", number: "+8801787208108", color: Colors.blue),
-            const SizedBox(height: 10),
-            _buildContactOption(name: "Rasel", number: "+8801782124891", color: Colors.blueAccent),
-            const SizedBox(height: 10),
-          ],
-          FloatingActionButton(
-            onPressed: _toggleFabMenu,
-            backgroundColor: Colors.greenAccent,
-            child: AnimatedRotation(
-              duration: const Duration(milliseconds: 200),
-              turns: _isFabMenuOpen ? 0.5 : 0,
-              child: const Icon(Icons.message, color: Colors.black),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactOption({
-    required String name,
-    required String number,
-    required Color color,
-  }) {
-    return GestureDetector(
-      onTap: () {
-        sendMessageToWhatsApp(number);
-        _toggleFabMenu();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(30),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.person, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(name, style: const TextStyle(color: Colors.white)),
-          ],
-        ),
+      child: FloatingActionButton(
+        onPressed: _navigateToChat,
+        backgroundColor: Colors.greenAccent,
+        child: const Icon(Icons.message, color: Colors.black),
       ),
     );
   }

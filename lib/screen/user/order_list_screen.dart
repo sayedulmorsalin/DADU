@@ -70,7 +70,7 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
       appBar: AppBar(title: Text('${widget.status} Orders')),
       body: Column(
         children: [
-          _buildTopNotice(),
+          _buildTopNotice(displayedItems.isNotEmpty),
           Expanded(
             child: displayedItems.isEmpty
                 ? Center(
@@ -107,7 +107,9 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
     );
   }
 
-  Widget _buildTopNotice() {
+  Widget _buildTopNotice(bool hasItems) {
+    if (!hasItems) return const SizedBox.shrink();
+
     if (widget.status == 'To Verify') {
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
