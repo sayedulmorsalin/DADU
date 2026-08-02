@@ -1,0 +1,3 @@
+- [x] Update `OrderListScreen` to hide notice when `displayedItems` is empty.
+- [x] Update `Profile._castToList` to filter out invalid items.
+- [x] Verify the changes.

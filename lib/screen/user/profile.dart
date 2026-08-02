@@ -170,7 +170,10 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
 
   List<dynamic>? _castToList(dynamic data) {
     if (data == null) return null;
-    if (data is List) return data;
+    if (data is List) {
+      // Filter out nulls and empty/invalid entries that might exist in older database versions
+      return data.where((item) => item != null && item != '').toList();
+    }
     return null;
   }
 

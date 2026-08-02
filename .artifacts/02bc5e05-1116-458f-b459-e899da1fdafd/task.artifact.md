@@ -1,0 +1,6 @@
+- [x] Update `product_details.dart`
+    - [x] Add imports for `Get` and `HomeController`
+    - [x] Implement `_navigateToChat` method
+    - [x] Update FAB `onPressed` logic
+    - [x] Remove `sendMessageToWhatsApp` and related UI components
+- [x] Verify navigation behavior
