@@ -269,7 +269,11 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
                                   backgroundColor: AppColors.surfaceGrey,
                                   backgroundImage:
                                       tempProfilePic.isNotEmpty
-                                          ? NetworkImage(tempProfilePic)
+                                          ? NetworkImage(
+                                              tempProfilePic.startsWith('/')
+                                                  ? "https://api.dadubd.com$tempProfilePic"
+                                                  : tempProfilePic,
+                                            )
                                           : null,
                                   child:
                                       tempProfilePic.isEmpty && !_isUpdatingProfilePic
@@ -638,7 +642,12 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
                   panEnabled: true,
                   minScale: 0.5,
                   maxScale: 4.0,
-                  child: Image.network(profilePic, fit: BoxFit.contain),
+                  child: Image.network(
+                    profilePic.startsWith('/')
+                        ? "https://api.dadubd.com$profilePic"
+                        : profilePic,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ),
@@ -899,7 +908,13 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
                 radius: 40,
                 backgroundColor: AppColors.surfaceGrey,
                 backgroundImage:
-                    profilePic.isNotEmpty ? NetworkImage(profilePic) : null,
+                    profilePic.isNotEmpty
+                        ? NetworkImage(
+                            profilePic.startsWith('/')
+                                ? "https://api.dadubd.com$profilePic"
+                                : profilePic,
+                          )
+                        : null,
                 child:
                     profilePic.isEmpty
                         ? const Icon(Icons.person, size: 40)

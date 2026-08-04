@@ -23,6 +23,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
   final RxBool isInitialLoading = true.obs;
   final RxBool isLoadingMore = false.obs;
+  final RxBool hasMore = true.obs;
   final RxBool loggedIn = false.obs;
   final RxBool profileImageLoading = false.obs;
   final RxBool showSearchResults = false.obs;
@@ -169,12 +170,15 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   Future<void> loadInitialProducts() async {
     isInitialLoading.value = true;
     apiPage = 1;
+    hasMore.value = true;
 
     // Fetch products exclusively from API
     final apiProducts = await apiService.fetchProducts(limit: 20, page: apiPage);
     
     products.assignAll(apiProducts);
-    if (apiProducts.isNotEmpty) {
+    if (apiProducts.length < 20) {
+      hasMore.value = false;
+    } else {
       apiPage++;
     }
 
@@ -182,12 +186,15 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> loadMoreProducts() async {
-    if (isLoadingMore.value || isInitialLoading.value) return;
+    if (isLoadingMore.value || isInitialLoading.value || !hasMore.value) return;
     if (searchController.text.trim().isNotEmpty) return;
 
     isLoadingMore.value = true;
 
     final moreProducts = await apiService.fetchProducts(limit: 20, page: apiPage);
+    if (moreProducts.isEmpty || moreProducts.length < 20) {
+      hasMore.value = false;
+    }
     if (moreProducts.isNotEmpty) {
       products.addAll(moreProducts);
       apiPage++;

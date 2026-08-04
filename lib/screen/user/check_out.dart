@@ -305,8 +305,8 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
         throw Exception("User not authenticated");
       }
 
-      if (!_freeDeliverySelected && _paymentProofImage != null) {
-        paymentProof = await _imageService.uploadProfileImage(
+      if (_paymentProofImage != null) {
+        paymentProof = await _imageService.uploadPaymentImage(
           _paymentProofImage!,
         );
       }

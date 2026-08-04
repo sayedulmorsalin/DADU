@@ -19,6 +19,7 @@ class _ComboPackState extends State<ComboPack> {
   List<Map<String, dynamic>> catagoryProducts = [];
   bool isLoading = true;
   bool isLoadingMore = false;
+  bool hasMore = true;
   int currentPage = 1;
   ScrollController scrollController = ScrollController();
 
@@ -31,7 +32,8 @@ class _ComboPackState extends State<ComboPack> {
       if (scrollController.position.pixels >=
               scrollController.position.maxScrollExtent - 200 &&
           !isLoadingMore &&
-          !isLoading) {
+          !isLoading &&
+          hasMore) {
         fetchMoreProducts();
       }
     });
@@ -39,18 +41,24 @@ class _ComboPackState extends State<ComboPack> {
 
   Future<void> fetchInitialProducts() async {
     currentPage = 1;
+    hasMore = true;
     final products = await apiService.fetchProducts(
       category: bundle,
       limit: 20,
       page: currentPage,
     );
     catagoryProducts = products;
-    if (products.isNotEmpty) currentPage++;
+    if (products.length < 20) {
+      hasMore = false;
+    } else {
+      currentPage++;
+    }
 
     setState(() => isLoading = false);
   }
 
   Future<void> fetchMoreProducts() async {
+    if (isLoadingMore || !hasMore) return;
     setState(() => isLoadingMore = true);
     final moreProducts = await apiService.fetchProducts(
       category: bundle,
@@ -58,6 +66,9 @@ class _ComboPackState extends State<ComboPack> {
       page: currentPage,
     );
 
+    if (moreProducts.isEmpty || moreProducts.length < 20) {
+      hasMore = false;
+    }
     if (moreProducts.isNotEmpty) {
       catagoryProducts.addAll(moreProducts);
       currentPage++;

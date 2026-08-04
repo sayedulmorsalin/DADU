@@ -1,5 +1,6 @@
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class OrderListScreen extends StatefulWidget {
   final String status;
@@ -50,6 +51,8 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
                   // Enrich item with order-level metadata
                   itemMap['_order_id'] = orderMap['order_id'];
                   itemMap['_order_date'] = orderMap['order_date'];
+                  itemMap['paymentMethod'] = orderMap['paymentMethod'] ?? itemMap['paymentMethod'];
+                  itemMap['paymentProof'] = orderMap['paymentProof'] ?? itemMap['paymentProof'];
                   displayedItems.add(itemMap);
                 }
               }
@@ -189,6 +192,8 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
     final price = _safeGetNum(order, 'price') ?? 0;
     final quantity = _safeGetNum(order, 'quantity') ?? 0;
     final total = price * quantity;
+    final paymentProof = _safeGetString(order, 'paymentProof');
+    final paymentMethod = _safeGetString(order, 'paymentMethod');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -343,6 +348,149 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
                   ],
                 ),
               ],
+            ),
+            if ((paymentMethod != null && paymentMethod.isNotEmpty) ||
+                (paymentProof != null && paymentProof.isNotEmpty)) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Payment Method',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          paymentMethod?.toUpperCase() ?? 'N/A',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (paymentProof != null && paymentProof.isNotEmpty) ...[
+                    GestureDetector(
+                      onTap: () => _showPaymentProofDialog(context, paymentProof),
+                      child: Row(
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: const [
+                              Text(
+                                'Payment Proof',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Tap to view',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: AppColors.primary.withOpacity(0.5)),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(5),
+                              child: Image.network(
+                                paymentProof.startsWith('/')
+                                    ? "${dotenv.get('API_BASE_URL', fallback: 'https://api.dadubd.com')}$paymentProof"
+                                    : paymentProof,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.broken_image, size: 20, color: AppColors.error);
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPaymentProofDialog(BuildContext context, String imageUrl) {
+    final fullUrl = imageUrl.startsWith('/')
+        ? "${dotenv.get('API_BASE_URL', fallback: 'https://api.dadubd.com')}$imageUrl"
+        : imageUrl;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Payment Proof Screenshot',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: InteractiveViewer(
+                  child: Image.network(
+                    fullUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Padding(
+                        padding: EdgeInsets.all(32.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                            SizedBox(height: 8),
+                            Text('Failed to load payment proof image'),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
           ],
         ),

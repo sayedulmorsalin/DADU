@@ -1,4 +1,4 @@
-
+import 'dart:io';
 import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/screen/user/cart.dart';
 import 'package:dadu/screen/user/check_out.dart';
@@ -11,8 +11,13 @@ import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../model/cart_model.dart';
 import '../../services/firebase.dart';
+import '../../services/d1.dart';
 import '../authentication/sign_up_2nd.dart';
 import '../authentication/sign_up_first.dart';
 
@@ -67,16 +72,127 @@ class _ProductDetailsState extends State<ProductDetails> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
+  final ApiService _apiService = ApiService();
+  bool _isLoadingReviews = true;
+  Map<String, dynamic>? _reviewsData;
+  bool _isCheckingEligibility = true;
+  Map<String, dynamic>? _eligibilityData;
+
+  bool _showReviewForm = false;
+  int _selectedRating = 5;
+  final TextEditingController _reviewCommentController = TextEditingController();
+  File? _reviewImageFile;
+  bool _isSubmittingReview = false;
+
   @override
   void initState() {
     super.initState();
     selectedSize = null;
+    _loadReviewsAndEligibility();
   }
 
   @override
   void dispose() {
+    _reviewCommentController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadReviewsAndEligibility() async {
+    setState(() {
+      _isLoadingReviews = true;
+      _isCheckingEligibility = true;
+    });
+
+    final reviews = await _apiService.fetchProductReviews(widget.productid);
+    final eligibility = await _apiService.checkReviewEligibility(widget.productid);
+
+    if (mounted) {
+      setState(() {
+        _reviewsData = reviews;
+        _isLoadingReviews = false;
+        _eligibilityData = eligibility;
+        _isCheckingEligibility = false;
+      });
+    }
+  }
+
+  Future<void> _pickReviewImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery, imageQuality: 75);
+      if (image != null) {
+        setState(() {
+          _reviewImageFile = File(image.path);
+        });
+      }
+    } catch (e) {
+      // Handle image pick error silently
+    }
+  }
+
+  Future<void> _submitReview() async {
+    final comment = _reviewCommentController.text.trim();
+    if (comment.isEmpty && _reviewImageFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please write a comment or add an image')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmittingReview = true;
+    });
+
+    try {
+      String? uploadedImageUrl;
+      if (_reviewImageFile != null) {
+        uploadedImageUrl = await _apiService.uploadReviewImage(_reviewImageFile!);
+      }
+
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final userName = currentUser?.displayName ?? currentUser?.email?.split('@')[0] ?? 'Buyer';
+
+      final result = await _apiService.submitProductReview(
+        widget.productid,
+        rating: _selectedRating,
+        comment: comment,
+        imageUrl: uploadedImageUrl,
+        userName: userName,
+      );
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Thank you! Your review has been published.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _reviewCommentController.clear();
+        setState(() {
+          _reviewImageFile = null;
+          _showReviewForm = false;
+        });
+        await _loadReviewsAndEligibility();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['error'] ?? 'Failed to submit review'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmittingReview = false;
+        });
+      }
+    }
   }
 
   void _launchURL(String url) async {
@@ -100,18 +216,14 @@ class _ProductDetailsState extends State<ProductDetails> {
     FileDownloader.downloadFile(
       url: url,
       name: "dadu_${DateTime.now().millisecondsSinceEpoch}.jpg",
-
       downloadDestination: DownloadDestinations.publicDownloads,
       subPath: "Dadu",
-
       onProgress: (String? fileName, double progress) {},
-
       onDownloadCompleted: (String path) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text("Saved to: $path")));
       },
-
       onDownloadError: (String errorMessage) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Download error: $errorMessage")),
@@ -125,7 +237,11 @@ class _ProductDetailsState extends State<ProductDetails> {
       return const SizedBox.shrink();
     }
 
-    List<String> sizes = widget.size.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+    List<String> sizes = widget.size
+        .split(',')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
     if (sizes.isEmpty) return const SizedBox.shrink();
 
     return SingleChildScrollView(
@@ -143,7 +259,8 @@ class _ProductDetailsState extends State<ProductDetails> {
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected ? Colors.black : Colors.white,
                   borderRadius: BorderRadius.circular(12),
@@ -174,7 +291,8 @@ class _ProductDetailsState extends State<ProductDetails> {
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
-  bool get _isSizeRequired => widget.size.isNotEmpty && widget.size.toLowerCase() != "no size";
+  bool get _isSizeRequired =>
+      widget.size.isNotEmpty && widget.size.toLowerCase() != "no size";
 
   void _addToCart() async {
     if (_isSizeRequired && selectedSize == null) {
@@ -228,7 +346,8 @@ class _ProductDetailsState extends State<ProductDetails> {
           }
 
           if (cartItems.containsKey(productId)) {
-            Map<String, dynamic> sizeMap = Map<String, dynamic>.from(cartItems[productId] is Map ? cartItems[productId] : {});
+            Map<String, dynamic> sizeMap = Map<String, dynamic>.from(
+                cartItems[productId] is Map ? cartItems[productId] : {});
 
             if (sizeMap.containsKey(size)) {
               int currentQty = int.tryParse(sizeMap[size].toString()) ?? 0;
@@ -312,7 +431,9 @@ class _ProductDetailsState extends State<ProductDetails> {
           return;
         } else {
           double priceValue = _parsePrice(widget.price);
-          double deliveryFeeValue = double.tryParse(widget.deliveryFee.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0.0;
+          double deliveryFeeValue = double.tryParse(
+                  widget.deliveryFee.replaceAll(RegExp(r'[^\d.]'), '')) ??
+              0.0;
           List<CartItem> checkoutItems = [
             CartItem(
               id: widget.productid,
@@ -330,11 +451,10 @@ class _ProductDetailsState extends State<ProductDetails> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder:
-                  (context) => CheckOut(
-                    cartItems: checkoutItems,
-                    totalAmount: priceValue,
-                  ),
+              builder: (context) => CheckOut(
+                cartItems: checkoutItems,
+                totalAmount: priceValue,
+              ),
             ),
           );
         }
@@ -407,7 +527,7 @@ class _ProductDetailsState extends State<ProductDetails> {
     List<String> images = [];
 
     // Adding images in order: Image Three, Two, One (image20)
-    // This handles the user's request to "reverse it" while maintaining 
+    // This handles the user's request to "reverse it" while maintaining
     // the exclusion of the primary image (image5).
     if (widget.imageThree.isNotEmpty) images.add(widget.imageThree);
     if (widget.imageTwo.isNotEmpty) images.add(widget.imageTwo);
@@ -495,7 +615,8 @@ class _ProductDetailsState extends State<ProductDetails> {
                                       });
                                     },
                                     itemBuilder: (context, index) {
-                                      return Image.network(images[index], fit: BoxFit.cover);
+                                      return Image.network(images[index],
+                                          fit: BoxFit.cover);
                                     },
                                   )
                                 : Image.network(
@@ -507,7 +628,8 @@ class _ProductDetailsState extends State<ProductDetails> {
                             : Container(
                                 color: Colors.grey[200],
                                 child: const Center(
-                                  child: Icon(Icons.image, size: 100, color: Colors.grey),
+                                  child: Icon(Icons.image,
+                                      size: 100, color: Colors.grey),
                                 ),
                               ),
                         if (images.length > 1)
@@ -515,7 +637,8 @@ class _ProductDetailsState extends State<ProductDetails> {
                             top: 100,
                             right: 20,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: Colors.black.withValues(alpha: 0.4),
                                 borderRadius: BorderRadius.circular(20),
@@ -540,7 +663,8 @@ class _ProductDetailsState extends State<ProductDetails> {
                     width: double.infinity,
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(30)),
                     ),
                     padding: const EdgeInsets.fromLTRB(20, 30, 20, 100),
                     child: Column(
@@ -562,21 +686,27 @@ class _ProductDetailsState extends State<ProductDetails> {
                                       onTap: () {
                                         _pageController.animateToPage(
                                           index,
-                                          duration: const Duration(milliseconds: 300),
+                                          duration:
+                                              const Duration(milliseconds: 300),
                                           curve: Curves.easeInOut,
                                         );
                                       },
                                       child: Container(
-                                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 8),
                                         decoration: BoxDecoration(
                                           border: Border.all(
-                                            color: isSelected ? Colors.black : Colors.transparent,
+                                            color: isSelected
+                                                ? Colors.black
+                                                : Colors.transparent,
                                             width: 2,
                                           ),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius:
+                                              BorderRadius.circular(8),
                                         ),
                                         child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
                                           child: Image.network(
                                             images[index],
                                             width: 60,
@@ -648,11 +778,13 @@ class _ProductDetailsState extends State<ProductDetails> {
                               decoration: BoxDecoration(
                                 color: Colors.orange.shade50,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.orange.shade200),
+                                border:
+                                    Border.all(color: Colors.orange.shade200),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.stars, color: Colors.orange, size: 16),
+                                  const Icon(Icons.stars,
+                                      color: Colors.orange, size: 16),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Cash back ${widget.goldCoin.toStringAsFixed(0)}',
@@ -695,7 +827,8 @@ class _ProductDetailsState extends State<ProductDetails> {
                         const SizedBox(height: 25),
                         _buildVideoSection(),
                         const SizedBox(height: 25),
-                        if (widget.size.isNotEmpty && widget.size != "no size") ...[
+                        if (widget.size.isNotEmpty &&
+                            widget.size != "no size") ...[
                           const SizedBox(height: 25),
                           _buildSizeSection(_buildDynamicSizeButtons()),
                         ],
@@ -710,7 +843,9 @@ class _ProductDetailsState extends State<ProductDetails> {
                             color: Colors.grey.shade800,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 30),
+                        _buildReviewsSection(),
+                        const SizedBox(height: 30),
                       ],
                     ),
                   ),
@@ -739,7 +874,8 @@ class _ProductDetailsState extends State<ProductDetails> {
   Widget _buildVideoSection() {
     return InkWell(
       onTap: () {
-        if (widget.videoLink == "No videoLink available" || widget.videoLink.isEmpty) {
+        if (widget.videoLink == "No videoLink available" ||
+            widget.videoLink.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Video is not available now')),
           );
@@ -770,7 +906,10 @@ class _ProductDetailsState extends State<ProductDetails> {
               children: [
                 Text(
                   "Product Video",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.red),
                 ),
                 Text(
                   "Watch for more details",
@@ -817,14 +956,16 @@ class _ProductDetailsState extends State<ProductDetails> {
         child: Row(
           children: [
             InkWell(
-              onTap: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Cart())),
+              onTap: () => Navigator.pushReplacement(
+                  context, MaterialPageRoute(builder: (context) => Cart())),
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.shopping_cart_outlined, color: Colors.black),
+                child: const Icon(Icons.shopping_cart_outlined,
+                    color: Colors.black),
               ),
             ),
             const SizedBox(width: 12),
@@ -836,10 +977,13 @@ class _ProductDetailsState extends State<ProductDetails> {
                   backgroundColor: Colors.orange.shade400,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                child: const Text('Add to Cart', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text('Add to Cart',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
             const SizedBox(width: 12),
@@ -851,10 +995,13 @@ class _ProductDetailsState extends State<ProductDetails> {
                   backgroundColor: Colors.black,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   elevation: 0,
                 ),
-                child: const Text('Buy Now', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text('Buy Now',
+                    style:
+                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               ),
             ),
           ],
@@ -873,5 +1020,438 @@ class _ProductDetailsState extends State<ProductDetails> {
         child: const Icon(Icons.message, color: Colors.black),
       ),
     );
+  }
+
+  Widget _buildReviewsSection() {
+    final double avgRating = (_reviewsData?['averageRating'] ?? 0.0).toDouble();
+    final int totalReviews = _reviewsData?['totalReviews'] ?? 0;
+    final Map<String, dynamic> starBreakdown = Map<String, dynamic>.from(_reviewsData?['starBreakdown'] ?? {});
+    final List<dynamic> reviewsList = _reviewsData?['reviews'] as List<dynamic>? ?? [];
+
+    final bool isEligible = _eligibilityData?['eligible'] == true;
+    final bool hasReviewed = _eligibilityData?['hasReviewed'] == true;
+    final String ineligibleReason = _eligibilityData?['reason'] ?? 'Only verified buyers of delivered orders can write a review.';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildSectionTitle("Customer Reviews"),
+            if (totalReviews > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.amber, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$avgRating ($totalReviews)',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Rating Overview Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            children: [
+              // Left: Big Rating Number
+              Column(
+                children: [
+                  Text(
+                    avgRating > 0 ? avgRating.toStringAsFixed(1) : "0.0",
+                    style: const TextStyle(fontSize: 38, fontWeight: FontWeight.bold, color: Colors.black87),
+                  ),
+                  Row(
+                    children: List.generate(5, (index) {
+                      return Icon(
+                        index < avgRating.floor()
+                            ? Icons.star
+                            : (index < avgRating ? Icons.star_half : Icons.star_border),
+                        color: Colors.amber,
+                        size: 16,
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "$totalReviews ${totalReviews == 1 ? 'review' : 'reviews'}",
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 20),
+              // Right: Star distribution bars
+              Expanded(
+                child: Column(
+                  children: List.generate(5, (idx) {
+                    final starNum = 5 - idx;
+                    final count = (starBreakdown[starNum.toString()] ?? starBreakdown[starNum] ?? 0) as int;
+                    final ratio = totalReviews > 0 ? (count / totalReviews) : 0.0;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: Row(
+                        children: [
+                          Text('$starNum', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          const Icon(Icons.star, size: 12, color: Colors.amber),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: ratio,
+                                minHeight: 6,
+                                backgroundColor: Colors.grey.shade200,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.amber.shade600),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 20,
+                            child: Text(
+                              '$count',
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                              textAlign: TextAlign.end,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Eligibility / Review Posting Form Banner
+        if (_isCheckingEligibility)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8.0),
+            child: SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+          )
+        else if (hasReviewed)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.green.shade200),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 20),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "You have submitted a review for this product. Thank you!",
+                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (isEligible)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!_showReviewForm)
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _showReviewForm = true;
+                    });
+                  },
+                  icon: const Icon(Icons.rate_review, color: Colors.white),
+                  label: const Text('Write a Review', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.orange.shade300, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Write Your Review",
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 20),
+                            onPressed: () {
+                              setState(() {
+                                _showReviewForm = false;
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text("Rating", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey)),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: List.generate(5, (index) {
+                          final starVal = index + 1;
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _selectedRating = starVal;
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: Icon(
+                                starVal <= _selectedRating ? Icons.star : Icons.star_border,
+                                color: Colors.amber,
+                                size: 32,
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _reviewCommentController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: "Share details of your experience with this product...",
+                          hintStyle: TextStyle(fontSize: 14, color: Colors.grey.shade400),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Colors.black),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: _pickReviewImage,
+                            icon: const Icon(Icons.add_a_photo, size: 18),
+                            label: Text(_reviewImageFile != null ? "Change Photo" : "Add Photo"),
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          if (_reviewImageFile != null)
+                            Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(_reviewImageFile!, width: 44, height: 44, fit: BoxFit.cover),
+                                ),
+                                Positioned(
+                                  top: -4,
+                                  right: -4,
+                                  child: GestureDetector(
+                                    onTap: () => setState(() => _reviewImageFile = null),
+                                    child: Container(
+                                      decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                      child: const Icon(Icons.close, size: 14, color: Colors.white),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _isSubmittingReview ? null : _submitReview,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange.shade500,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: _isSubmittingReview
+                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Text("Submit Review", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.lock_outline, color: Colors.grey.shade700, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    ineligibleReason,
+                    style: TextStyle(color: Colors.grey.shade800, fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        const SizedBox(height: 20),
+
+        // Reviews List
+        if (_isLoadingReviews)
+          const Center(child: CircularProgressIndicator())
+        else if (reviewsList.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0),
+            child: Text(
+              "No reviews yet. Be the first to review this product!",
+              style: TextStyle(color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: reviewsList.length,
+            separatorBuilder: (context, index) => const Divider(height: 24),
+            itemBuilder: (context, index) {
+              final rev = reviewsList[index];
+              final String userName = rev['userName'] ?? 'Customer';
+              final int rating = parseIntSafe(rev['rating']);
+              final String comment = rev['comment'] ?? '';
+              final String? rawImg = rev['imageUrl'];
+              final String? imgUrl = (rawImg != null && rawImg.isNotEmpty)
+                  ? ApiService.resolveUrl(rawImg)
+                  : null;
+              final String dateStr = rev['createdAt'] ?? '';
+
+              String formattedDate = '';
+              if (dateStr.isNotEmpty) {
+                try {
+                  final dt = DateTime.parse(dateStr).toLocal();
+                  formattedDate = DateFormat('MMM dd, yyyy').format(dt);
+                } catch (_) {}
+              }
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.blue.shade100,
+                        child: Text(
+                          userName.substring(0, 1).toUpperCase(),
+                          style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Row(
+                              children: List.generate(5, (starIdx) {
+                                return Icon(
+                                  starIdx < rating ? Icons.star : Icons.star_border,
+                                  color: Colors.amber,
+                                  size: 14,
+                                );
+                              }),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (formattedDate.isNotEmpty)
+                        Text(formattedDate, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+                    ],
+                  ),
+                  if (comment.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(comment, style: TextStyle(fontSize: 14, color: Colors.grey.shade800, height: 1.4)),
+                  ],
+                  if (imgUrl != null) ...[
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => Dialog(
+                            child: CachedNetworkImage(imageUrl: imgUrl, fit: BoxFit.contain),
+                          ),
+                        );
+                      },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: CachedNetworkImage(
+                          imageUrl: imgUrl,
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Container(width: 100, height: 100, color: Colors.grey.shade200),
+                          errorWidget: (context, url, error) => const Icon(Icons.error),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  int parseIntSafe(dynamic val) {
+    if (val is int) return val;
+    if (val is String) return int.tryParse(val) ?? 5;
+    return 5;
   }
 }

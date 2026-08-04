@@ -22,6 +22,7 @@ class _CatagoryState extends State<Catagory> {
   List<Map<String, dynamic>> catagoryProducts = [];
   bool isLoading = true;
   bool isLoadingMore = false;
+  bool hasMore = true;
   int currentPage = 1;
   String? selectedBrand;
   String? selectedSubCatagory;
@@ -44,7 +45,8 @@ class _CatagoryState extends State<Catagory> {
       if (scrollController.position.pixels >=
               scrollController.position.maxScrollExtent - 200 &&
           !isLoadingMore &&
-          !isLoading) {
+          !isLoading &&
+          hasMore) {
         fetchMoreProducts();
       }
     });
@@ -54,6 +56,7 @@ class _CatagoryState extends State<Catagory> {
     setState(() {
       isLoading = true;
       currentPage = 1;
+      hasMore = true;
     });
 
     String? categoryFilter;
@@ -73,12 +76,17 @@ class _CatagoryState extends State<Catagory> {
       page: currentPage,
     );
     catagoryProducts = products;
-    if (products.isNotEmpty) currentPage++;
+    if (products.length < 20) {
+      hasMore = false;
+    } else {
+      currentPage++;
+    }
 
     setState(() => isLoading = false);
   }
 
   Future<void> fetchMoreProducts() async {
+    if (isLoadingMore || !hasMore) return;
     setState(() => isLoadingMore = true);
 
     String? categoryFilter;
@@ -98,6 +106,9 @@ class _CatagoryState extends State<Catagory> {
       page: currentPage,
     );
 
+    if (moreProducts.isEmpty || moreProducts.length < 20) {
+      hasMore = false;
+    }
     if (moreProducts.isNotEmpty) {
       catagoryProducts.addAll(moreProducts);
       currentPage++;

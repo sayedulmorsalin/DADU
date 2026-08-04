@@ -16,7 +16,7 @@ publish_to: 'Googole play store' # Remove this line if you wish to publish to pu
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.3+29
+version: 1.0.3+31
 
 environment:
   sdk: ^3.7.0
@@ -61,6 +61,10 @@ dependencies:
   in_app_update: ^4.2.5
   app_links: ^6.3.2
   share_plus: ^13.2.0
+  web_socket_channel: ^3.0.1
+  record: ^6.2.1
+  audioplayers: ^6.7.1
+  http_parser: ^4.1.2
 
 
 

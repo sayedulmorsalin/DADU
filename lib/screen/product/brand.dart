@@ -19,6 +19,7 @@ class _BrandState extends State<Brand> {
   List<Map<String, dynamic>> brandProducts = [];
   bool isLoading = true;
   bool isLoadingMore = false;
+  bool hasMore = true;
   int currentPage = 1;
   ScrollController scrollController = ScrollController();
 
@@ -31,7 +32,8 @@ class _BrandState extends State<Brand> {
       if (scrollController.position.pixels >=
               scrollController.position.maxScrollExtent - 200 &&
           !isLoadingMore &&
-          !isLoading) {
+          !isLoading &&
+          hasMore) {
         fetchMoreProducts();
       }
     });
@@ -41,6 +43,7 @@ class _BrandState extends State<Brand> {
     setState(() {
       isLoading = true;
       currentPage = 1;
+      hasMore = true;
     });
 
     final products = await apiService.fetchProducts(
@@ -49,12 +52,17 @@ class _BrandState extends State<Brand> {
       page: currentPage,
     );
     brandProducts = products;
-    if (products.isNotEmpty) currentPage++;
+    if (products.length < 20) {
+      hasMore = false;
+    } else {
+      currentPage++;
+    }
 
     setState(() => isLoading = false);
   }
 
   Future<void> fetchMoreProducts() async {
+    if (isLoadingMore || !hasMore) return;
     setState(() => isLoadingMore = true);
 
     final moreProducts = await apiService.fetchProducts(
@@ -63,6 +71,9 @@ class _BrandState extends State<Brand> {
       page: currentPage,
     );
 
+    if (moreProducts.isEmpty || moreProducts.length < 20) {
+      hasMore = false;
+    }
     if (moreProducts.isNotEmpty) {
       brandProducts.addAll(moreProducts);
       currentPage++;
