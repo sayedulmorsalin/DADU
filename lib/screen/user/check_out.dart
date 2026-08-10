@@ -32,6 +32,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _refundPhoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
   String _paymentMethod = 'bkash';
@@ -54,6 +55,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   bool _versionCheckLoading = true;
   Map<String, dynamic>? _paymentDetails;
   bool _paymentNumberLoading = false;
+  bool _hasPendingOrder = false;
 
   final Auth _auth = Auth();
   final ImageService _imageService = ImageService();
@@ -66,6 +68,21 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     _loadUserAddress();
     _loadPaymentNumber();
     _refreshVersionRequirement();
+    _checkPendingOrderStatus();
+  }
+
+  Future<void> _checkPendingOrderStatus() async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser?.email != null) {
+        final hasPending = await db.hasPendingOrder(currentUser!.email!);
+        if (mounted) {
+          setState(() {
+            _hasPendingOrder = hasPending;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -123,6 +140,8 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
         setState(() {
           _nameController.text = userDetails['name'] ?? '';
           _phoneController.text = userDetails['phone'] ?? '';
+          _refundPhoneController.text =
+              userDetails['refundPhone'] ?? userDetails['phone'] ?? '';
           _addressController.text = userDetails['address'] ?? '';
           selectedDistrict = userDetails['district'];
           selectedThana = userDetails['thana'];
@@ -266,6 +285,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _nameController.dispose();
     _phoneController.dispose();
+    _refundPhoneController.dispose();
     _addressController.dispose();
     _noteController.dispose();
     super.dispose();
@@ -297,6 +317,31 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
       return;
     }
 
+    final currentUserForCheck = _auth.currentUser;
+    if (currentUserForCheck?.email != null) {
+      final hasPending = await db.hasPendingOrder(currentUserForCheck!.email!);
+      if (hasPending) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Order In Progress'),
+              content: const Text(
+                'You currently have an active order in progress (Verify, Shipping, or To Receive).\n\nYou cannot place a new order until your current order is delivered.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    }
+
     setState(() => _isProcessing = true);
 
     try {
@@ -326,6 +371,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
             'customerName': _nameController.text,
             'customerEmail': currentUser.email,
             'phone': _phoneController.text,
+            'refundPhone': _refundPhoneController.text.trim(),
             'address': _addressController.text,
             'note': _noteController.text.trim(),
             'district': selectedDistrict ?? '',
@@ -434,6 +480,46 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     );
   }
 
+  InputDecoration _modernInputDecoration({
+    required String labelText,
+    required IconData prefixIcon,
+    String? hintText,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      prefixIcon: Icon(prefixIcon, color: AppColors.primary, size: 22),
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      labelStyle: TextStyle(
+        color: Colors.grey.shade700,
+        fontWeight: FontWeight.w500,
+        fontSize: 15,
+      ),
+      hintStyle: TextStyle(
+        color: Colors.grey.shade400,
+        fontSize: 14,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: const BorderSide(color: AppColors.error, width: 2),
+      ),
+    );
+  }
+
   Widget _buildShippingForm() {
     return Form(
       key: _formKey,
@@ -441,10 +527,10 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
         children: [
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(
+            decoration: _modernInputDecoration(
               labelText: 'Full Name',
-              prefixIcon: Icon(Icons.person),
-              border: OutlineInputBorder(),
+              prefixIcon: Icons.person_outline_rounded,
+              hintText: 'Enter your full name',
             ),
             validator:
                 (value) =>
@@ -452,13 +538,13 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                         ? 'Please enter your name'
                         : null,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           TextFormField(
             controller: _phoneController,
-            decoration: const InputDecoration(
-              labelText: 'Phone number',
-              prefixIcon: Icon(Icons.phone),
-              border: OutlineInputBorder(),
+            decoration: _modernInputDecoration(
+              labelText: 'Phone Number',
+              prefixIcon: Icons.phone_outlined,
+              hintText: 'e.g. 01700000000',
             ),
             keyboardType: TextInputType.phone,
             validator: (value) {
@@ -471,14 +557,35 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
               return null;
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _refundPhoneController,
+            decoration: _modernInputDecoration(
+              labelText: 'Refund Number (পণ্য না থাকলে টাকা ফেরতের নম্বর)',
+              prefixIcon: Icons.currency_exchange_rounded,
+              hintText: 'e.g. 01700000000',
+            ),
+            keyboardType: TextInputType.phone,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter refund number (রিফান্ড নম্বর দিন)';
+              }
+              if (value.length != 11) {
+                return "Please enter a valid 11-digit number";
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             value: selectedDistrict,
-            decoration: const InputDecoration(
+            decoration: _modernInputDecoration(
               labelText: 'District',
-              prefixIcon: Icon(Icons.location_city),
-              border: OutlineInputBorder(),
+              prefixIcon: Icons.location_city_outlined,
+              hintText: 'Select your district',
             ),
+            dropdownColor: Colors.white,
+            borderRadius: BorderRadius.circular(14),
             validator:
                 (value) =>
                     value == null || value.isEmpty
@@ -500,15 +607,17 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                   _calculateDeliveryCharge();
                 }),
           ),
-          const SizedBox(height: 12),
-          if (thanaList.isNotEmpty)
+          if (thanaList.isNotEmpty) ...[
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: selectedThana,
-              decoration: const InputDecoration(
-                labelText: 'Thana/Upozila',
-                prefixIcon: Icon(Icons.location_on),
-                border: OutlineInputBorder(),
+              decoration: _modernInputDecoration(
+                labelText: 'Thana / Upozila',
+                prefixIcon: Icons.location_on_outlined,
+                hintText: 'Select your thana',
               ),
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(14),
               validator:
                   (value) =>
                       value == null || value.isEmpty
@@ -524,13 +633,14 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                     _calculateDeliveryCharge();
                   }),
             ),
-          const SizedBox(height: 12),
+          ],
+          const SizedBox(height: 16),
           TextFormField(
             controller: _addressController,
-            decoration: const InputDecoration(
+            decoration: _modernInputDecoration(
               labelText: 'Address',
-              prefixIcon: Icon(Icons.home),
-              border: OutlineInputBorder(),
+              prefixIcon: Icons.home_outlined,
+              hintText: 'House no., street, area details',
             ),
             validator:
                 (value) =>
@@ -538,13 +648,12 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                         ? 'Please enter your address'
                         : null,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           TextFormField(
             controller: _noteController,
-            decoration: const InputDecoration(
+            decoration: _modernInputDecoration(
               labelText: 'Order Note (Optional)',
-              prefixIcon: Icon(Icons.note_add),
-              border: OutlineInputBorder(),
+              prefixIcon: Icons.edit_note_rounded,
               hintText: 'Add instructions (e.g., color, preferred time)',
             ),
             maxLines: 3,
@@ -557,90 +666,295 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   bool get _canUseCoinDiscount => deliveryPoints >= 10;
 
   Widget _buildCoinDiscountButton() {
-    if (_canUseCoinDiscount) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: ElevatedButton(
-          onPressed: _toggleCoinDiscount,
-          style: ElevatedButton.styleFrom(
-            backgroundColor:
-                _coinDiscountSelected
-                    ? AppColors.success
-                    : Theme.of(context).primaryColor,
-            minimumSize: const Size(double.infinity, 50),
+    if (!_canUseCoinDiscount) return const SizedBox.shrink();
+
+    final bool selected = _coinDiscountSelected;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                )
+              : const LinearGradient(
+                  colors: [Color(0xFFFFF8E1), Color(0xFFFFECB3)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+          border: Border.all(
+            color: selected ? Colors.transparent : Colors.amber.shade700,
+            width: 1.5,
           ),
-          child: Text(
-            _coinDiscountSelected
-                ? 'Dadu Coin Discount Applied! (-৳${_coinDiscountAmount.toStringAsFixed(2)})'
-                : 'Use Dadu Coins for Discount (Balance: ${deliveryPoints.toStringAsFixed(0)} coins)',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textOnPrimary,
+          boxShadow: [
+            BoxShadow(
+              color: (selected ? Colors.green : Colors.amber).withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
-            textAlign: TextAlign.center,
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _toggleCoinDiscount,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? Colors.white.withValues(alpha: 0.25)
+                          : Colors.amber.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      selected ? Icons.check_circle_rounded : Icons.monetization_on_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          selected
+                              ? 'Dadu Coin Discount Applied!'
+                              : 'Use Dadu Coins for Discount',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: selected ? Colors.white : Colors.amber.shade900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          selected
+                              ? '-৳${_coinDiscountAmount.toStringAsFixed(2)} savings'
+                              : 'Balance: ${deliveryPoints.toStringAsFixed(0)} coins',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: selected ? Colors.white.withValues(alpha: 0.9) : Colors.brown.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : Colors.amber.shade800.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      selected ? Icons.done_all_rounded : Icons.add_circle_outline_rounded,
+                      color: selected ? Colors.white : Colors.amber.shade900,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      );
-    }
-    return const SizedBox();
+      ),
+    );
   }
 
   Widget _buildFreeDeliveryButton() {
-    if (_canUseFreeDelivery) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 16, bottom: 16),
-        child: ElevatedButton(
-          onPressed: _toggleFreeDelivery,
-          style: ElevatedButton.styleFrom(
-            backgroundColor:
-                _freeDeliverySelected
-                    ? AppColors.success
-                    : Theme.of(context).primaryColor,
-            minimumSize: const Size(double.infinity, 50),
+    if (!_canUseFreeDelivery) return const SizedBox.shrink();
+
+    final bool selected = _freeDeliverySelected;
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 14),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: selected
+              ? const LinearGradient(
+                  colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                )
+              : const LinearGradient(
+                  colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+          border: Border.all(
+            color: selected ? Colors.transparent : Colors.green.shade700,
+            width: 1.5,
           ),
-          child: Text(
-            _freeDeliverySelected
-                ? 'Free Delivery Applied! Remaining Points: ${(deliveryPoints - _freeDeliveryCost).toStringAsFixed(2)}'
-                : 'Use Free Delivery (Cost: ${_freeDeliveryCost.toStringAsFixed(0)} points)',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textOnPrimary,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.green.withValues(alpha: 0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
-            textAlign: TextAlign.center,
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _toggleFreeDelivery,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? Colors.white.withValues(alpha: 0.25)
+                          : Colors.green.shade700,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      selected ? Icons.verified_rounded : Icons.local_shipping_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          selected ? 'Free Delivery Applied!' : 'Use Free Delivery',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: selected ? Colors.white : Colors.green.shade900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          selected
+                              ? 'Remaining Points: ${(deliveryPoints - _freeDeliveryCost).toStringAsFixed(2)}'
+                              : 'Cost: ${_freeDeliveryCost.toStringAsFixed(0)} points',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: selected ? Colors.white.withValues(alpha: 0.9) : Colors.green.shade800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : Colors.green.shade800.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      selected ? Icons.done_all_rounded : Icons.add_circle_outline_rounded,
+                      color: selected ? Colors.white : Colors.green.shade900,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
-      );
-    }
-    return const SizedBox();
+      ),
+    );
   }
 
   Widget _buildPaymentMethodSection() {
-    return Column(
-      children: [
-        RadioListTile(
-          title: const Text('Bkash'),
-          value: 'bkash',
-          groupValue: _paymentMethod,
-          onChanged:
-              (value) => setState(() => _paymentMethod = value.toString()),
-        ),
-        RadioListTile(
-          title: const Text('Nagad'),
-          value: 'nagad',
-          groupValue: _paymentMethod,
-          onChanged:
-              (value) => setState(() => _paymentMethod = value.toString()),
-        ),
-        RadioListTile(
-          title: const Text('Rocket'),
-          value: 'rocket',
-          groupValue: _paymentMethod,
-          onChanged:
-              (value) => setState(() => _paymentMethod = value.toString()),
-        ),
-      ],
+    final methods = [
+      {
+        'id': 'bkash',
+        'name': 'bKash',
+        'icon': Icons.account_balance_wallet_rounded,
+        'color': const Color(0xFFE2136E)
+      },
+      {
+        'id': 'nagad',
+        'name': 'Nagad',
+        'icon': Icons.account_balance_wallet_rounded,
+        'color': const Color(0xFFF7921E)
+      },
+      {
+        'id': 'rocket',
+        'name': 'Rocket',
+        'icon': Icons.account_balance_wallet_rounded,
+        'color': const Color(0xFF8C3494)
+      },
+    ];
+
+    return Row(
+      children: methods.map((method) {
+        final bool isSelected = _paymentMethod == method['id'];
+        final Color brandColor = method['color'] as Color;
+
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _paymentMethod = method['id'] as String),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? brandColor.withValues(alpha: 0.1)
+                    : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isSelected ? brandColor : Colors.grey.shade300,
+                  width: isSelected ? 2 : 1,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: brandColor.withValues(alpha: 0.15),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isSelected ? Icons.check_circle_rounded : (method['icon'] as IconData),
+                    color: isSelected ? brandColor : Colors.grey.shade600,
+                    size: 24,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    method['name'] as String,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      color: isSelected ? brandColor : Colors.black87,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -649,8 +963,8 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Payment Proof( upload screenshoot of Delivery charge ) (আপনার পাঠানো ডেলিভারি চার্জের স্ক্রিনশট আপলোড করুন)',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          'Payment Proof ( upload screenshot of Delivery charge ) (আপনার পাঠানো ডেলিভারি চার্জের স্ক্রিনশট আপলোড করুন)',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         _paymentProofImage != null
@@ -659,10 +973,13 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.textSecondary),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.3)),
                   ),
-                  child: Image.file(_paymentProofImage!, fit: BoxFit.contain),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(_paymentProofImage!, fit: BoxFit.contain),
+                  ),
                 ),
                 Positioned(
                   top: 8,
@@ -671,9 +988,10 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                     radius: 16,
                     backgroundColor: AppColors.error,
                     child: IconButton(
+                      padding: EdgeInsets.zero,
                       icon: const Icon(
                         Icons.close,
-                        size: 16,
+                        size: 18,
                         color: AppColors.textOnPrimary,
                       ),
                       onPressed: _removePaymentProof,
@@ -682,16 +1000,18 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                 ),
               ],
             )
-            : GestureDetector(
+            : InkWell(
                 onTap: _pickPaymentProof,
+                borderRadius: BorderRadius.circular(16),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 30),
+                  padding: const EdgeInsets.symmetric(vertical: 24),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceGrey, // Changed to a lighter theme-consistent color
-                    borderRadius: BorderRadius.circular(20),
+                    color: AppColors.surfaceGrey.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: AppColors.textSecondary.withOpacity(0.2),
+                      color: AppColors.primary.withValues(alpha: 0.4),
+                      width: 1.5,
                     ),
                   ),
                   child: Column(
@@ -699,21 +1019,21 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.placeholderBackground,
-                          borderRadius: BorderRadius.circular(15),
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
                         ),
                         child: const Icon(
-                          Icons.file_upload_outlined,
-                          color: AppColors.iconAccent,
+                          Icons.cloud_upload_outlined,
+                          color: AppColors.primary,
                           size: 32,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       const Text(
-                        'Upload Image',
+                        'Upload Payment Proof Screenshot',
                         style: TextStyle(
                           color: AppColors.textPrimary,
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -872,6 +1192,37 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildPendingOrderBanner() {
+    if (!_hasPendingOrder) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.error.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.error, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'You have an active order in progress (Verify / Shipping / To Receive). You cannot place a new order until your current order is delivered.',
+              style: TextStyle(
+                color: Colors.red.shade900,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -889,6 +1240,7 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildPendingOrderBanner(),
             const Text(
               'Delivery Information',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -927,22 +1279,46 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.copy, size: 20),
-                      onPressed:
-                          (_paymentNumberLoading ||
-                                  _getDisplayNumber() == "Not available")
-                              ? null
-                              : () {
-                                Clipboard.setData(
-                                  ClipboardData(text: _getDisplayNumber()),
-                                );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Number copied'),
-                                  ),
-                                );
-                              },
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: (_paymentNumberLoading ||
+                              _getDisplayNumber() == "Not available")
+                          ? null
+                          : () {
+                            Clipboard.setData(
+                              ClipboardData(text: _getDisplayNumber()),
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Number copied'),
+                              ),
+                            );
+                          },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.copy_rounded,
+                                size: 16, color: AppColors.primary),
+                            SizedBox(width: 4),
+                            Text(
+                              'Copy',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -961,37 +1337,89 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
                 _buildPaymentProofSection(),
             ],
 
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed:
-                    (_isProcessing || _versionCheckLoading || needupdate)
+            const SizedBox(height: 24),
+            Builder(
+              builder: (context) {
+                final bool isDisabled =
+                    _isProcessing || _versionCheckLoading || needupdate || _hasPendingOrder;
+                final String buttonText = needupdate
+                    ? 'UPDATE APP TO ORDER'
+                    : _hasPendingOrder
+                    ? 'ORDER IN PROGRESS'
+                    : _versionCheckLoading
+                    ? 'CHECKING APP VERSION...'
+                    : 'PLACE ORDER';
+
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: double.infinity,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: isDisabled
                         ? null
-                        : _submitOrder,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child:
-                    _isProcessing
-                        ? const CircularProgressIndicator(
-                          color: AppColors.textOnPrimary,
-                        )
-                        : Text(
-                          needupdate
-                              ? 'UPDATE APP TO ORDER'
-                              : _versionCheckLoading
-                              ? 'CHECKING APP VERSION...'
-                              : 'PLACE ORDER',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: AppColors.textOnPrimary,
+                        : const LinearGradient(
+                            colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
                           ),
-                        ),
-              ),
+                    color: isDisabled ? Colors.grey.shade300 : null,
+                    boxShadow: isDisabled
+                        ? []
+                        : [
+                            BoxShadow(
+                              color: Colors.orange.withValues(alpha: 0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: isDisabled ? null : _submitOrder,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Center(
+                        child: _isProcessing
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: AppColors.textOnPrimary,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    needupdate
+                                        ? Icons.system_update_rounded
+                                        : Icons.shopping_bag_outlined,
+                                    color: isDisabled
+                                        ? Colors.grey.shade600
+                                        : AppColors.textOnPrimary,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    buttonText,
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.8,
+                                      color: isDisabled
+                                          ? Colors.grey.shade600
+                                          : AppColors.textOnPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),

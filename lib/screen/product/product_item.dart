@@ -1,12 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:dadu/screen/authentication/sign_up_first.dart';
-import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:dadu/screen/product/product_details.dart';
-import 'package:dadu/services/auth.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
-
-import '../../services/firebase.dart';
 
 class ProductItem extends StatelessWidget {
   final String productId;
@@ -26,8 +21,6 @@ class ProductItem extends StatelessWidget {
   final int stock;
   final String deliveryFee;
   final dynamic createdAt;
-
-  final dataBase db = dataBase();
 
   ProductItem({
     super.key,
@@ -50,75 +43,31 @@ class ProductItem extends StatelessWidget {
     this.createdAt,
   });
 
-  void _addToCart(BuildContext context) async {
-    final Auth auth = Auth();
-    final currentUser = auth.currentUser;
-
-    if (currentUser == null || currentUser.isAnonymous) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SignUpScreen()),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please create an account to add items to your cart.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    final userDetails = await db.getUserDetails(currentUser.email!);
-    final address = userDetails?['address']?.toString() ?? '';
-
-    if (address.isEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => SignUpScreen2()),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please complete your profile to add items.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-
-    try {
-      final cartItems = Map<String, dynamic>.from(
-        userDetails?['cart_item'] ?? {},
-      );
-      const cartSize = 'default';
-
-      if (cartItems.containsKey(productId)) {
-        final productEntry = cartItems[productId];
-        if (productEntry is int) {
-          cartItems[productId] = {'default': productEntry + 1};
-        } else if (productEntry is Map) {
-          final currentQty = (productEntry[cartSize] as int?) ?? 0;
-          cartItems[productId][cartSize] = currentQty + 1;
-        }
-      } else {
-        cartItems[productId] = {cartSize: 1};
-      }
-
-      await db.updateUserDetails(currentUser.email!, {'cart_item': cartItems});
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('$title added to cart'),
-          duration: const Duration(seconds: 1),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to add item: $e'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
+  void _navigateToDetails(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => ProductDetails(
+              productid: productId,
+              title: title,
+              price: price,
+              image20: image20,
+              description: description,
+              videoLink: videoLink,
+              catagory: catagory,
+              image5: image5,
+              goldCoin: goldCoin,
+              brand: brand,
+              imageTwo: imageTwo,
+              imageThree: imageThree,
+              size: size,
+              stock: stock,
+              deliveryFee: deliveryFee,
+              createdAt: createdAt,
+            ),
+      ),
+    );
   }
 
   Widget _buildImage(String path) {
@@ -170,32 +119,7 @@ class ProductItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => ProductDetails(
-                  productid: productId,
-                  title: title,
-                  price: price,
-                  image20: image20,
-                  description: description,
-                  videoLink: videoLink,
-                  catagory: catagory,
-                  image5: image5,
-                  goldCoin: goldCoin,
-                  brand: brand,
-                  imageTwo: imageTwo,
-                  imageThree: imageThree,
-                  size: size,
-                  stock: stock,
-                  deliveryFee: deliveryFee,
-                  createdAt: createdAt,
-                ),
-          ),
-        );
-      },
+      onTap: () => _navigateToDetails(context),
       child: Card(
         color: AppColors.cardBackground,
         elevation: 1,
@@ -241,7 +165,7 @@ class ProductItem extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.amber.withOpacity(0.1),
+                          color: Colors.amber.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -257,7 +181,7 @@ class ProductItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   InkWell(
-                    onTap: () => _addToCart(context),
+                    onTap: () => _navigateToDetails(context),
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
                       width: double.infinity,
@@ -266,20 +190,20 @@ class ProductItem extends StatelessWidget {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: AppColors.primary.withOpacity(0.3),
+                          color: AppColors.primary.withValues(alpha: 0.3),
                         ),
                       ),
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(
-                            Icons.add_shopping_cart,
+                            Icons.visibility_outlined,
                             color: AppColors.primary,
                             size: 18,
                           ),
                           SizedBox(width: 8),
                           Text(
-                            'Add to Cart',
+                            'View Product',
                             style: TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.bold,
@@ -299,3 +223,4 @@ class ProductItem extends StatelessWidget {
     );
   }
 }
+

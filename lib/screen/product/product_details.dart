@@ -448,15 +448,46 @@ class _ProductDetailsState extends State<ProductDetails> {
             ),
           ];
 
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CheckOut(
-                cartItems: checkoutItems,
-                totalAmount: priceValue,
+          if (currentUser.email != null) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => const Center(child: CircularProgressIndicator()),
+            );
+            final hasPending = await db.hasPendingOrder(currentUser.email!);
+            if (context.mounted) Navigator.pop(context);
+
+            if (hasPending && context.mounted) {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Order In Progress'),
+                  content: const Text(
+                    'You currently have an active order in progress (Verify, Shipping, or To Receive).\n\nYou cannot place a new order until your current order is delivered.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+              return;
+            }
+          }
+
+          if (context.mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CheckOut(
+                  cartItems: checkoutItems,
+                  totalAmount: priceValue,
+                ),
               ),
-            ),
-          );
+            );
+          }
         }
       }
     } else {

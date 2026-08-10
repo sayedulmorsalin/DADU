@@ -211,6 +211,37 @@ class dataBase {
     }
   }
 
+  Future<bool> hasPendingOrder(String email) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get(const GetOptions(source: Source.server));
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final data = querySnapshot.docs.first.data();
+
+        List<dynamic> castToList(dynamic listData) {
+          if (listData == null) return [];
+          if (listData is List) {
+            return listData.where((item) => item != null && item != '').toList();
+          }
+          return [];
+        }
+
+        final toVerify = castToList(data['to_verify']);
+        final toShip = castToList(data['to_ship']);
+        final toReceive = castToList(data['to_receive']);
+
+        return toVerify.isNotEmpty || toShip.isNotEmpty || toReceive.isNotEmpty;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Stream<DocumentSnapshot<Map<String, dynamic>>> getUserStream(String email) {
     return FirebaseFirestore.instance
         .collection('users')
