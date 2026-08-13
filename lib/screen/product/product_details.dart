@@ -63,13 +63,18 @@ class ProductDetails extends StatefulWidget {
   State<ProductDetails> createState() => _ProductDetailsState();
 }
 
-class _ProductDetailsState extends State<ProductDetails> {
+class _ProductDetailsState extends State<ProductDetails>
+    with SingleTickerProviderStateMixin {
   final dataBase db = new dataBase();
   String? selectedSize;
   final Auth _auth = Auth();
   String Address = "";
   List<CartItem> cartItems = [];
   final PageController _pageController = PageController();
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _sizeSectionKey = GlobalKey();
+  late AnimationController _blinkController;
+  late Animation<double> _blinkAnimation;
   int _currentPage = 0;
 
   final ApiService _apiService = ApiService();
@@ -88,14 +93,44 @@ class _ProductDetailsState extends State<ProductDetails> {
   void initState() {
     super.initState();
     selectedSize = null;
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _blinkAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
+    );
     _loadReviewsAndEligibility();
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
+    _blinkController.dispose();
     _reviewCommentController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _scrollToAndHighlightSize() {
+    if (_sizeSectionKey.currentContext != null) {
+      Scrollable.ensureVisible(
+        _sizeSectionKey.currentContext!,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        alignment: 0.3,
+      );
+    }
+
+    _blinkController.reset();
+    _blinkController.repeat(reverse: true, period: const Duration(milliseconds: 300));
+
+    Future.delayed(const Duration(milliseconds: 1800), () {
+      if (mounted) {
+        _blinkController.stop();
+        _blinkController.reset();
+      }
+    });
   }
 
   Future<void> _loadReviewsAndEligibility() async {
@@ -244,44 +279,66 @@ class _ProductDetailsState extends State<ProductDetails> {
         .toList();
     if (sizes.isEmpty) return const SizedBox.shrink();
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: sizes.map((size) {
-          final isSelected = selectedSize == size;
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedSize = size;
-                });
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.black : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isSelected ? Colors.black : Colors.grey.shade300,
-                    width: 1.5,
+    return AnimatedBuilder(
+      animation: _blinkAnimation,
+      builder: (context, child) {
+        final blinkVal = _blinkAnimation.value;
+        final blinkBorderColor = Color.lerp(Colors.grey.shade300, Colors.red.shade600, blinkVal)!;
+        final blinkBgColor = Color.lerp(Colors.white, Colors.red.shade50, blinkVal)!;
+
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: sizes.map((size) {
+              final isSelected = selectedSize == size;
+              return Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      selectedSize = size;
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.black : blinkBgColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected
+                            ? Colors.black
+                            : (blinkVal > 0 ? blinkBorderColor : Colors.grey.shade300),
+                        width: isSelected ? 1.5 : (1.5 + blinkVal * 1.0),
+                      ),
+                      boxShadow: blinkVal > 0 && !isSelected
+                          ? [
+                              BoxShadow(
+                                color: Colors.red.withValues(alpha: 0.3 * blinkVal),
+                                blurRadius: 8 * blinkVal,
+                                spreadRadius: 1 * blinkVal,
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: Text(
+                      size,
+                      style: TextStyle(
+                        color: isSelected
+                            ? Colors.white
+                            : (blinkVal > 0.5 ? Colors.red.shade800 : Colors.black),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                   ),
                 ),
-                child: Text(
-                  size,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 
@@ -296,6 +353,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   void _addToCart() async {
     if (_isSizeRequired && selectedSize == null) {
+      _scrollToAndHighlightSize();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a size first'),
@@ -394,6 +452,7 @@ class _ProductDetailsState extends State<ProductDetails> {
 
   void _buyNow() async {
     if (_isSizeRequired && selectedSize == null) {
+      _scrollToAndHighlightSize();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select a size first'),
@@ -616,6 +675,7 @@ class _ProductDetailsState extends State<ProductDetails> {
       body: Stack(
         children: [
           SingleChildScrollView(
+            controller: _scrollController,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -957,13 +1017,67 @@ class _ProductDetailsState extends State<ProductDetails> {
   }
 
   Widget _buildSizeSection(Widget sizeWidget) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle("Select Size"),
-        const SizedBox(height: 12),
-        sizeWidget,
-      ],
+    return AnimatedBuilder(
+      animation: _blinkAnimation,
+      builder: (context, child) {
+        final blinkVal = _blinkAnimation.value;
+        final sectionBorderColor = Color.lerp(Colors.transparent, Colors.red.shade400, blinkVal)!;
+        final sectionBgColor = Color.lerp(Colors.transparent, Colors.red.shade50.withValues(alpha: 0.5), blinkVal)!;
+
+        return Container(
+          key: _sizeSectionKey,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: sectionBgColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: sectionBorderColor,
+              width: blinkVal > 0 ? 2.0 : 0.0,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _buildSectionTitle("Select Size"),
+                  if (_isSizeRequired && selectedSize == null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      "*",
+                      style: TextStyle(
+                        color: blinkVal > 0.3 ? Colors.red : Colors.red.shade400,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                  if (blinkVal > 0) ...[
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade600,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        "Please select a size!",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              sizeWidget,
+            ],
+          ),
+        );
+      },
     );
   }
 
