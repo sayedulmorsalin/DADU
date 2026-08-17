@@ -44,6 +44,7 @@ class dataBase {
             };
           })
           .whereType<Map<String, dynamic>>()
+          .where((p) => (p['stock'] as int? ?? 0) > 0)
           .toList();
     } catch (e) {
       return [];
@@ -94,6 +95,7 @@ class dataBase {
             };
           })
           .whereType<Map<String, dynamic>>()
+          .where((p) => (p['stock'] as int? ?? 0) > 0)
           .toList();
     } catch (e) {
       return [];
@@ -167,7 +169,7 @@ class dataBase {
               "stock": int.tryParse(data['stock']?.toString() ?? '0') ?? 0,
               "deliveryFee": data['deliveryFee'] ?? '',
             };
-          }).toList();
+          }).where((p) => (p['stock'] as int? ?? 0) > 0).toList();
 
       allResults.addAll(loadedProducts);
     }
@@ -460,7 +462,7 @@ class dataBase {
         "stock": int.tryParse(data['stock']?.toString() ?? '0') ?? 0,
         "deliveryFee": data['deliveryFee'] ?? '',
       };
-    }).toList();
+    }).where((p) => (p['stock'] as int? ?? 0) > 0).toList();
   }
 
   Future<List<Map<String, dynamic>>> getNewArrivalProducts() async {
@@ -492,7 +494,7 @@ class dataBase {
         "stock": int.tryParse(data['stock']?.toString() ?? '0') ?? 0,
         "deliveryFee": data['deliveryFee'] ?? '',
       };
-    }).toList();
+    }).where((p) => (p['stock'] as int? ?? 0) > 0).toList();
   }
 
   Future<List<String>> getFCMToken() async {
@@ -749,9 +751,4 @@ Future<double> getRewardAdSilverRate() async {
 
     }, SetOptions(merge: true));
   }
-
-
-
-
-
 }

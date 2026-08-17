@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../../cloudflare/dadu-api"
+		},
+		{
+			"path": "../../../dadu_admin_panel"
+		}
+	],
+	"settings": {}
+}

@@ -274,7 +274,7 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> loadNewArrivalProducts() async {
-    final items = await db.getNewArrivalProducts();
+    final items = await apiService.fetchProducts(limit: 20);
     newArrivalProducts.assignAll(items);
   }
 
@@ -282,8 +282,10 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     searchQuery.value = value;
   }
 
-  Future<Map<String, dynamic>> getProductByName(String name) {
-    return db.getProductByName(name);
+  Future<Map<String, dynamic>> getProductByName(String name) async {
+    final results = await apiService.fetchProducts(search: name, limit: 1);
+    if (results.isNotEmpty) return results.first;
+    return {};
   }
 
   void clearSearch() {

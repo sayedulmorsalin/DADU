@@ -95,10 +95,18 @@ class ChatController extends GetxController {
   bool _hasMore = true;
   final int _limit = 20;
 
+  final RxBool isMessagingEnabled = true.obs;
+  Timer? _statusCheckTimer;
+
   @override
   void onInit() {
     super.onInit();
     _currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+    checkMessagingStatus();
+    _statusCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      checkMessagingStatus();
+    });
 
     if (_currentUserId != null) {
       loadMessages(isInitial: true);
@@ -109,6 +117,11 @@ class ChatController extends GetxController {
     _setupScrollListener();
     _setupFocusListener();
     _setupTextListener();
+  }
+
+  Future<void> checkMessagingStatus() async {
+    final enabled = await apiService.fetchMessagingStatus();
+    isMessagingEnabled.value = enabled;
   }
 
   void _listenToSocket() {
@@ -375,6 +388,16 @@ class ChatController extends GetxController {
   }
 
   Future<void> sendMessage() async {
+    if (!isMessagingEnabled.value) {
+      Get.snackbar(
+        'Messaging Disabled',
+        'Messaging is currently disabled by Admin.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
     final text = messageController.text.trim();
     if ((text.isEmpty && selectedImages.isEmpty && selectedVoiceNote.value == null) || 
         _currentUserId == null || isSending.value) return;
@@ -484,6 +507,7 @@ class ChatController extends GetxController {
 
   @override
   void onClose() {
+    _statusCheckTimer?.cancel();
     messageController.dispose();
     scrollController.dispose();
     focusNode.dispose();

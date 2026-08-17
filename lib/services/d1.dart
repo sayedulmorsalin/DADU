@@ -49,15 +49,11 @@ class ApiService {
     }
 
     try {
+      // Products are now public — send the auth token when available so
+      // the server can personalise the response in future, but the request
+      // succeeds even for unauthenticated guests.
       final User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('User is not authenticated');
-      }
-
-      final String? token = await user.getIdToken();
-      if (token == null) {
-        throw Exception('Failed to get auth token');
-      }
+      final String? token = await user?.getIdToken();
 
       String url = '$_baseUrl/products?limit=$limit&page=$page';
       if (category != null) {
@@ -73,12 +69,14 @@ class ApiService {
         url += '&ids=${Uri.encodeComponent(ids.join(','))}';
       }
 
+      final Map<String, String> headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
       final response = await http.get(
         Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -125,6 +123,9 @@ class ApiService {
                 : 1,
             "deliveryFee": item['deliveryFee'] ?? '',
           };
+        }).where((product) {
+          final stock = product['stock'];
+          return (stock is int) ? stock > 0 : true;
         }).toList();
 
         // Save to cache
@@ -278,6 +279,62 @@ class ApiService {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final Map<String, dynamic> jsonData = jsonDecode(response.body);
+        return jsonData['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> fetchMessagingStatus() async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      final String? token = await user?.getIdToken();
+
+      final response = await http.get(
+        Uri.parse('$_baseUrl/messages/status'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final dynamic jsonData = jsonDecode(response.body);
+        if (jsonData is Map) {
+          if (jsonData.containsKey('enabled')) {
+            return jsonData['enabled'] == true;
+          }
+          if (jsonData.containsKey('messagingEnabled')) {
+            return jsonData['messagingEnabled'] == true;
+          }
+        }
+      }
+      return true;
+    } catch (e) {
+      return true;
+    }
+  }
+
+  Future<bool> updateMessagingStatus(bool enabled) async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+      final String? token = await user.getIdToken();
+      if (token == null) return false;
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/messages/status'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'enabled': enabled}),
+      );
+
+      if (response.statusCode == 200) {
         final Map<String, dynamic> jsonData = jsonDecode(response.body);
         return jsonData['success'] == true;
       }

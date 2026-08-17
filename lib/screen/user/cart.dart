@@ -38,25 +38,14 @@ class _CartState extends State<Cart> {
     final List<String> allProductIds = cartData.keys.toList();
     if (allProductIds.isEmpty) return [];
 
-    // Map to hold fetched product data
+    // Map to hold fetched product data from API
     final Map<String, dynamic> productsDataMap = {};
-    final List<String> missingFromDbIds = [];
 
-    // First try fetching from local Firestore
-    for (var productId in allProductIds) {
-      final data = await db.getProductById(productId);
-      if (data != null) {
-        productsDataMap[productId] = data;
-      } else {
-        missingFromDbIds.add(productId);
-      }
-    }
-
-    // Batch fetch any missing items from API
-    if (missingFromDbIds.isNotEmpty) {
+    // Batch fetch cart items exclusively from API
+    if (allProductIds.isNotEmpty) {
       final apiProducts = await apiService.fetchProducts(
-        limit: missingFromDbIds.length,
-        ids: missingFromDbIds,
+        limit: allProductIds.length,
+        ids: allProductIds,
       );
       for (var product in apiProducts) {
         productsDataMap[product['id']] = product;

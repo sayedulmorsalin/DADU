@@ -27,7 +27,8 @@ class CheckOut extends StatefulWidget {
   State<CheckOut> createState() => _CheckOutState();
 }
 
-class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
+class _CheckOutState extends State<CheckOut>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   final dataBase db = new dataBase();
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
@@ -35,6 +36,9 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   final TextEditingController _refundPhoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _noteController = TextEditingController();
+  late AnimationController _blinkController;
+  late Animation<double> _blinkAnimation;
+  final GlobalKey _refundSectionKey = GlobalKey();
   String _paymentMethod = 'bkash';
   bool _isProcessing = false;
   String? selectedDistrict;
@@ -64,6 +68,13 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _blinkAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
+    );
     _calculateDeliveryCharge();
     _loadUserAddress();
     _loadPaymentNumber();
@@ -140,8 +151,6 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
         setState(() {
           _nameController.text = userDetails['name'] ?? '';
           _phoneController.text = userDetails['phone'] ?? '';
-          _refundPhoneController.text =
-              userDetails['refundPhone'] ?? userDetails['phone'] ?? '';
           _addressController.text = userDetails['address'] ?? '';
           selectedDistrict = userDetails['district'];
           selectedThana = userDetails['thana'];
@@ -280,9 +289,31 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
     });
   }
 
+  void _scrollToAndHighlightRefund() {
+    if (_refundSectionKey.currentContext != null) {
+      Scrollable.ensureVisible(
+        _refundSectionKey.currentContext!,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        alignment: 0.3,
+      );
+    }
+
+    _blinkController.reset();
+    _blinkController.repeat(reverse: true, period: const Duration(milliseconds: 300));
+
+    Future.delayed(const Duration(milliseconds: 1800), () {
+      if (mounted) {
+        _blinkController.stop();
+        _blinkController.reset();
+      }
+    });
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _blinkController.dispose();
     _nameController.dispose();
     _phoneController.dispose();
     _refundPhoneController.dispose();
@@ -292,7 +323,18 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
   }
 
   Future<void> _submitOrder() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_refundPhoneController.text.trim().isEmpty) {
+      _scrollToAndHighlightRefund();
+      _formKey.currentState!.validate();
+      return;
+    }
+
+    if (!_formKey.currentState!.validate()) {
+      if (_refundPhoneController.text.trim().length != 11) {
+        _scrollToAndHighlightRefund();
+      }
+      return;
+    }
 
     if (!_freeDeliverySelected &&
         (_paymentMethod == 'bkash' ||
@@ -558,134 +600,164 @@ class _CheckOutState extends State<CheckOut> with WidgetsBindingObserver {
             },
           ),
           const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.amber.shade50.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.amber.shade700, width: 2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.amber.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
+          AnimatedBuilder(
+            animation: _blinkAnimation,
+            builder: (context, child) {
+              final blinkVal = _blinkAnimation.value;
+              final borderColor = Color.lerp(Colors.amber.shade700, Colors.red.shade600, blinkVal)!;
+              final bgColor = Color.lerp(
+                Colors.amber.shade50.withValues(alpha: 0.9),
+                Colors.red.shade50,
+                blinkVal,
+              )!;
+
+              return Container(
+                key: _refundSectionKey,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: borderColor,
+                    width: 2.0 + (blinkVal * 1.5),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (blinkVal > 0 ? Colors.red : Colors.amber).withValues(
+                        alpha: 0.15 + (blinkVal * 0.2),
+                      ),
+                      blurRadius: 8 + (blinkVal * 4),
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade700,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.currency_exchange_rounded,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'IMPORTANT: REFUND NUMBER',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.amber.shade900,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade700,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Text(
-                        'টাকা ফেরত নম্বর',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Color.lerp(Colors.amber.shade700, Colors.red.shade700, blinkVal),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.currency_exchange_rounded,
+                            color: Colors.white,
+                            size: 16,
+                          ),
                         ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'IMPORTANT: REFUND NUMBER',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            color: Color.lerp(Colors.amber.shade900, Colors.red.shade900, blinkVal),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Color.lerp(Colors.amber.shade700, Colors.red.shade700, blinkVal),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'টাকা ফেরত নম্বর',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _refundPhoneController,
+                      decoration: InputDecoration(
+                        labelText: 'Refund Number (টাকা ফেরতের নম্বর)',
+                        hintText: 'e.g. 01700000000',
+                        prefixIcon: Icon(
+                          Icons.phone_android_rounded,
+                          color: Color.lerp(Colors.amber.shade900, Colors.red.shade900, blinkVal),
+                          size: 22,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        labelStyle: TextStyle(
+                          color: Color.lerp(Colors.amber.shade900, Colors.red.shade900, blinkVal),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 14,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(
+                            color: Color.lerp(Colors.amber.shade400, Colors.red.shade400, blinkVal)!,
+                            width: 1.5 + blinkVal,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.amber.shade800, width: 2),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+                        ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.error, width: 2),
+                        ),
+                      ),
+                      keyboardType: TextInputType.phone,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter refund number (রিফান্ড নম্বর দিন)';
+                        }
+                        if (value.trim().length != 11) {
+                          return "Please enter a valid 11-digit number";
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            size: 14,
+                            color: Color.lerp(Colors.amber.shade900, Colors.red.shade900, blinkVal),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'পণ্য স্টকে না থাকলে এই নম্বরে সরাসরি টাকা ফেরত দেওয়া হবে।',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color.lerp(Colors.amber.shade900, Colors.red.shade900, blinkVal),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _refundPhoneController,
-                  decoration: InputDecoration(
-                    labelText: 'Refund Number (টাকা ফেরতের নম্বর)',
-                    hintText: 'e.g. 01700000000',
-                    prefixIcon: Icon(Icons.phone_android_rounded, color: Colors.amber.shade900, size: 22),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    labelStyle: TextStyle(
-                      color: Colors.amber.shade900,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade400,
-                      fontSize: 14,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.amber.shade400, width: 1.5),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.amber.shade800, width: 2),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.error, width: 1.5),
-                    ),
-                    focusedErrorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.error, width: 2),
-                    ),
-                  ),
-                  keyboardType: TextInputType.phone,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter refund number (রিফান্ড নম্বর দিন)';
-                    }
-                    if (value.length != 11) {
-                      return "Please enter a valid 11-digit number";
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 6),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, size: 14, color: Colors.amber.shade900),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          'পণ্য স্টকে না থাকলে এই নম্বরে সরাসরি টাকা ফেরত দেওয়া হবে।',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.amber.shade900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(

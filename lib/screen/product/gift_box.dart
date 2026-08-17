@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/authentication/sign_up_2nd.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
+import 'package:dadu/services/d1.dart';
 import 'package:dadu/services/firebase.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +28,7 @@ class GiftBox extends StatefulWidget {
 
 class _GiftBoxState extends State<GiftBox> {
   final dataBase _db = dataBase();
+  final ApiService _apiService = ApiService();
 
   List<Product> _products = [];
   bool _isLoadingProducts = true;
@@ -55,7 +57,7 @@ class _GiftBoxState extends State<GiftBox> {
 
   Future<void> _loadFreeGiftProducts() async {
     try {
-      final productData = await _db.getFreeGiftProducts();
+      final productData = await _apiService.fetchProducts(limit: 20);
 
       if (!mounted) return;
 

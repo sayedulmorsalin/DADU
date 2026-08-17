@@ -416,11 +416,41 @@ class Chat extends StatelessWidget {
         ],
       ),
       child: SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Obx(() {
-              final replyMsg = controller.replyingToMessage.value;
+        child: Obx(() {
+          if (!controller.isMessagingEnabled.value) {
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.speaker_notes_off_rounded, color: Colors.red.shade700, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Messaging is currently turned off by Admin.',
+                      style: TextStyle(
+                        color: Colors.red.shade900,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Obx(() {
+                final replyMsg = controller.replyingToMessage.value;
               if (replyMsg == null) return const SizedBox.shrink();
               final senderText = replyMsg['senderRole'] == 'user' ? 'Replying to Yourself' : 'Replying to DADU Admin';
               String snippetText = controller.getReplySnippet(replyMsg);
@@ -679,10 +709,11 @@ class Chat extends StatelessWidget {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
+        );
+      }),
+    ),
+  );
+}
 }
 
 class TypingDots extends StatefulWidget {
