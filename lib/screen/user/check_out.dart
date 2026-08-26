@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/user/order_list_screen.dart';
 import 'package:dadu/screen/user/profile.dart';
 import 'package:dadu/services/api.dart';
 import 'package:dadu/services/app_version_service.dart';
+import 'package:dadu/services/transaction_id_extractor.dart';
+import 'package:dadu/services/transaction_verification_service.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -39,8 +42,11 @@ class _CheckOutState extends State<CheckOut>
   late AnimationController _blinkController;
   late Animation<double> _blinkAnimation;
   final GlobalKey _refundSectionKey = GlobalKey();
+  final TextEditingController _transactionIdController = TextEditingController();
   String _paymentMethod = 'bkash';
   bool _isProcessing = false;
+  bool _isScanningProof = false;
+  bool _trxAutoDetected = false;
   String? selectedDistrict;
   String? selectedThana;
   List<String> thanaList = [];
@@ -63,6 +69,13 @@ class _CheckOutState extends State<CheckOut>
 
   final Auth _auth = Auth();
   final ImageService _imageService = ImageService();
+  final TransactionVerificationService _transactionVerificationService =
+      TransactionVerificationService();
+
+  bool _isValidatingTrx = false;
+  TransactionVerificationResult _trxVerificationResult =
+      TransactionVerificationResult.unverified();
+  Timer? _trxDebounceTimer;
 
   @override
   void initState() {
@@ -75,6 +88,7 @@ class _CheckOutState extends State<CheckOut>
     _blinkAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
     );
+    _transactionIdController.addListener(_onTransactionIdChanged);
     _calculateDeliveryCharge();
     _loadUserAddress();
     _loadPaymentNumber();
@@ -94,6 +108,61 @@ class _CheckOutState extends State<CheckOut>
         }
       }
     } catch (_) {}
+  }
+
+  void _onTransactionIdChanged() {
+    final text = _transactionIdController.text.trim();
+    if (text.isEmpty) {
+      _trxDebounceTimer?.cancel();
+      if (!_trxVerificationResult.isUnverified || _isValidatingTrx) {
+        setState(() {
+          _isValidatingTrx = false;
+          _trxVerificationResult = TransactionVerificationResult.unverified();
+        });
+      }
+      return;
+    }
+
+    _trxDebounceTimer?.cancel();
+    _trxDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+      _verifyTransactionId(text);
+    });
+  }
+
+  Future<void> _verifyTransactionId(String trxId) async {
+    final clean = trxId.trim();
+    if (clean.isEmpty) return;
+    if (!mounted) return;
+
+    setState(() {
+      _isValidatingTrx = true;
+    });
+
+    try {
+      final result = await _transactionVerificationService.verifyTransaction(
+        clean,
+        expectedProvider: _paymentMethod,
+      );
+
+      if (!mounted) return;
+
+      if (_transactionIdController.text.trim().toLowerCase() ==
+          clean.toLowerCase()) {
+        setState(() {
+          _isValidatingTrx = false;
+          _trxVerificationResult = result;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isValidatingTrx = false;
+        _trxVerificationResult = TransactionVerificationResult.error(
+          'Verification failed: ${e.toString()}',
+          trxId: clean,
+        );
+      });
+    }
   }
 
   @override
@@ -204,14 +273,127 @@ class _CheckOutState extends State<CheckOut>
       setState(() {
         _paymentProofImage = File(image.path);
         _imageSelected = true;
+        _isScanningProof = true;
+        _trxAutoDetected = false;
+      });
+
+      try {
+        final extractedTrx =
+            await TransactionIdExtractor.extractTransactionId(image.path);
+        if (!mounted) return;
+
+        setState(() {
+          _isScanningProof = false;
+          if (extractedTrx != null && extractedTrx.isNotEmpty) {
+            _transactionIdController.text = extractedTrx;
+            _trxAutoDetected = true;
+          }
+        });
+
+        if (extractedTrx != null && extractedTrx.isNotEmpty) {
+          _verifyTransactionId(extractedTrx);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: AppColors.textOnPrimary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('Transaction ID detected: $extractedTrx'),
+                  ),
+                ],
+              ),
+              backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Could not auto-detect Transaction ID. You can enter it manually below.',
+              ),
+              backgroundColor: AppColors.warning,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _isScanningProof = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _rescanPaymentProof() async {
+    if (_paymentProofImage == null) return;
+
+    setState(() {
+      _isScanningProof = true;
+      _trxAutoDetected = false;
+    });
+
+    try {
+      final extractedTrx =
+          await TransactionIdExtractor.extractTransactionId(_paymentProofImage!.path);
+      if (!mounted) return;
+
+      setState(() {
+        _isScanningProof = false;
+        if (extractedTrx != null && extractedTrx.isNotEmpty) {
+          _transactionIdController.text = extractedTrx;
+          _trxAutoDetected = true;
+        }
+      });
+
+      if (extractedTrx != null && extractedTrx.isNotEmpty) {
+        _verifyTransactionId(extractedTrx);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: AppColors.textOnPrimary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Transaction ID detected: $extractedTrx'),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Could not auto-detect Transaction ID. Please enter manually.',
+            ),
+            backgroundColor: AppColors.warning,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isScanningProof = false;
       });
     }
   }
 
   void _removePaymentProof() {
+    _trxDebounceTimer?.cancel();
     setState(() {
       _paymentProofImage = null;
       _imageSelected = false;
+      _isScanningProof = false;
+      _trxAutoDetected = false;
+      _isValidatingTrx = false;
+      _trxVerificationResult = TransactionVerificationResult.unverified();
+      _transactionIdController.clear();
     });
   }
 
@@ -279,11 +461,17 @@ class _CheckOutState extends State<CheckOut>
   }
 
   void _toggleFreeDelivery() {
+    _trxDebounceTimer?.cancel();
     setState(() {
       _freeDeliverySelected = !_freeDeliverySelected;
       if (_freeDeliverySelected) {
         _paymentProofImage = null;
         _imageSelected = false;
+        _isScanningProof = false;
+        _trxAutoDetected = false;
+        _isValidatingTrx = false;
+        _trxVerificationResult = TransactionVerificationResult.unverified();
+        _transactionIdController.clear();
       }
       _calculateDeliveryCharge();
     });
@@ -314,11 +502,14 @@ class _CheckOutState extends State<CheckOut>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _blinkController.dispose();
+    _trxDebounceTimer?.cancel();
+    _transactionIdController.removeListener(_onTransactionIdChanged);
     _nameController.dispose();
     _phoneController.dispose();
     _refundPhoneController.dispose();
     _addressController.dispose();
     _noteController.dispose();
+    _transactionIdController.dispose();
     super.dispose();
   }
 
@@ -339,16 +530,45 @@ class _CheckOutState extends State<CheckOut>
     if (!_freeDeliverySelected &&
         (_paymentMethod == 'bkash' ||
             _paymentMethod == 'nagad' ||
-            _paymentMethod == 'rocket') &&
-        !_imageSelected) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please upload payment proof screenshot'),
-          backgroundColor: AppColors.warning,
-        ),
+            _paymentMethod == 'rocket')) {
+      final trxId = _transactionIdController.text.trim();
+      if (trxId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please enter or scan the Transaction ID'),
+            backgroundColor: AppColors.warning,
+          ),
+        );
+        return;
+      }
+
+      setState(() => _isProcessing = true);
+
+      // Verify transaction against database
+      final verifyRes = await _transactionVerificationService.verifyTransaction(
+        trxId,
+        expectedProvider: _paymentMethod,
       );
-      return;
+
+      if (!mounted) return;
+
+      setState(() {
+        _trxVerificationResult = verifyRes;
+      });
+
+      if (!verifyRes.isValid) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(verifyRes.message),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        return;
+      }
     }
+
     if (needupdate) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -397,7 +617,6 @@ class _CheckOutState extends State<CheckOut>
           _paymentProofImage!,
         );
       }
-
       final double usedPoints =
           (_freeDeliverySelected ? _freeDeliveryCost : 0.0) +
           (_coinDiscountSelected ? _coinDiscountAmount : 0.0);
@@ -419,7 +638,8 @@ class _CheckOutState extends State<CheckOut>
             'district': selectedDistrict ?? '',
             'thana': selectedThana ?? '',
             'paymentMethod': _paymentMethod,
-            'paymentProof': paymentProof ?? '',
+            'paymentProof': '',
+            'transaction_id': _transactionIdController.text.trim(),
             'items':
                 widget.cartItems
                     .map(
@@ -459,6 +679,17 @@ class _CheckOutState extends State<CheckOut>
       };
 
       await db.updateUserDetailsAfterBuy(currentUser.email!, userUpdateData);
+
+      // Mark the transaction as used in Cloudflare D1 database so it cannot be reused
+      if (!_freeDeliverySelected &&
+          (_paymentMethod == 'bkash' ||
+              _paymentMethod == 'nagad' ||
+              _paymentMethod == 'rocket')) {
+        final trxId = _transactionIdController.text.trim();
+        if (trxId.isNotEmpty) {
+          _transactionVerificationService.markTransactionUsed(trxId);
+        }
+      }
 
       // Fetch updated user details to get the to_verify list for the next screen
       final updatedDetails = await db.getUserDetails(currentUser.email!);
@@ -1146,8 +1377,13 @@ class _CheckOutState extends State<CheckOut>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Payment Proof ( upload screenshot of Delivery charge ) (আপনার পাঠানো ডেলিভারি চার্জের স্ক্রিনশট আপলোড করুন)',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+          'Transaction ID / Payment Verification (ট্রানজেকশন আইডি)',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Enter Transaction ID manually, or upload a screenshot to auto-scan it.',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 12),
         _paymentProofImage != null
@@ -1157,7 +1393,9 @@ class _CheckOutState extends State<CheckOut>
                   width: double.infinity,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.textSecondary.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.textSecondary.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
@@ -1181,6 +1419,40 @@ class _CheckOutState extends State<CheckOut>
                     ),
                   ),
                 ),
+                if (_isScanningProof)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: Colors.white,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Reading screenshot...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Extracting Transaction ID with ML Kit',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             )
             : InkWell(
@@ -1190,11 +1462,10 @@ class _CheckOutState extends State<CheckOut>
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceGrey.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(16),
+                    color: AppColors.surfaceGrey,
+                    borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      width: 1.5,
+                      color: AppColors.textSecondary.withValues(alpha: 0.2),
                     ),
                   ),
                   child: Column(
@@ -1202,18 +1473,18 @@ class _CheckOutState extends State<CheckOut>
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
+                          color: AppColors.placeholderBackground,
+                          borderRadius: BorderRadius.circular(15),
                         ),
                         child: const Icon(
-                          Icons.cloud_upload_outlined,
-                          color: AppColors.primary,
-                          size: 32,
+                          Icons.document_scanner_outlined,
+                          color: AppColors.iconAccent,
+                          size: 30,
                         ),
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'Upload Payment Proof Screenshot',
+                        'Auto-Scan Screenshot (Optional)',
                         style: TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 16,
@@ -1222,7 +1493,7 @@ class _CheckOutState extends State<CheckOut>
                       ),
                       const SizedBox(height: 4),
                       const Text(
-                        'PNG, JPG, WebP supported',
+                        'Tap to pick image and auto-fill TrxID below',
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,
@@ -1233,8 +1504,345 @@ class _CheckOutState extends State<CheckOut>
                 ),
               ),
         const SizedBox(height: 16),
+        TextFormField(
+          controller: _transactionIdController,
+          textCapitalization: TextCapitalization.characters,
+          decoration: InputDecoration(
+            labelText: 'Transaction ID / TrxID (ট্রানজেকশন আইডি)',
+            hintText: 'e.g. BL489QZX87 or 72K83M9A',
+            prefixIcon: const Icon(Icons.receipt_long),
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_isValidatingTrx)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                else if (_trxVerificationResult.isValid)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(Icons.check_circle, color: AppColors.success),
+                  )
+                else if (_trxVerificationResult.isAlreadyUsed)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(Icons.cancel, color: AppColors.error),
+                  )
+                else if (_trxVerificationResult.isNotFound)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(Icons.error_outline, color: AppColors.warning),
+                  ),
+                if (_paymentProofImage != null)
+                  IconButton(
+                    icon: _isScanningProof
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.document_scanner_outlined),
+                    tooltip: 'Re-scan Screenshot',
+                    onPressed: _isScanningProof ? null : _rescanPaymentProof,
+                  ),
+              ],
+            ),
+            helperText: _trxAutoDetected
+                ? '✓ Auto-extracted from screenshot. Edit if needed.'
+                : 'Enter manually or auto-filled from screenshot.',
+            helperStyle: TextStyle(
+              color:
+                  _trxAutoDetected
+                      ? AppColors.success
+                      : AppColors.textSecondary,
+              fontWeight:
+                  _trxAutoDetected ? FontWeight.bold : FontWeight.normal,
+            ),
+            border: const OutlineInputBorder(),
+          ),
+          validator: (value) {
+            if (!_freeDeliverySelected &&
+                (_paymentMethod == 'bkash' ||
+                    _paymentMethod == 'nagad' ||
+                    _paymentMethod == 'rocket')) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please enter or scan the Transaction ID';
+              }
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 10),
+        _buildTransactionStatusWidget(),
+        const SizedBox(height: 16),
       ],
     );
+  }
+
+  Widget _buildTransactionStatusWidget() {
+    if (_isValidatingTrx) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceGrey,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Theme.of(context).primaryColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Checking transaction status in database...',
+                style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_trxVerificationResult.isValid) {
+      final provider = _trxVerificationResult.provider?.toUpperCase() ?? 'MFS';
+      final amount = _trxVerificationResult.amount != null
+          ? '৳${_trxVerificationResult.amount!.toStringAsFixed(2)}'
+          : null;
+
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8F5E9),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFF81C784)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.check_circle,
+              color: Color(0xFF2E7D32),
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'Transaction Verified',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1B5E20),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2E7D32),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          provider,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (amount != null) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          amount,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Color(0xFF1B5E20),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    '✓ Available and not used before. You can proceed with order!',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF2E7D32)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_trxVerificationResult.isAlreadyUsed) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFEBEE),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE57373)),
+        ),
+        child: const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.cancel,
+              color: Color(0xFFC62828),
+              size: 22,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Transaction Already Used (ব্যবহৃত হয়ে গেছে)',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFB71C1C),
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'This Transaction ID has already been redeemed for another order. Please provide a new payment TrxID.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFFC62828)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_trxVerificationResult.isNotFound) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF3E0),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFFFB74D)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFE65100),
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Transaction Not Found (ডাটাবেজে পাওয়া যায়নি)',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFBF360C),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'This Transaction ID was not found in our database. Please double check that you typed the correct TrxID and sent payment to our official number.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFFE65100)),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        final text = _transactionIdController.text.trim();
+                        if (text.isNotEmpty) {
+                          _verifyTransactionId(text);
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        side: const BorderSide(color: Color(0xFFE65100)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                      ),
+                      icon: const Icon(Icons.refresh,
+                          size: 15, color: Color(0xFFE65100)),
+                      label: const Text(
+                        'Check Again',
+                        style: TextStyle(
+                            fontSize: 12, color: Color(0xFFE65100)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_trxVerificationResult.isError) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceGrey,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _trxVerificationResult.message,
+                style: const TextStyle(fontSize: 12, color: AppColors.error),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.refresh, size: 18),
+              onPressed: () {
+                final text = _transactionIdController.text.trim();
+                if (text.isNotEmpty) {
+                  _verifyTransactionId(text);
+                }
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildOrderSummaryItem(CartItem item) {

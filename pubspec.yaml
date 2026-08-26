@@ -66,6 +66,7 @@ dependencies:
   audioplayers: ^6.7.1
   http_parser: ^4.1.2
   google_fonts: ^6.2.1
+  google_mlkit_text_recognition: ^0.16.0
 
 
 

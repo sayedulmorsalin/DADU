@@ -53,6 +53,7 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
                   itemMap['_order_date'] = orderMap['order_date'];
                   itemMap['paymentMethod'] = orderMap['paymentMethod'] ?? itemMap['paymentMethod'];
                   itemMap['paymentProof'] = orderMap['paymentProof'] ?? itemMap['paymentProof'];
+                  itemMap['_transaction_id'] = orderMap['transaction_id'];
                   displayedItems.add(itemMap);
                 }
               }
@@ -258,6 +259,19 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
                           color: AppColors.textSecondary,
                         ),
                       ),
+                      if (order.containsKey('_transaction_id') &&
+                          order['_transaction_id'] != null &&
+                          order['_transaction_id'].toString().trim().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'TrxID: ${order['_transaction_id']}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
