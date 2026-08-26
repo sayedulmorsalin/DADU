@@ -42,6 +42,9 @@ class _CheckOutState extends State<CheckOut>
   late AnimationController _blinkController;
   late Animation<double> _blinkAnimation;
   final GlobalKey _refundSectionKey = GlobalKey();
+  late AnimationController _proofBlinkController;
+  late Animation<double> _proofBlinkAnimation;
+  final GlobalKey _proofSectionKey = GlobalKey();
   final TextEditingController _transactionIdController = TextEditingController();
   String _paymentMethod = 'bkash';
   bool _isProcessing = false;
@@ -87,6 +90,13 @@ class _CheckOutState extends State<CheckOut>
     );
     _blinkAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
+    );
+    _proofBlinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+    _proofBlinkAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _proofBlinkController, curve: Curves.easeInOut),
     );
     _transactionIdController.addListener(_onTransactionIdChanged);
     _calculateDeliveryCharge();
@@ -498,10 +508,35 @@ class _CheckOutState extends State<CheckOut>
     });
   }
 
+  void _scrollToAndHighlightProof() {
+    if (_proofSectionKey.currentContext != null) {
+      Scrollable.ensureVisible(
+        _proofSectionKey.currentContext!,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+        alignment: 0.3,
+      );
+    }
+
+    _proofBlinkController.reset();
+    _proofBlinkController.repeat(
+      reverse: true,
+      period: const Duration(milliseconds: 300),
+    );
+
+    Future.delayed(const Duration(milliseconds: 1800), () {
+      if (mounted) {
+        _proofBlinkController.stop();
+        _proofBlinkController.reset();
+      }
+    });
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _blinkController.dispose();
+    _proofBlinkController.dispose();
     _trxDebounceTimer?.cancel();
     _transactionIdController.removeListener(_onTransactionIdChanged);
     _nameController.dispose();
@@ -531,8 +566,23 @@ class _CheckOutState extends State<CheckOut>
         (_paymentMethod == 'bkash' ||
             _paymentMethod == 'nagad' ||
             _paymentMethod == 'rocket')) {
+      if (_paymentProofImage == null) {
+        _scrollToAndHighlightProof();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please upload the transaction screenshot (পেমেন্ট প্রুফের স্ক্রিনশট আপলোড করুন)',
+            ),
+            backgroundColor: AppColors.warning,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
       final trxId = _transactionIdController.text.trim();
       if (trxId.isEmpty) {
+        _scrollToAndHighlightProof();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Please enter or scan the Transaction ID'),
@@ -1455,53 +1505,104 @@ class _CheckOutState extends State<CheckOut>
                   ),
               ],
             )
-            : InkWell(
-                onTap: _pickPaymentProof,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceGrey,
+            : AnimatedBuilder(
+                animation: _proofBlinkAnimation,
+                builder: (context, child) {
+                  final blinkVal = _proofBlinkAnimation.value;
+                  final borderColor = Color.lerp(
+                    AppColors.textSecondary.withValues(alpha: 0.2),
+                    Colors.red.shade600,
+                    blinkVal,
+                  )!;
+                  final bgColor = Color.lerp(
+                    AppColors.surfaceGrey,
+                    Colors.red.shade50,
+                    blinkVal,
+                  )!;
+
+                  return InkWell(
+                    key: _proofSectionKey,
+                    onTap: _pickPaymentProof,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: AppColors.textSecondary.withValues(alpha: 0.2),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      decoration: BoxDecoration(
+                        color: bgColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: borderColor,
+                          width: 1.5 + (blinkVal * 1.5),
+                        ),
+                        boxShadow: blinkVal > 0
+                            ? [
+                                BoxShadow(
+                                  color: Colors.red.withValues(
+                                    alpha: 0.25 * blinkVal,
+                                  ),
+                                  blurRadius: 10 * blinkVal,
+                                  spreadRadius: 1 * blinkVal,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Color.lerp(
+                                AppColors.placeholderBackground,
+                                Colors.red.shade100,
+                                blinkVal,
+                              ),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: Icon(
+                              Icons.document_scanner_outlined,
+                              color: Color.lerp(
+                                AppColors.iconAccent,
+                                Colors.red.shade700,
+                                blinkVal,
+                              ),
+                              size: 30,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Upload Screenshot (পেমেন্ট স্ক্রিনশট আপলোড করুন)',
+                            style: TextStyle(
+                              color: Color.lerp(
+                                AppColors.textPrimary,
+                                Colors.red.shade900,
+                                blinkVal,
+                              ),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            blinkVal > 0
+                                ? '⚠️ Please upload transaction screenshot'
+                                : 'Tap to pick image and auto-fill TrxID below',
+                            style: TextStyle(
+                              color: Color.lerp(
+                                AppColors.textSecondary,
+                                Colors.red.shade700,
+                                blinkVal,
+                              ),
+                              fontSize: 13,
+                              fontWeight: blinkVal > 0
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppColors.placeholderBackground,
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: const Icon(
-                          Icons.document_scanner_outlined,
-                          color: AppColors.iconAccent,
-                          size: 30,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Auto-Scan Screenshot (Optional)',
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Tap to pick image and auto-fill TrxID below',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                  );
+                },
               ),
         const SizedBox(height: 16),
         TextFormField(
