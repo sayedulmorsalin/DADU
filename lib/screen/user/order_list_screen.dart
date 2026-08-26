@@ -50,6 +50,7 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
                   // Enrich item with order-level metadata
                   itemMap['_order_id'] = orderMap['order_id'];
                   itemMap['_order_date'] = orderMap['order_date'];
+                  itemMap['_transaction_id'] = orderMap['transaction_id'];
                   displayedItems.add(itemMap);
                 }
               }
@@ -253,6 +254,19 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
                           color: AppColors.textSecondary,
                         ),
                       ),
+                      if (order.containsKey('_transaction_id') &&
+                          order['_transaction_id'] != null &&
+                          order['_transaction_id'].toString().trim().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'TrxID: ${order['_transaction_id']}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

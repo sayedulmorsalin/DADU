@@ -61,6 +61,7 @@ dependencies:
   in_app_update: ^4.2.5
   app_links: ^6.3.2
   share_plus: ^13.2.0
+  google_mlkit_text_recognition: ^0.16.0
 
 
 
