@@ -92,6 +92,14 @@ class ApiService {
               [];
         }
 
+        String toHighRes(String? url) {
+          if (url == null || url.isEmpty) return '';
+          if (url.contains('img5_')) {
+            return url.replaceAll('img5_', 'img20_');
+          }
+          return url;
+        }
+
         final results = productList.map((item) {
           return {
             "id": item['id']?.toString() ?? '',
@@ -103,20 +111,20 @@ class ApiService {
                     item['imagePrimary'].toString().isNotEmpty)
                 ? item['imagePrimary']
                 : null,
-            "image20": (item['imageOne'] != null &&
+            "image20": toHighRes((item['imageOne'] != null &&
                     item['imageOne'].toString().isNotEmpty)
                 ? item['imageOne']
                 : ((item['imagePrimary'] != null &&
                         item['imagePrimary'].toString().isNotEmpty)
                     ? item['imagePrimary']
-                    : null),
+                    : null)),
             "catagory": item['catagory'] ?? item['brand'] ?? 'Others',
             "gold_coin":
                 double.tryParse(item['freeCoin']?.toString() ?? '0') ?? 0.0,
             "createdAt": item['createdAt'],
             "brand": item['brand'] ?? '',
-            "imageTwo": item['imageTwo'] ?? '',
-            "imageThree": item['imageThree'] ?? '',
+            "imageTwo": toHighRes(item['imageTwo']?.toString() ?? ''),
+            "imageThree": toHighRes(item['imageThree']?.toString() ?? ''),
             "size": item['size'] ?? '',
             "stock": item['stock'] != null
                 ? (int.tryParse(item['stock'].toString()) ?? 1)

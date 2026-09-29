@@ -8,9 +8,11 @@ import 'package:dadu/services/app_version_service.dart';
 import 'package:dadu/services/transaction_id_extractor.dart';
 import 'package:dadu/services/transaction_verification_service.dart';
 import 'package:dadu/theme/app_colors.dart';
+import 'package:external_app_launcher/external_app_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/district_upozila.dart';
 import '../../model/cart_model.dart';
 import '../../services/auth.dart';
@@ -45,7 +47,8 @@ class _CheckOutState extends State<CheckOut>
   late AnimationController _proofBlinkController;
   late Animation<double> _proofBlinkAnimation;
   final GlobalKey _proofSectionKey = GlobalKey();
-  final TextEditingController _transactionIdController = TextEditingController();
+  final TextEditingController _transactionIdController =
+      TextEditingController();
   String _paymentMethod = 'bkash';
   bool _isProcessing = false;
   bool _isScanningProof = false;
@@ -288,8 +291,9 @@ class _CheckOutState extends State<CheckOut>
       });
 
       try {
-        final extractedTrx =
-            await TransactionIdExtractor.extractTransactionId(image.path);
+        final extractedTrx = await TransactionIdExtractor.extractTransactionId(
+          image.path,
+        );
         if (!mounted) return;
 
         setState(() {
@@ -306,7 +310,10 @@ class _CheckOutState extends State<CheckOut>
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.check_circle, color: AppColors.textOnPrimary),
+                  const Icon(
+                    Icons.check_circle,
+                    color: AppColors.textOnPrimary,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text('Transaction ID detected: $extractedTrx'),
@@ -346,8 +353,9 @@ class _CheckOutState extends State<CheckOut>
     });
 
     try {
-      final extractedTrx =
-          await TransactionIdExtractor.extractTransactionId(_paymentProofImage!.path);
+      final extractedTrx = await TransactionIdExtractor.extractTransactionId(
+        _paymentProofImage!.path,
+      );
       if (!mounted) return;
 
       setState(() {
@@ -366,9 +374,7 @@ class _CheckOutState extends State<CheckOut>
               children: [
                 const Icon(Icons.check_circle, color: AppColors.textOnPrimary),
                 const SizedBox(width: 8),
-                Expanded(
-                  child: Text('Transaction ID detected: $extractedTrx'),
-                ),
+                Expanded(child: Text('Transaction ID detected: $extractedTrx')),
               ],
             ),
             backgroundColor: AppColors.success,
@@ -436,9 +442,12 @@ class _CheckOutState extends State<CheckOut>
     }
 
     // Logic: Max(minimumCharge, highest single delivery fee) + (Sum of all fees - that highest single fee)
-    double baseFee = (maxSingleFee > minimumCharge) ? maxSingleFee : minimumCharge.toDouble();
+    double baseFee =
+        (maxSingleFee > minimumCharge)
+            ? maxSingleFee
+            : minimumCharge.toDouble();
     double extraFees = totalAllFees - maxSingleFee;
-    
+
     baseDeliveryCharge = (baseFee + extraFees).toInt();
     deliveryCharge = _freeDeliverySelected ? 0 : baseDeliveryCharge;
 
@@ -498,7 +507,10 @@ class _CheckOutState extends State<CheckOut>
     }
 
     _blinkController.reset();
-    _blinkController.repeat(reverse: true, period: const Duration(milliseconds: 300));
+    _blinkController.repeat(
+      reverse: true,
+      period: const Duration(milliseconds: 300),
+    );
 
     Future.delayed(const Duration(milliseconds: 1800), () {
       if (mounted) {
@@ -636,18 +648,19 @@ class _CheckOutState extends State<CheckOut>
         if (mounted) {
           showDialog(
             context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Order In Progress'),
-              content: const Text(
-                'You currently have an active order in progress (Verify, Shipping, or To Receive).\n\nYou cannot place a new order until your current order is delivered.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
+            builder:
+                (context) => AlertDialog(
+                  title: const Text('Order In Progress'),
+                  content: const Text(
+                    'You currently have an active order in progress (Preparing, Shipping, or To Receive).\n\nYou cannot place a new order until your current order is delivered.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
           );
         }
         return;
@@ -671,9 +684,8 @@ class _CheckOutState extends State<CheckOut>
           (_freeDeliverySelected ? _freeDeliveryCost : 0.0) +
           (_coinDiscountSelected ? _coinDiscountAmount : 0.0);
 
-      final double remainingDeliveryPoints = (deliveryPoints - usedPoints)
-          .clamp(0.0, double.infinity)
-          .toDouble();
+      final double remainingDeliveryPoints =
+          (deliveryPoints - usedPoints).clamp(0.0, double.infinity).toDouble();
 
       final userUpdateData = {
         "to_verify": FieldValue.arrayUnion([
@@ -712,8 +724,11 @@ class _CheckOutState extends State<CheckOut>
             'deliveryCharge': deliveryCharge,
             'coinDiscount': _coinDiscountAmount,
             'total': _total,
-            'totalFreeCoins': widget.cartItems.fold(0.0, (sum, item) => sum + (item.freeCoin * item.quantity)),
-            'order_status': "verify",
+            'totalFreeCoins': widget.cartItems.fold(
+              0.0,
+              (sum, item) => sum + (item.freeCoin * item.quantity),
+            ),
+            'order_status': "preparing",
             'freeDeliveryUsed': _freeDeliverySelected,
             'coinDiscountUsed': _coinDiscountSelected,
             'baseDeliveryCharge': baseDeliveryCharge,
@@ -768,7 +783,7 @@ class _CheckOutState extends State<CheckOut>
           (context) => AlertDialog(
             title: const Text('Order Confirmed'),
             content: const Text(
-              'Your order has been placed successfully!\n\nPlease wait until owner verify your payment information.',
+              'Your order has been placed successfully!\n\nYour order is now preparing.',
             ),
             actions: [
               TextButton(
@@ -790,7 +805,7 @@ class _CheckOutState extends State<CheckOut>
                     MaterialPageRoute(
                       builder:
                           (context) => OrderListScreen(
-                            status: 'To Verify',
+                            status: 'Preparing',
                             orders: toVerifyOrders,
                           ),
                     ),
@@ -820,10 +835,7 @@ class _CheckOutState extends State<CheckOut>
         fontWeight: FontWeight.w500,
         fontSize: 15,
       ),
-      hintStyle: TextStyle(
-        color: Colors.grey.shade400,
-        fontSize: 14,
-      ),
+      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
@@ -885,12 +897,18 @@ class _CheckOutState extends State<CheckOut>
             animation: _blinkAnimation,
             builder: (context, child) {
               final blinkVal = _blinkAnimation.value;
-              final borderColor = Color.lerp(Colors.amber.shade700, Colors.red.shade600, blinkVal)!;
-              final bgColor = Color.lerp(
-                Colors.amber.shade50.withValues(alpha: 0.9),
-                Colors.red.shade50,
-                blinkVal,
-              )!;
+              final borderColor =
+                  Color.lerp(
+                    Colors.amber.shade700,
+                    Colors.red.shade600,
+                    blinkVal,
+                  )!;
+              final bgColor =
+                  Color.lerp(
+                    Colors.amber.shade50.withValues(alpha: 0.9),
+                    Colors.red.shade50,
+                    blinkVal,
+                  )!;
 
               return Container(
                 key: _refundSectionKey,
@@ -904,9 +922,8 @@ class _CheckOutState extends State<CheckOut>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: (blinkVal > 0 ? Colors.red : Colors.amber).withValues(
-                        alpha: 0.15 + (blinkVal * 0.2),
-                      ),
+                      color: (blinkVal > 0 ? Colors.red : Colors.amber)
+                          .withValues(alpha: 0.15 + (blinkVal * 0.2)),
                       blurRadius: 8 + (blinkVal * 4),
                       offset: const Offset(0, 3),
                     ),
@@ -920,7 +937,11 @@ class _CheckOutState extends State<CheckOut>
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Color.lerp(Colors.amber.shade700, Colors.red.shade700, blinkVal),
+                            color: Color.lerp(
+                              Colors.amber.shade700,
+                              Colors.red.shade700,
+                              blinkVal,
+                            ),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -935,15 +956,26 @@ class _CheckOutState extends State<CheckOut>
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w900,
-                            color: Color.lerp(Colors.amber.shade900, Colors.red.shade900, blinkVal),
+                            color: Color.lerp(
+                              Colors.amber.shade900,
+                              Colors.red.shade900,
+                              blinkVal,
+                            ),
                             letterSpacing: 0.5,
                           ),
                         ),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
-                            color: Color.lerp(Colors.amber.shade700, Colors.red.shade700, blinkVal),
+                            color: Color.lerp(
+                              Colors.amber.shade700,
+                              Colors.red.shade700,
+                              blinkVal,
+                            ),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Text(
@@ -965,14 +997,25 @@ class _CheckOutState extends State<CheckOut>
                         hintText: 'e.g. 01700000000',
                         prefixIcon: Icon(
                           Icons.phone_android_rounded,
-                          color: Color.lerp(Colors.amber.shade900, Colors.red.shade900, blinkVal),
+                          color: Color.lerp(
+                            Colors.amber.shade900,
+                            Colors.red.shade900,
+                            blinkVal,
+                          ),
                           size: 22,
                         ),
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
                         labelStyle: TextStyle(
-                          color: Color.lerp(Colors.amber.shade900, Colors.red.shade900, blinkVal),
+                          color: Color.lerp(
+                            Colors.amber.shade900,
+                            Colors.red.shade900,
+                            blinkVal,
+                          ),
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -983,21 +1026,35 @@ class _CheckOutState extends State<CheckOut>
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: Color.lerp(Colors.amber.shade400, Colors.red.shade400, blinkVal)!,
+                            color:
+                                Color.lerp(
+                                  Colors.amber.shade400,
+                                  Colors.red.shade400,
+                                  blinkVal,
+                                )!,
                             width: 1.5 + blinkVal,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.amber.shade800, width: 2),
+                          borderSide: BorderSide(
+                            color: Colors.amber.shade800,
+                            width: 2,
+                          ),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+                          borderSide: const BorderSide(
+                            color: AppColors.error,
+                            width: 1.5,
+                          ),
                         ),
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: AppColors.error, width: 2),
+                          borderSide: const BorderSide(
+                            color: AppColors.error,
+                            width: 2,
+                          ),
                         ),
                       ),
                       keyboardType: TextInputType.phone,
@@ -1019,7 +1076,11 @@ class _CheckOutState extends State<CheckOut>
                           Icon(
                             Icons.info_outline_rounded,
                             size: 14,
-                            color: Color.lerp(Colors.amber.shade900, Colors.red.shade900, blinkVal),
+                            color: Color.lerp(
+                              Colors.amber.shade900,
+                              Colors.red.shade900,
+                              blinkVal,
+                            ),
                           ),
                           const SizedBox(width: 4),
                           Expanded(
@@ -1028,7 +1089,11 @@ class _CheckOutState extends State<CheckOut>
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w600,
-                                color: Color.lerp(Colors.amber.shade900, Colors.red.shade900, blinkVal),
+                                color: Color.lerp(
+                                  Colors.amber.shade900,
+                                  Colors.red.shade900,
+                                  blinkVal,
+                                ),
                               ),
                             ),
                           ),
@@ -1139,24 +1204,27 @@ class _CheckOutState extends State<CheckOut>
         duration: const Duration(milliseconds: 250),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: selected
-              ? const LinearGradient(
-                  colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                )
-              : const LinearGradient(
-                  colors: [Color(0xFFFFF8E1), Color(0xFFFFECB3)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
+          gradient:
+              selected
+                  ? const LinearGradient(
+                    colors: [Color(0xFF2E7D32), Color(0xFF4CAF50)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  )
+                  : const LinearGradient(
+                    colors: [Color(0xFFFFF8E1), Color(0xFFFFECB3)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
           border: Border.all(
             color: selected ? Colors.transparent : Colors.amber.shade700,
             width: 1.5,
           ),
           boxShadow: [
             BoxShadow(
-              color: (selected ? Colors.green : Colors.amber).withValues(alpha: 0.2),
+              color: (selected ? Colors.green : Colors.amber).withValues(
+                alpha: 0.2,
+              ),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -1174,13 +1242,16 @@ class _CheckOutState extends State<CheckOut>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? Colors.white.withValues(alpha: 0.25)
-                          : Colors.amber.shade700,
+                      color:
+                          selected
+                              ? Colors.white.withValues(alpha: 0.25)
+                              : Colors.amber.shade700,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      selected ? Icons.check_circle_rounded : Icons.monetization_on_rounded,
+                      selected
+                          ? Icons.check_circle_rounded
+                          : Icons.monetization_on_rounded,
                       color: Colors.white,
                       size: 22,
                     ),
@@ -1197,7 +1268,8 @@ class _CheckOutState extends State<CheckOut>
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: selected ? Colors.white : Colors.amber.shade900,
+                            color:
+                                selected ? Colors.white : Colors.amber.shade900,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -1208,7 +1280,10 @@ class _CheckOutState extends State<CheckOut>
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: selected ? Colors.white.withValues(alpha: 0.9) : Colors.brown.shade700,
+                            color:
+                                selected
+                                    ? Colors.white.withValues(alpha: 0.9)
+                                    : Colors.brown.shade700,
                           ),
                         ),
                       ],
@@ -1217,13 +1292,16 @@ class _CheckOutState extends State<CheckOut>
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? Colors.white.withValues(alpha: 0.2)
-                          : Colors.amber.shade800.withValues(alpha: 0.1),
+                      color:
+                          selected
+                              ? Colors.white.withValues(alpha: 0.2)
+                              : Colors.amber.shade800.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      selected ? Icons.done_all_rounded : Icons.add_circle_outline_rounded,
+                      selected
+                          ? Icons.done_all_rounded
+                          : Icons.add_circle_outline_rounded,
                       color: selected ? Colors.white : Colors.amber.shade900,
                       size: 20,
                     ),
@@ -1247,17 +1325,18 @@ class _CheckOutState extends State<CheckOut>
         duration: const Duration(milliseconds: 250),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: selected
-              ? const LinearGradient(
-                  colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                )
-              : const LinearGradient(
-                  colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
+          gradient:
+              selected
+                  ? const LinearGradient(
+                    colors: [Color(0xFF1B5E20), Color(0xFF388E3C)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  )
+                  : const LinearGradient(
+                    colors: [Color(0xFFE8F5E9), Color(0xFFC8E6C9)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
           border: Border.all(
             color: selected ? Colors.transparent : Colors.green.shade700,
             width: 1.5,
@@ -1282,13 +1361,16 @@ class _CheckOutState extends State<CheckOut>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? Colors.white.withValues(alpha: 0.25)
-                          : Colors.green.shade700,
+                      color:
+                          selected
+                              ? Colors.white.withValues(alpha: 0.25)
+                              : Colors.green.shade700,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      selected ? Icons.verified_rounded : Icons.local_shipping_rounded,
+                      selected
+                          ? Icons.verified_rounded
+                          : Icons.local_shipping_rounded,
                       color: Colors.white,
                       size: 22,
                     ),
@@ -1299,11 +1381,14 @@ class _CheckOutState extends State<CheckOut>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          selected ? 'Free Delivery Applied!' : 'Use Free Delivery',
+                          selected
+                              ? 'Free Delivery Applied!'
+                              : 'Use Free Delivery',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: selected ? Colors.white : Colors.green.shade900,
+                            color:
+                                selected ? Colors.white : Colors.green.shade900,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -1314,7 +1399,10 @@ class _CheckOutState extends State<CheckOut>
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
-                            color: selected ? Colors.white.withValues(alpha: 0.9) : Colors.green.shade800,
+                            color:
+                                selected
+                                    ? Colors.white.withValues(alpha: 0.9)
+                                    : Colors.green.shade800,
                           ),
                         ),
                       ],
@@ -1323,13 +1411,16 @@ class _CheckOutState extends State<CheckOut>
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: selected
-                          ? Colors.white.withValues(alpha: 0.2)
-                          : Colors.green.shade800.withValues(alpha: 0.1),
+                      color:
+                          selected
+                              ? Colors.white.withValues(alpha: 0.2)
+                              : Colors.green.shade800.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      selected ? Icons.done_all_rounded : Icons.add_circle_outline_rounded,
+                      selected
+                          ? Icons.done_all_rounded
+                          : Icons.add_circle_outline_rounded,
                       color: selected ? Colors.white : Colors.green.shade900,
                       size: 20,
                     ),
@@ -1349,76 +1440,422 @@ class _CheckOutState extends State<CheckOut>
         'id': 'bkash',
         'name': 'bKash',
         'icon': Icons.account_balance_wallet_rounded,
-        'color': const Color(0xFFE2136E)
+        'color': const Color(0xFFE2136E),
       },
       {
         'id': 'nagad',
         'name': 'Nagad',
         'icon': Icons.account_balance_wallet_rounded,
-        'color': const Color(0xFFF7921E)
+        'color': const Color(0xFFF7921E),
       },
       {
         'id': 'rocket',
         'name': 'Rocket',
         'icon': Icons.account_balance_wallet_rounded,
-        'color': const Color(0xFF8C3494)
+        'color': const Color(0xFF8C3494),
       },
     ];
 
     return Row(
-      children: methods.map((method) {
-        final bool isSelected = _paymentMethod == method['id'];
-        final Color brandColor = method['color'] as Color;
+      children:
+          methods.map((method) {
+            final bool isSelected = _paymentMethod == method['id'];
+            final Color brandColor = method['color'] as Color;
 
-        return Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _paymentMethod = method['id'] as String),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? brandColor.withValues(alpha: 0.1)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: isSelected ? brandColor : Colors.grey.shade300,
-                  width: isSelected ? 2 : 1,
-                ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: brandColor.withValues(alpha: 0.15),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : [],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    isSelected ? Icons.check_circle_rounded : (method['icon'] as IconData),
-                    color: isSelected ? brandColor : Colors.grey.shade600,
-                    size: 24,
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    method['name'] as String,
-                    style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                      color: isSelected ? brandColor : Colors.black87,
-                      fontSize: 14,
+            return Expanded(
+              child: GestureDetector(
+                onTap:
+                    () =>
+                        setState(() => _paymentMethod = method['id'] as String),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color:
+                        isSelected
+                            ? brandColor.withValues(alpha: 0.1)
+                            : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isSelected ? brandColor : Colors.grey.shade300,
+                      width: isSelected ? 2 : 1,
                     ),
+                    boxShadow:
+                        isSelected
+                            ? [
+                              BoxShadow(
+                                color: brandColor.withValues(alpha: 0.15),
+                                blurRadius: 6,
+                                offset: const Offset(0, 3),
+                              ),
+                            ]
+                            : [],
                   ),
-                ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isSelected
+                            ? Icons.check_circle_rounded
+                            : (method['icon'] as IconData),
+                        color: isSelected ? brandColor : Colors.grey.shade600,
+                        size: 24,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        method['name'] as String,
+                        style: TextStyle(
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected ? brandColor : Colors.black87,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+    );
+  }
+
+  Color _getPaymentBrandColor([String? method]) {
+    final m = method ?? _paymentMethod;
+    switch (m) {
+      case 'bkash':
+        return const Color(0xFFE2136E);
+      case 'nagad':
+        return const Color(0xFFF7921E);
+      case 'rocket':
+        return const Color(0xFF8C3494);
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  LinearGradient _getPaymentBrandGradient([String? method]) {
+    final m = method ?? _paymentMethod;
+    switch (m) {
+      case 'bkash':
+        return const LinearGradient(
+          colors: [Color(0xFFE2136E), Color(0xFFC2185B)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        );
+      case 'nagad':
+        return const LinearGradient(
+          colors: [Color(0xFFF7921E), Color(0xFFE65100)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        );
+      case 'rocket':
+        return const LinearGradient(
+          colors: [Color(0xFF8C3494), Color(0xFF6A1B9A)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        );
+      default:
+        return const LinearGradient(
+          colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        );
+    }
+  }
+
+  String _getPaymentBrandName([String? method]) {
+    final m = method ?? _paymentMethod;
+    switch (m) {
+      case 'bkash':
+        return 'bKash';
+      case 'nagad':
+        return 'Nagad';
+      case 'rocket':
+        return 'Rocket';
+      default:
+        return 'Payment';
+    }
+  }
+
+  String _getPaymentBrandBengaliName([String? method]) {
+    final m = method ?? _paymentMethod;
+    switch (m) {
+      case 'bkash':
+        return 'বিকাশ';
+      case 'nagad':
+        return 'নগদ';
+      case 'rocket':
+        return 'রকেট';
+      default:
+        return '';
+    }
+  }
+
+  Future<void> _openPaymentApp() async {
+    final String paymentNumber = _getDisplayNumber();
+    if (paymentNumber.isNotEmpty && paymentNumber != "Not available") {
+      await Clipboard.setData(ClipboardData(text: paymentNumber));
+    }
+
+    String androidPackage = '';
+    String iosScheme = '';
+    String appStoreLink = '';
+    final String appName = _getPaymentBrandName();
+    final String bengaliName = _getPaymentBrandBengaliName();
+
+    switch (_paymentMethod) {
+      case 'bkash':
+        androidPackage = 'com.bKash.customerapp';
+        iosScheme = 'bkash://';
+        appStoreLink = 'https://apps.apple.com/app/bkash/id1435012987';
+        break;
+      case 'nagad':
+        androidPackage = 'com.konasl.nagad';
+        iosScheme = 'nagad://';
+        appStoreLink = 'https://apps.apple.com/app/nagad/id1471844877';
+        break;
+      case 'rocket':
+        androidPackage = 'com.dbbl.mbs.apps.main';
+        iosScheme = 'dbblrocket://';
+        appStoreLink = 'https://apps.apple.com/app/rocket/id1006574971';
+        break;
+      default:
+        return;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  paymentNumber.isNotEmpty && paymentNumber != "Not available"
+                      ? '$bengaliName নম্বর ($paymentNumber) কপি হয়েছে! $appName অ্যাপ খোলা হচ্ছে...'
+                      : '$appName অ্যাপ খোলা হচ্ছে...',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    fontSize: 13.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: _getPaymentBrandColor(),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+
+    try {
+      if (Platform.isAndroid) {
+        await LaunchApp.openApp(
+          androidPackageName: androidPackage,
+          openStore: true,
+        );
+      } else if (Platform.isIOS) {
+        await LaunchApp.openApp(
+          iosUrlScheme: iosScheme,
+          appStoreLink: appStoreLink,
+          openStore: true,
+        );
+      } else {
+        final uri = Uri.parse(
+          'https://play.google.com/store/apps/details?id=$androidPackage',
+        );
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      }
+    } catch (e) {
+      // Fallback with url_launcher
+      try {
+        final Uri storeUri = Uri.parse(
+          Platform.isIOS
+              ? appStoreLink
+              : 'https://play.google.com/store/apps/details?id=$androidPackage',
+        );
+        if (await canLaunchUrl(storeUri)) {
+          await launchUrl(storeUri, mode: LaunchMode.externalApplication);
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$appName অ্যাপটি ওপেন করা সম্ভব হয়নি।'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Widget _buildPayNowButton() {
+    final String brandName = _getPaymentBrandName();
+    final String bengaliName = _getPaymentBrandBengaliName();
+    final Color brandColor = _getPaymentBrandColor();
+    final LinearGradient brandGradient = _getPaymentBrandGradient();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: brandGradient,
+              boxShadow: [
+                BoxShadow(
+                  color: brandColor.withValues(alpha: 0.38),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _openPaymentApp,
+                borderRadius: BorderRadius.circular(18),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 15,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.22),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.35),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.account_balance_wallet_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Pay Now with $brandName',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.25),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Text(
+                                    'OPEN APP',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'নম্বর অটো কপি হবে এবং $bengaliName অ্যাপ ওপেন হবে',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.92),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.12),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          color: brandColor,
+                          size: 18,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        );
-      }).toList(),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: brandColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: brandColor.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 16, color: brandColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'পেমেন্ট করার পর ট্রানজেকশন আইডি (TrxID) বা স্ক্রিনশট নিচে দিন।',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: brandColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1479,9 +1916,7 @@ class _CheckOutState extends State<CheckOut>
                       child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(
-                            color: Colors.white,
-                          ),
+                          CircularProgressIndicator(color: Colors.white),
                           SizedBox(height: 12),
                           Text(
                             'Reading screenshot...',
@@ -1506,36 +1941,39 @@ class _CheckOutState extends State<CheckOut>
               ],
             )
             : AnimatedBuilder(
-                animation: _proofBlinkAnimation,
-                builder: (context, child) {
-                  final blinkVal = _proofBlinkAnimation.value;
-                  final borderColor = Color.lerp(
-                    AppColors.textSecondary.withValues(alpha: 0.2),
-                    Colors.red.shade600,
-                    blinkVal,
-                  )!;
-                  final bgColor = Color.lerp(
-                    AppColors.surfaceGrey,
-                    Colors.red.shade50,
-                    blinkVal,
-                  )!;
+              animation: _proofBlinkAnimation,
+              builder: (context, child) {
+                final blinkVal = _proofBlinkAnimation.value;
+                final borderColor =
+                    Color.lerp(
+                      AppColors.textSecondary.withValues(alpha: 0.2),
+                      Colors.red.shade600,
+                      blinkVal,
+                    )!;
+                final bgColor =
+                    Color.lerp(
+                      AppColors.surfaceGrey,
+                      Colors.red.shade50,
+                      blinkVal,
+                    )!;
 
-                  return InkWell(
-                    key: _proofSectionKey,
-                    onTap: _pickPaymentProof,
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      decoration: BoxDecoration(
-                        color: bgColor,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: borderColor,
-                          width: 1.5 + (blinkVal * 1.5),
-                        ),
-                        boxShadow: blinkVal > 0
-                            ? [
+                return InkWell(
+                  key: _proofSectionKey,
+                  onTap: _pickPaymentProof,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: borderColor,
+                        width: 1.5 + (blinkVal * 1.5),
+                      ),
+                      boxShadow:
+                          blinkVal > 0
+                              ? [
                                 BoxShadow(
                                   color: Colors.red.withValues(
                                     alpha: 0.25 * blinkVal,
@@ -1544,66 +1982,67 @@ class _CheckOutState extends State<CheckOut>
                                   spreadRadius: 1 * blinkVal,
                                 ),
                               ]
-                            : null,
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Color.lerp(
-                                AppColors.placeholderBackground,
-                                Colors.red.shade100,
-                                blinkVal,
-                              ),
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Icon(
-                              Icons.document_scanner_outlined,
-                              color: Color.lerp(
-                                AppColors.iconAccent,
-                                Colors.red.shade700,
-                                blinkVal,
-                              ),
-                              size: 30,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Upload Screenshot (পেমেন্ট স্ক্রিনশট আপলোড করুন)',
-                            style: TextStyle(
-                              color: Color.lerp(
-                                AppColors.textPrimary,
-                                Colors.red.shade900,
-                                blinkVal,
-                              ),
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            blinkVal > 0
-                                ? '⚠️ Please upload transaction screenshot'
-                                : 'Tap to pick image and auto-fill TrxID below',
-                            style: TextStyle(
-                              color: Color.lerp(
-                                AppColors.textSecondary,
-                                Colors.red.shade700,
-                                blinkVal,
-                              ),
-                              fontSize: 13,
-                              fontWeight: blinkVal > 0
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ],
-                      ),
+                              : null,
                     ),
-                  );
-                },
-              ),
+                    child: Column(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Color.lerp(
+                              AppColors.placeholderBackground,
+                              Colors.red.shade100,
+                              blinkVal,
+                            ),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Icon(
+                            Icons.document_scanner_outlined,
+                            color: Color.lerp(
+                              AppColors.iconAccent,
+                              Colors.red.shade700,
+                              blinkVal,
+                            ),
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Upload Screenshot (পেমেন্ট স্ক্রিনশট আপলোড করুন)',
+                          style: TextStyle(
+                            color: Color.lerp(
+                              AppColors.textPrimary,
+                              Colors.red.shade900,
+                              blinkVal,
+                            ),
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          blinkVal > 0
+                              ? '⚠️ Please upload transaction screenshot'
+                              : 'Tap to pick image and auto-fill TrxID below',
+                          style: TextStyle(
+                            color: Color.lerp(
+                              AppColors.textSecondary,
+                              Colors.red.shade700,
+                              blinkVal,
+                            ),
+                            fontSize: 13,
+                            fontWeight:
+                                blinkVal > 0
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
         const SizedBox(height: 16),
         TextFormField(
           controller: _transactionIdController,
@@ -1641,21 +2080,23 @@ class _CheckOutState extends State<CheckOut>
                   ),
                 if (_paymentProofImage != null)
                   IconButton(
-                    icon: _isScanningProof
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.document_scanner_outlined),
+                    icon:
+                        _isScanningProof
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.document_scanner_outlined),
                     tooltip: 'Re-scan Screenshot',
                     onPressed: _isScanningProof ? null : _rescanPaymentProof,
                   ),
               ],
             ),
-            helperText: _trxAutoDetected
-                ? '✓ Auto-extracted from screenshot. Edit if needed.'
-                : 'Enter manually or auto-filled from screenshot.',
+            helperText:
+                _trxAutoDetected
+                    ? '✓ Auto-extracted from screenshot. Edit if needed.'
+                    : 'Enter manually or auto-filled from screenshot.',
             helperStyle: TextStyle(
               color:
                   _trxAutoDetected
@@ -1721,9 +2162,10 @@ class _CheckOutState extends State<CheckOut>
 
     if (_trxVerificationResult.isValid) {
       final provider = _trxVerificationResult.provider?.toUpperCase() ?? 'MFS';
-      final amount = _trxVerificationResult.amount != null
-          ? '৳${_trxVerificationResult.amount!.toStringAsFixed(2)}'
-          : null;
+      final amount =
+          _trxVerificationResult.amount != null
+              ? '৳${_trxVerificationResult.amount!.toStringAsFixed(2)}'
+              : null;
 
       return Container(
         width: double.infinity,
@@ -1736,11 +2178,7 @@ class _CheckOutState extends State<CheckOut>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.check_circle,
-              color: Color(0xFF2E7D32),
-              size: 22,
-            ),
+            const Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 22),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -1759,7 +2197,9 @@ class _CheckOutState extends State<CheckOut>
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF2E7D32),
                           borderRadius: BorderRadius.circular(6),
@@ -1811,11 +2251,7 @@ class _CheckOutState extends State<CheckOut>
         child: const Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              Icons.cancel,
-              color: Color(0xFFC62828),
-              size: 22,
-            ),
+            Icon(Icons.cancel, color: Color(0xFFC62828), size: 22),
             SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -1891,14 +2327,21 @@ class _CheckOutState extends State<CheckOut>
                         visualDensity: VisualDensity.compact,
                         side: const BorderSide(color: Color(0xFFE65100)),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                       ),
-                      icon: const Icon(Icons.refresh,
-                          size: 15, color: Color(0xFFE65100)),
+                      icon: const Icon(
+                        Icons.refresh,
+                        size: 15,
+                        color: Color(0xFFE65100),
+                      ),
                       label: const Text(
                         'Check Again',
                         style: TextStyle(
-                            fontSize: 12, color: Color(0xFFE65100)),
+                          fontSize: 12,
+                          color: Color(0xFFE65100),
+                        ),
                       ),
                     ),
                   ),
@@ -2098,11 +2541,15 @@ class _CheckOutState extends State<CheckOut>
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 28),
+          const Icon(
+            Icons.warning_amber_rounded,
+            color: AppColors.error,
+            size: 28,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'You have an active order in progress (Verify / Shipping / To Receive). You cannot place a new order until your current order is delivered.',
+              'You have an active order in progress (Preparing / Shipping / To Receive). You cannot place a new order until your current order is delivered.',
               style: TextStyle(
                 color: Colors.red.shade900,
                 fontSize: 13.5,
@@ -2173,23 +2620,26 @@ class _CheckOutState extends State<CheckOut>
                     ),
                     const SizedBox(width: 8),
                     InkWell(
-                      onTap: (_paymentNumberLoading ||
-                              _getDisplayNumber() == "Not available")
-                          ? null
-                          : () {
-                            Clipboard.setData(
-                              ClipboardData(text: _getDisplayNumber()),
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Number copied'),
-                              ),
-                            );
-                          },
+                      onTap:
+                          (_paymentNumberLoading ||
+                                  _getDisplayNumber() == "Not available")
+                              ? null
+                              : () {
+                                Clipboard.setData(
+                                  ClipboardData(text: _getDisplayNumber()),
+                                );
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Number copied'),
+                                  ),
+                                );
+                              },
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(16),
@@ -2197,8 +2647,11 @@ class _CheckOutState extends State<CheckOut>
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.copy_rounded,
-                                size: 16, color: AppColors.primary),
+                            Icon(
+                              Icons.copy_rounded,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'Copy',
@@ -2222,6 +2675,7 @@ class _CheckOutState extends State<CheckOut>
               ),
               const SizedBox(height: 16),
               _buildPaymentMethodSection(),
+              _buildPayNowButton(),
               if (!_freeDeliverySelected &&
                   (_paymentMethod == 'bkash' ||
                       _paymentMethod == 'nagad' ||
@@ -2233,14 +2687,18 @@ class _CheckOutState extends State<CheckOut>
             Builder(
               builder: (context) {
                 final bool isDisabled =
-                    _isProcessing || _versionCheckLoading || needupdate || _hasPendingOrder;
-                final String buttonText = needupdate
-                    ? 'UPDATE APP TO ORDER'
-                    : _hasPendingOrder
-                    ? 'ORDER IN PROGRESS'
-                    : _versionCheckLoading
-                    ? 'CHECKING APP VERSION...'
-                    : 'PLACE ORDER';
+                    _isProcessing ||
+                    _versionCheckLoading ||
+                    needupdate ||
+                    _hasPendingOrder;
+                final String buttonText =
+                    needupdate
+                        ? 'UPDATE APP TO ORDER'
+                        : _hasPendingOrder
+                        ? 'ORDER IN PROGRESS'
+                        : _versionCheckLoading
+                        ? 'CHECKING APP VERSION...'
+                        : 'PLACE ORDER';
 
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
@@ -2248,23 +2706,25 @@ class _CheckOutState extends State<CheckOut>
                   height: 54,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(16),
-                    gradient: isDisabled
-                        ? null
-                        : const LinearGradient(
-                            colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                          ),
-                    color: isDisabled ? Colors.grey.shade300 : null,
-                    boxShadow: isDisabled
-                        ? []
-                        : [
-                            BoxShadow(
-                              color: Colors.orange.withValues(alpha: 0.4),
-                              blurRadius: 12,
-                              offset: const Offset(0, 5),
+                    gradient:
+                        isDisabled
+                            ? null
+                            : const LinearGradient(
+                              colors: [Color(0xFFFF9800), Color(0xFFF57C00)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
                             ),
-                          ],
+                    color: isDisabled ? Colors.grey.shade300 : null,
+                    boxShadow:
+                        isDisabled
+                            ? []
+                            : [
+                              BoxShadow(
+                                color: Colors.orange.withValues(alpha: 0.4),
+                                blurRadius: 12,
+                                offset: const Offset(0, 5),
+                              ),
+                            ],
                   ),
                   child: Material(
                     color: Colors.transparent,
@@ -2272,41 +2732,44 @@ class _CheckOutState extends State<CheckOut>
                       onTap: isDisabled ? null : _submitOrder,
                       borderRadius: BorderRadius.circular(16),
                       child: Center(
-                        child: _isProcessing
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: AppColors.textOnPrimary,
-                                  strokeWidth: 2.5,
-                                ),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    needupdate
-                                        ? Icons.system_update_rounded
-                                        : Icons.shopping_bag_outlined,
-                                    color: isDisabled
-                                        ? Colors.grey.shade600
-                                        : AppColors.textOnPrimary,
-                                    size: 22,
+                        child:
+                            _isProcessing
+                                ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.textOnPrimary,
+                                    strokeWidth: 2.5,
                                   ),
-                                  const SizedBox(width: 10),
-                                  Text(
-                                    buttonText,
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.8,
-                                      color: isDisabled
-                                          ? Colors.grey.shade600
-                                          : AppColors.textOnPrimary,
+                                )
+                                : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      needupdate
+                                          ? Icons.system_update_rounded
+                                          : Icons.shopping_bag_outlined,
+                                      color:
+                                          isDisabled
+                                              ? Colors.grey.shade600
+                                              : AppColors.textOnPrimary,
+                                      size: 22,
                                     ),
-                                  ),
-                                ],
-                              ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      buttonText,
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.8,
+                                        color:
+                                            isDisabled
+                                                ? Colors.grey.shade600
+                                                : AppColors.textOnPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                       ),
                     ),
                   ),

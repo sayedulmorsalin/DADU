@@ -84,6 +84,31 @@
 
     <queries>
 
+        <!-- Payment Apps -->
+        <package android:name="com.bKash.customerapp" />
+        <package android:name="com.konasl.nagad" />
+        <package android:name="com.dbbl.mcommerce.app" />
+
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="bkash" />
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="nagad" />
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="rocket" />
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="dbblrocket" />
+        </intent>
+
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

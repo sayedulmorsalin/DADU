@@ -29,7 +29,6 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   final RxBool showSearchResults = false.obs;
   final RxBool isSearching = false.obs;
   final RxBool isSearchReady = false.obs;
-  final RxBool giftBannerVisible = false.obs;
   final RxBool showAllCategories = false.obs;
 
   final RxInt selectedIndex = 0.obs;
@@ -100,8 +99,6 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     if (products.isEmpty) {
       await loadInitialProducts();
     }
-
-    giftBannerVisible.value = true;
 
     unawaited(_loadSecondaryDataStaggered());
   }

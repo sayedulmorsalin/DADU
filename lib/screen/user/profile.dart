@@ -983,10 +983,10 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
 
           children: [
             GestureDetector(
-              onTap: () => _navigateToOrderPage(context, 'To Verify', toVerify),
+              onTap: () => _navigateToOrderPage(context, 'Preparing', toVerify),
               child: _buildOrderStatus(
-                'To Verify',
-                Icons.verified_outlined,
+                'Preparing',
+                Icons.inventory_2_outlined,
                 toVerifyCount,
               ),
             ),
@@ -1074,8 +1074,8 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
 
     if (toVerifyCount > 0) {
       notices.add(_buildStatusNotice(
-        'An admin will verify your order within 24 hours. Please wait until then.',
-        '২৪ ঘণ্টার মধ্যে একজন অ্যাডমিন আপনার অর্ডার যাচাই করবেন, অনুগ্রহ করে ততক্ষণ অপেক্ষা করুন।',
+        'Your order is being prepared. Please wait until then.',
+        'আপনার অর্ডারটি প্রস্তুত করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন।',
       ));
     }
 

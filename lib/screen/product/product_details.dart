@@ -522,7 +522,7 @@ class _ProductDetailsState extends State<ProductDetails>
                 builder: (context) => AlertDialog(
                   title: const Text('Order In Progress'),
                   content: const Text(
-                    'You currently have an active order in progress (Verify, Shipping, or To Receive).\n\nYou cannot place a new order until your current order is delivered.',
+                    'You currently have an active order in progress (Preparing, Shipping, or To Receive).\n\nYou cannot place a new order until your current order is delivered.',
                   ),
                   actions: [
                     TextButton(
@@ -616,13 +616,19 @@ class _ProductDetailsState extends State<ProductDetails>
   Widget build(BuildContext context) {
     List<String> images = [];
 
+    String toHighRes(String url) {
+      if (url.contains('img5_')) {
+        return url.replaceAll('img5_', 'img20_');
+      }
+      return url;
+    }
+
     // Adding images in order: Image Three, Two, One (image20)
-    // This handles the user's request to "reverse it" while maintaining
-    // the exclusion of the primary image (image5).
-    if (widget.imageThree.isNotEmpty) images.add(widget.imageThree);
-    if (widget.imageTwo.isNotEmpty) images.add(widget.imageTwo);
+    // Ensures all images resolve to their high-resolution version (img20) rather than heavy compression (img5)
+    if (widget.imageThree.isNotEmpty) images.add(toHighRes(widget.imageThree));
+    if (widget.imageTwo.isNotEmpty) images.add(toHighRes(widget.imageTwo));
     if (widget.image20.isNotEmpty && widget.image20 != widget.image5) {
-      images.add(widget.image20);
+      images.add(toHighRes(widget.image20));
     }
 
     // If no specific details images are found, we follow the user's rule:

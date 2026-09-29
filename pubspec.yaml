@@ -67,6 +67,8 @@ dependencies:
   http_parser: ^4.1.2
   google_fonts: ^6.2.1
   google_mlkit_text_recognition: ^0.16.0
+  external_app_launcher: ^4.0.3
+  android_intent_plus: ^6.1.0
 
 
 
