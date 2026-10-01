@@ -679,12 +679,17 @@ class ApiService {
   }
 
   /// Delete a used product listing (owner only).
-  Future<bool> deleteUsedProduct(String id) async {
+  /// Backend deletes both the D1 database record and all associated images from Cloudflare R2.
+  Future<Map<String, dynamic>> deleteUsedProduct(String id) async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) return false;
+      if (user == null) {
+        return {'success': false, 'error': 'Please log in to delete this listing.'};
+      }
       final String? token = await user.getIdToken();
-      if (token == null) return false;
+      if (token == null) {
+        return {'success': false, 'error': 'Authentication failed. Please re-login.'};
+      }
 
       final response = await http.delete(
         Uri.parse('$_baseUrl/used-products/$id'),
@@ -692,13 +697,19 @@ class ApiService {
           'Authorization': 'Bearer $token',
         },
       );
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        return jsonData['success'] == true;
+      final jsonData = jsonDecode(response.body);
+      if (response.statusCode == 200 && jsonData['success'] == true) {
+        return {
+          'success': true,
+          'message': jsonData['message'] ?? 'Product and picture deleted successfully'
+        };
       }
-      return false;
+      return {
+        'success': false,
+        'error': jsonData['error'] ?? 'Failed to delete listing (${response.statusCode})'
+      };
     } catch (e) {
-      return false;
+      return {'success': false, 'error': 'Failed to delete product: $e'};
     }
   }
 
