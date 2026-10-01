@@ -468,4 +468,263 @@ class ApiService {
       return {'success': false, 'error': 'Failed to submit review: $e'};
     }
   }
+
+  // =========================================================================
+  // Used / Old Products API (C2C Marketplace)
+  // =========================================================================
+
+  /// Upload an image specifically for an old/used product.
+  /// Backend stores it in the dedicated 'used-products' folder in Cloudflare R2.
+  Future<String?> uploadUsedProductImage(File imageFile) async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print('uploadUsedProductImage: User is not authenticated');
+        return null;
+      }
+      final String? token = await user.getIdToken();
+      if (token == null) {
+        print('uploadUsedProductImage: Failed to get auth token');
+        return null;
+      }
+
+      // Try dedicated endpoint first
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl/upload/used-product-image'),
+      );
+      request.headers['Authorization'] = 'Bearer $token';
+      request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
+
+      // If dedicated endpoint is 404 (e.g. pending worker deployment), fallback to general /images/upload
+      if (response.statusCode == 404) {
+        print('uploadUsedProductImage: /upload/used-product-image returned 404, falling back to /images/upload');
+        request = http.MultipartRequest(
+          'POST',
+          Uri.parse('$_baseUrl/images/upload'),
+        );
+        request.headers['Authorization'] = 'Bearer $token';
+        request.fields['folder'] = 'used-products';
+        request.files.add(await http.MultipartFile.fromPath('file', imageFile.path));
+
+        streamedResponse = await request.send();
+        response = await http.Response.fromStream(streamedResponse);
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          String? url = jsonData['imageUrl'];
+          if (url != null && url.startsWith('/')) {
+            url = resolveUrl(url);
+          }
+          return url;
+        }
+      }
+      print('uploadUsedProductImage error: ${response.statusCode} - ${response.body}');
+      return null;
+    } catch (e) {
+      print('uploadUsedProductImage exception: $e');
+      return null;
+    }
+  }
+
+  /// Submit an old product for sale.
+  /// Backend saves to 'used_products' table with status 'pending' awaiting admin review.
+  Future<Map<String, dynamic>> submitUsedProduct({
+    required String name,
+    required double price,
+    double? originalPrice,
+    required String details,
+    String? brand,
+    String catagory = 'Boots',
+    String? size,
+    String condition = 'Good',
+    required String imagePrimary,
+    String? userName,
+    String? userPhone,
+  }) async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        return {'success': false, 'error': 'Please log in to post your old product.'};
+      }
+      final String? token = await user.getIdToken();
+      if (token == null) {
+        return {'success': false, 'error': 'Authentication failed. Please re-login.'};
+      }
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl/used-products'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'name': name,
+          'price': price,
+          if (originalPrice != null) 'originalPrice': originalPrice,
+          'details': details,
+          if (brand != null && brand.isNotEmpty) 'brand': brand,
+          'catagory': catagory,
+          if (size != null && size.isNotEmpty) 'size': size,
+          'condition': condition,
+          'imagePrimary': imagePrimary,
+          if (userName != null && userName.isNotEmpty) 'userName': userName,
+          if (userPhone != null && userPhone.isNotEmpty) 'userPhone': userPhone,
+        }),
+      );
+
+      final jsonData = jsonDecode(response.body);
+      return jsonData;
+    } catch (e) {
+      return {'success': false, 'error': 'Failed to post product: $e'};
+    }
+  }
+
+  /// Browse approved old/used products for "Buy Old Boot".
+  /// Backend strictly returns products where status = 'approved' from 'used_products'.
+  /// This never returns any new store catalog products.
+  Future<Map<String, dynamic>> fetchUsedProducts({
+    int page = 1,
+    int limit = 20,
+    String? brand,
+    String? category,
+    String? size,
+    String? condition,
+    String? search,
+  }) async {
+    try {
+      String url = '$_baseUrl/used-products?page=$page&limit=$limit';
+      if (category != null && category.isNotEmpty) {
+        url += '&catagory=${Uri.encodeComponent(category)}';
+      }
+      if (brand != null && brand.isNotEmpty) {
+        url += '&brand=${Uri.encodeComponent(brand)}';
+      }
+      if (size != null && size.isNotEmpty) {
+        url += '&size=${Uri.encodeComponent(size)}';
+      }
+      if (condition != null && condition.isNotEmpty) {
+        url += '&condition=${Uri.encodeComponent(condition)}';
+      }
+      if (search != null && search.isNotEmpty) {
+        url += '&q=${Uri.encodeComponent(search)}';
+      }
+
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final List list = jsonData['data'] ?? [];
+          return {
+            'success': true,
+            'data': list.map((e) => Map<String, dynamic>.from(e)).toList(),
+            'pagination': jsonData['pagination'] ?? {},
+          };
+        }
+      }
+      return {'success': false, 'data': <Map<String, dynamic>>[]};
+    } catch (e) {
+      return {'success': false, 'error': e.toString(), 'data': <Map<String, dynamic>>[]};
+    }
+  }
+
+  /// Get the current logged-in user's own submitted posts (pending, approved, rejected, sold).
+  Future<Map<String, dynamic>> fetchMyUsedProducts({
+    int page = 1,
+    int limit = 50,
+    String? status,
+  }) async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        return {'success': false, 'data': <Map<String, dynamic>>[]};
+      }
+      final String? token = await user.getIdToken();
+      if (token == null) {
+        return {'success': false, 'data': <Map<String, dynamic>>[]};
+      }
+
+      String url = '$_baseUrl/used-products/my-posts?page=$page&limit=$limit';
+      if (status != null && status.isNotEmpty) {
+        url += '&status=${Uri.encodeComponent(status)}';
+      }
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        if (jsonData['success'] == true) {
+          final List list = jsonData['data'] ?? [];
+          return {
+            'success': true,
+            'data': list.map((e) => Map<String, dynamic>.from(e)).toList(),
+            'pagination': jsonData['pagination'] ?? {},
+          };
+        }
+      }
+      return {'success': false, 'data': <Map<String, dynamic>>[]};
+    } catch (e) {
+      return {'success': false, 'error': e.toString(), 'data': <Map<String, dynamic>>[]};
+    }
+  }
+
+  /// Delete a used product listing (owner only).
+  Future<bool> deleteUsedProduct(String id) async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+      final String? token = await user.getIdToken();
+      if (token == null) return false;
+
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/used-products/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return jsonData['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Mark an old product as sold (owner only).
+  Future<bool> markUsedProductSold(String id) async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user == null) return false;
+      final String? token = await user.getIdToken();
+      if (token == null) return false;
+
+      final response = await http.put(
+        Uri.parse('$_baseUrl/used-products/$id'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'status': 'sold'}),
+      );
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        return jsonData['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
 }

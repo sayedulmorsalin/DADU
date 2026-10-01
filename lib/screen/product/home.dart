@@ -13,6 +13,8 @@ import 'package:dadu/screen/product/info_banner.dart';
 import 'package:dadu/screen/product/product_details.dart';
 import 'package:dadu/screen/product/product_item.dart';
 import 'package:dadu/screen/product/search_page.dart';
+import 'package:dadu/screen/product/buy_old_boot.dart';
+import 'package:dadu/screen/product/sell_old_product.dart';
 import 'package:dadu/screen/user/cart.dart';
 import 'package:dadu/screen/user/chat.dart';
 import 'package:dadu/screen/user/profile.dart';
@@ -358,10 +360,7 @@ class Home extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => Catagory(
-                      catagoryName: 'Boots',
-                      catagoryLogo: 'assets/icon/boots.png',
-                    ),
+                    builder: (_) => const BuyOldBootScreen(),
                   ),
                 );
               },
@@ -375,7 +374,21 @@ class Home extends StatelessWidget {
               subtitle: 'Cash / Exchange',
               icon: Icons.sell_outlined,
               gradientColors: const [Color(0xFFE65100), Color(0xFFFF9800)],
-              onTap: () => _showSellOldBootBottomSheet(context),
+              onTap: () {
+                if (!controller.loggedIn.value) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => SignUpScreen()),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SellOldProductScreen(),
+                    ),
+                  );
+                }
+              },
             ),
           ),
         ],
@@ -463,88 +476,6 @@ class Home extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  void _showSellOldBootBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.sell_outlined, color: Colors.orange, size: 24),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Sell Your Old Boot',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Have an old pair of boots you want to sell or exchange? Message us directly with details (photos, brand, size, and condition) to get an instant valuation!',
-              style: TextStyle(fontSize: 13.5, color: Colors.black87, height: 1.4),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  if (!controller.loggedIn.value) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => SignUpScreen()),
-                    );
-                    return;
-                  }
-                  controller.selectedIndex.value = 3;
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                icon: const Icon(Icons.chat_bubble_outline, size: 20),
-                label: const Text(
-                  'Message Support to Sell',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );
