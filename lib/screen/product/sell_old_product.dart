@@ -6,6 +6,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../../services/d1.dart';
 import '../../theme/app_colors.dart';
+import '../../component/app_banner_ad.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
 
 class SellOldProductScreen extends StatefulWidget {
@@ -410,6 +411,7 @@ class _SellOldProductScreenState extends State<SellOldProductScreen>
                 _buildMyListingsView(),
               ],
             ),
+      bottomNavigationBar: const AppBannerAdWidget(),
     );
   }
 

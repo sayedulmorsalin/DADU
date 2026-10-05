@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/d1.dart';
+import '../../component/app_banner_ad.dart';
+import '../../component/app_interstitial_ad_helper.dart';
 import 'sell_old_product.dart';
 
 class BuyOldBootScreen extends StatefulWidget {
@@ -52,14 +54,18 @@ class _BuyOldBootScreenState extends State<BuyOldBootScreen> {
     'Fair',
   ];
 
+  final Set<String> _revealedProductIds = {};
+
   @override
   void initState() {
     super.initState();
+    AppInterstitialAdHelper.loadAd();
     _loadProducts(reset: true);
   }
 
   @override
   void dispose() {
+    AppInterstitialAdHelper.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -149,12 +155,50 @@ class _BuyOldBootScreenState extends State<BuyOldBootScreen> {
     }
   }
 
+  String _maskPhoneNumber(String phone) {
+    final clean = phone.trim();
+    if (clean.isEmpty) return 'No phone provided';
+    if (clean.length <= 5) return '••••••';
+    final prefix = clean.substring(0, 3);
+    final suffix = clean.substring(clean.length - 2);
+    final dotsCount = clean.length - 5;
+    return '$prefix ${'•' * dotsCount} $suffix';
+  }
+
+  void _revealPhoneNumber(
+    Map<String, dynamic> product,
+    StateSetter setModalState, {
+    VoidCallback? onRevealed,
+  }) {
+    final String productId = product['id']?.toString() ?? '';
+
+    AppInterstitialAdHelper.showAd(
+      onComplete: () {
+        if (mounted) {
+          setState(() {
+            if (productId.isNotEmpty) {
+              _revealedProductIds.add(productId);
+            }
+          });
+          setModalState(() {});
+        }
+        if (onRevealed != null) {
+          onRevealed();
+        }
+      },
+    );
+  }
+
   void _showProductDetailsModal(Map<String, dynamic> product) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _buildProductDetailsBottomSheet(product),
+      builder: (ctx) => StatefulBuilder(
+        builder: (modalCtx, setModalState) {
+          return _buildProductDetailsBottomSheet(product, setModalState);
+        },
+      ),
     );
   }
 
@@ -206,6 +250,7 @@ class _BuyOldBootScreenState extends State<BuyOldBootScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: const AppBannerAdWidget(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
@@ -592,7 +637,12 @@ class _BuyOldBootScreenState extends State<BuyOldBootScreen> {
     );
   }
 
-  Widget _buildProductDetailsBottomSheet(Map<String, dynamic> product) {
+  Widget _buildProductDetailsBottomSheet(
+    Map<String, dynamic> product,
+    StateSetter setModalState,
+  ) {
+    final String productId = product['id']?.toString() ?? '';
+    final bool isPhoneRevealed = _revealedProductIds.contains(productId);
     final String name = product['name'] ?? 'Pre-owned Boot';
     final double price = (product['price'] is num) ? (product['price'] as num).toDouble() : 0.0;
     final double? originalPrice = (product['originalPrice'] is num)
@@ -750,14 +800,63 @@ class _BuyOldBootScreenState extends State<BuyOldBootScreen> {
                             sellerName,
                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            phone.isNotEmpty ? phone : 'Verified Member',
-                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                          ),
+                          const SizedBox(height: 3),
+                          if (phone.isEmpty)
+                            Text(
+                              'Verified Member',
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                            )
+                          else if (isPhoneRevealed)
+                            Row(
+                              children: [
+                                const Icon(Icons.phone, size: 13, color: Colors.green),
+                                const SizedBox(width: 4),
+                                SelectableText(
+                                  phone,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Row(
+                              children: [
+                                Icon(Icons.lock_outline, size: 13, color: Colors.orange.shade800),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _maskPhoneNumber(phone),
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: Colors.grey.shade700,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
                         ],
                       ),
                     ),
+                    if (phone.isNotEmpty && !isPhoneRevealed)
+                      ElevatedButton.icon(
+                        onPressed: () => _revealPhoneNumber(product, setModalState),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.deepOrange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        icon: const Icon(Icons.visibility_outlined, size: 14),
+                        label: const Text(
+                          'Show (Ad)',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -765,33 +864,78 @@ class _BuyOldBootScreenState extends State<BuyOldBootScreen> {
 
               // Contact Buttons
               if (phone.isNotEmpty) ...[
+                if (!isPhoneRevealed)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.ondemand_video_outlined, size: 14, color: Colors.orange.shade800),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Watch short ad to reveal number & contact',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Colors.orange.shade900,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Row(
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _callSeller(phone),
+                        onPressed: () {
+                          if (!isPhoneRevealed) {
+                            _revealPhoneNumber(
+                              product,
+                              setModalState,
+                              onRevealed: () => _callSeller(phone),
+                            );
+                          } else {
+                            _callSeller(phone);
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green.shade700,
+                          backgroundColor: isPhoneRevealed ? Colors.green.shade700 : Colors.green.shade600,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        icon: const Icon(Icons.phone),
-                        label: const Text('Call Seller', style: TextStyle(fontWeight: FontWeight.bold)),
+                        icon: Icon(isPhoneRevealed ? Icons.phone : Icons.lock_open, size: 18),
+                        label: Text(
+                          isPhoneRevealed ? 'Call Seller' : 'Unlock & Call',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => _whatsappSeller(phone),
+                        onPressed: () {
+                          if (!isPhoneRevealed) {
+                            _revealPhoneNumber(
+                              product,
+                              setModalState,
+                              onRevealed: () => _whatsappSeller(phone),
+                            );
+                          } else {
+                            _whatsappSeller(phone);
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF25D366),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        icon: const Icon(Icons.chat),
-                        label: const Text('WhatsApp', style: TextStyle(fontWeight: FontWeight.bold)),
+                        icon: Icon(isPhoneRevealed ? Icons.chat : Icons.lock_open, size: 18),
+                        label: Text(
+                          isPhoneRevealed ? 'WhatsApp' : 'Unlock WhatsApp',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ],
