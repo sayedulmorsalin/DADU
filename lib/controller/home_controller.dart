@@ -48,6 +48,8 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   final RxList<Map<String, dynamic>> flashProducts = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> newArrivalProducts =
       <Map<String, dynamic>>[].obs;
+  final RxList<Map<String, dynamic>> recommendedProducts =
+      <Map<String, dynamic>>[].obs;
 
   final RxList<Map<String, dynamic>> searchResults = <Map<String, dynamic>>[].obs;
   final RxString searchQuery = ''.obs;
@@ -145,6 +147,9 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     await Future<void>.delayed(const Duration(milliseconds: 220));
     if (newArrivalProducts.isEmpty) await loadNewArrivalProducts();
 
+    await Future<void>.delayed(const Duration(milliseconds: 220));
+    if (recommendedProducts.isEmpty) await loadRecommendations();
+
     await Future<void>.delayed(const Duration(milliseconds: 280));
     isSearchReady.value = true;
   }
@@ -156,12 +161,14 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     banners.clear();
     flashProducts.clear();
     newArrivalProducts.clear();
+    recommendedProducts.clear();
 
     // Force reload everything
     await loadInitialProducts();
     await loadBanners(forceRefresh: true);
     await loadFlashSaleProducts(forceRefresh: true);
     await loadNewArrivalProducts();
+    await loadRecommendations();
   }
 
   Future<void> loadInitialProducts() async {
@@ -169,11 +176,20 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     apiPage = 1;
     hasMore.value = true;
 
-    // Fetch products exclusively from API
-    final apiProducts = await apiService.fetchProducts(limit: 20, page: apiPage);
-    
-    products.assignAll(apiProducts);
-    if (apiProducts.length < 20) {
+    // Fetch recommendations for the main home screen product feed
+    List<Map<String, dynamic>> initialItems = [];
+    try {
+      initialItems = await apiService.fetchRecommendations(limit: 20);
+    } catch (_) {}
+
+    if (initialItems.isEmpty) {
+      initialItems = await apiService.fetchProducts(limit: 20, page: apiPage);
+    }
+
+    products.assignAll(initialItems);
+    recommendedProducts.assignAll(initialItems);
+
+    if (initialItems.length < 20) {
       hasMore.value = false;
     } else {
       apiPage++;
@@ -193,7 +209,9 @@ class HomeController extends GetxController with WidgetsBindingObserver {
       hasMore.value = false;
     }
     if (moreProducts.isNotEmpty) {
-      products.addAll(moreProducts);
+      final existingIds = products.map((p) => p['id']?.toString()).toSet();
+      final uniqueProducts = moreProducts.where((p) => !existingIds.contains(p['id']?.toString())).toList();
+      products.addAll(uniqueProducts);
       apiPage++;
     }
 
@@ -275,6 +293,11 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     newArrivalProducts.assignAll(items);
   }
 
+  Future<void> loadRecommendations() async {
+    final items = await apiService.fetchRecommendations(limit: 10);
+    recommendedProducts.assignAll(items);
+  }
+
   void onSearchChanged(String value) {
     searchQuery.value = value;
   }
@@ -307,6 +330,13 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     try {
       final results = await apiService.fetchProducts(search: query, limit: 10);
       searchResults.assignAll(results);
+
+      // Track user search query in background analytics
+      unawaited(apiService.logAnalyticsEvent(
+        eventType: 'product_search',
+        searchQuery: query,
+        metadata: {'resultsCount': results.length},
+      ));
     } catch (e) {
       searchResults.clear();
     } finally {

@@ -210,6 +210,6 @@ class _SlowScrollPhysics extends ScrollPhysics {
     ScrollMetrics position,
     double velocity,
   ) {
-    return super.createBallisticSimulation(position, velocity * 0.5);
+    return super.createBallisticSimulation(position, velocity * 0.75);
   }
 }

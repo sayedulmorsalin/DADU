@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dadu/screen/product/product_item.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -31,7 +30,6 @@ class _CatagoryState extends State<Catagory> {
   final List<String> bootSubCatagories = [
     'Boots Master Grade',
     'Boots Master Grade Copy',
-    'Boots Copy 4 Grade',
     'Boots China Copy',
     'Boots Turf',
   ];
@@ -317,6 +315,7 @@ class _CatagoryState extends State<Catagory> {
         _buildBrandItem('Adidas', 'assets/icon/adidas.png'),
         _buildBrandItem('Nike', 'assets/icon/Nike.png'),
         _buildBrandItem('Puma', 'assets/icon/puma.png'),
+        _buildBrandItem('New Balance', 'assets/icon/new_balance.png'),
         _buildBrandItem('Mizuno', 'assets/icon/mizuno.png'),
         _buildBrandItem('Dadu', 'assets/logo/black_logo.png'),
         _buildBrandItem('Others', 'assets/icon/other.png'),
@@ -375,6 +374,6 @@ class _SlowScrollPhysics extends ScrollPhysics {
     ScrollMetrics position,
     double velocity,
   ) {
-    return super.createBallisticSimulation(position, velocity * 0.5);
+    return super.createBallisticSimulation(position, velocity * 0.75);
   }
 }

@@ -738,4 +738,124 @@ class ApiService {
       return false;
     }
   }
+
+  /// Log user activity event (product visit, search query) to Cloudflare D1
+  Future<void> logAnalyticsEvent({
+    required String eventType,
+    String? productId,
+    String? searchQuery,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      final String? token = await user?.getIdToken();
+
+      final body = {
+        'eventType': eventType,
+        if (user != null && !user.isAnonymous) 'userId': user.uid,
+        if (productId != null) 'productId': productId,
+        if (searchQuery != null) 'searchQuery': searchQuery,
+        if (metadata != null) 'metadata': metadata,
+      };
+
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
+      await http
+          .post(
+            Uri.parse('$_baseUrl/analytics/event'),
+            headers: headers,
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 4));
+    } catch (_) {
+      // Non-blocking fire and forget
+    }
+  }
+
+  /// Fetch mixed recommendations (popular items, new arrivals, trending searches)
+  Future<List<Map<String, dynamic>>> fetchRecommendations({
+    int limit = 10,
+    String? category,
+  }) async {
+    try {
+      final User? user = FirebaseAuth.instance.currentUser;
+      final String? token = await user?.getIdToken();
+
+      String url = '$_baseUrl/products/recommendations?limit=$limit';
+      if (category != null && category.isNotEmpty) {
+        url += '&catagory=${Uri.encodeComponent(category)}';
+      }
+
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
+      final response = await http
+          .get(Uri.parse(url), headers: headers)
+          .timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final dynamic jsonData = jsonDecode(response.body);
+        List<dynamic> list = [];
+        if (jsonData is Map && jsonData['data'] is List) {
+          list = jsonData['data'];
+        } else if (jsonData is List) {
+          list = jsonData;
+        }
+
+        String toHighRes(String? url) {
+          if (url == null || url.isEmpty) return '';
+          if (url.contains('img5_')) {
+            return url.replaceAll('img5_', 'img20_');
+          }
+          return url;
+        }
+
+        return list.map((item) {
+          return {
+            "id": item['id']?.toString() ?? '',
+            "name": item['name'] ?? 'No Name',
+            "price": item['price']?.toString() ?? '0',
+            "details": item['details'] ?? 'No details available',
+            "videoLink": item['videoLink'] ?? '',
+            "image5": (item['imagePrimary'] != null &&
+                    item['imagePrimary'].toString().isNotEmpty)
+                ? item['imagePrimary']
+                : null,
+            "image20": toHighRes((item['imageOne'] != null &&
+                    item['imageOne'].toString().isNotEmpty)
+                ? item['imageOne']
+                : ((item['imagePrimary'] != null &&
+                        item['imagePrimary'].toString().isNotEmpty)
+                    ? item['imagePrimary']
+                    : null)),
+            "catagory": item['catagory'] ?? item['brand'] ?? 'Others',
+            "gold_coin":
+                double.tryParse(item['freeCoin']?.toString() ?? '0') ?? 0.0,
+            "createdAt": item['createdAt'],
+            "brand": item['brand'] ?? '',
+            "imageTwo": toHighRes(item['imageTwo']?.toString() ?? ''),
+            "imageThree": toHighRes(item['imageThree']?.toString() ?? ''),
+            "size": item['size'] ?? '',
+            "stock": item['stock'] != null
+                ? (int.tryParse(item['stock'].toString()) ?? 1)
+                : 1,
+            "deliveryFee": item['deliveryFee'] ?? '',
+            "recommendationType": item['recommendationType'] ?? 'popular',
+            "recommendationBadge": item['recommendationBadge'] ?? '🔥 Popular',
+          };
+        }).where((product) {
+          final stock = product['stock'];
+          return (stock is int) ? stock > 0 : true;
+        }).toList();
+      }
+      return [];
+    } catch (_) {
+      return [];
+    }
+  }
 }

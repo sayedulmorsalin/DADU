@@ -156,5 +156,55 @@ No numbers here
       final result = TransactionIdExtractor.parseTransactionIdFromText(ocrText);
       expect(result, isNull);
     });
+
+    test('extracts DJ80KXYKIA from bKash confirmation receipt and ignores balance ৳580.02 (not T58002)', () {
+      const ocrText = '''
+Send Money - now
+10:30am 08/10/2026
+আপনার সেন্ড মানি সফল হয়েছে
+01737163498
+01737163498
+সময়
+10:30am 08/10/26
+ট্রানজেকশন আইডি
+DJ80KXYKIA
+সর্বমোট
+৳60.00
++ চার্জ প্রযোজ্য নয়
+নতুন ব্যালেন্স
+৳580.02
+রেফারেন্স
+অটো পে চালু করুন শেয়ার
+আপনি অর্জন করেছেন বিকাশ রিওয়ার্ড পয়েন্ট
+হোম-এ ফিরে যাই
+''';
+      final result = TransactionIdExtractor.parseTransactionIdFromText(ocrText);
+      expect(result, 'DJ80KXYKIA');
+    });
+
+    test('extracts DJ80KXYKIA even when Latin OCR misreads Bengali and balance is T580.02', () {
+      const ocrText = '''
+Send Money - now
+10:30am 08/10/2026
+01737163498
+10:30am 08/10/26
+DJ80KXYKIA
+T60.00
+T580.02
+''';
+      final result = TransactionIdExtractor.parseTransactionIdFromText(ocrText);
+      expect(result, 'DJ80KXYKIA');
+    });
+
+    test('rejects currency amounts like T580.02 or T58002 as Transaction IDs', () {
+      const ocrText = '''
+Balance: T580.02
+Total: T60.00
+T58002
+''';
+      final result = TransactionIdExtractor.parseTransactionIdFromText(ocrText);
+      expect(result, isNull);
+    });
   });
 }
+

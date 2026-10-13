@@ -3,7 +3,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:dadu/component/notification_sheet.dart';
 import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/services/app_version_service.dart';
-import 'package:dadu/services/local_notification_db.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:dadu/screen/authentication/sign_up_first.dart';
 import 'package:dadu/screen/product/brand.dart';
@@ -21,7 +20,6 @@ import 'package:dadu/screen/user/profile.dart';
 import 'package:dadu/screen/user/reword_ad.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Home extends StatelessWidget {
@@ -109,12 +107,12 @@ class Home extends StatelessWidget {
             _buildCatagoryGrid(context),
             _buildComboPackBanner(context),
             _buildFlashSaleSection(context),
-            //_buildNewArrivalSection(context),
             const _VersionUpdateBanner(),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: InfoBanner(),
             ),
+            _buildSectionTitle('Recommended For You'),
             _buildProductGrid(),
             Obx(
               () =>
@@ -777,6 +775,7 @@ class Home extends StatelessWidget {
           _buildBrandItem(context, 'Adidas', 'assets/icon/adidas.png'),
           _buildBrandItem(context, 'Nike', 'assets/icon/Nike.png'),
           _buildBrandItem(context, 'Puma', 'assets/icon/puma.png'),
+          _buildBrandItem(context, 'New Balance', 'assets/icon/new_balance.png'),
           _buildBrandItem(context, 'Dadu', 'assets/logo/black_logo.png'),
           _buildBrandItem(context, 'Mizuno', 'assets/icon/mizuno.png'),
         ],
@@ -842,12 +841,14 @@ class Home extends StatelessWidget {
             childAspectRatio: 3.2,
             children: [
               _buildCatagoryItem(context, 'Boots', 'assets/icon/boots.png'),
-              _buildCatagoryItem(context, 'Gloves', 'assets/icon/gloves.png'),
+              _buildCatagoryItem(context, 'Sneaker', 'assets/icon/sneaker.png'),
+              _buildCatagoryItem(context, 'Slippers', 'assets/icon/slippers.png'),
               _buildCatagoryItem(context, 'Jersey', 'assets/icon/jersey.png'),
               _buildCatagoryItem(context, 'Pant', 'assets/icon/pant.png'),
-              _buildCatagoryItem(context, 'Bag', 'assets/icon/bag.png'),
-              _buildCatagoryItem(context, 'Safe Guard', 'assets/icon/safeguard.png'),
+              _buildCatagoryItem(context, 'Gloves', 'assets/icon/gloves.png'),
               if (controller.showAllCategories.value) ...[
+                _buildCatagoryItem(context, 'Bag', 'assets/icon/bag.png'),
+                _buildCatagoryItem(context, 'Safe Guard', 'assets/icon/safeguard.png'),
                 _buildCatagoryItem(context, 'Socks', 'assets/icon/socks.png'),
                 _buildCatagoryItem(context, 'Others', 'assets/icon/other.png'),
               ],
@@ -1004,19 +1005,21 @@ class Home extends StatelessWidget {
               Row(
                 children: [
                   const Text(
-                    'FLASH',
+                    'AJKER',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.w900,
                       color: Colors.black,
                       fontStyle: FontStyle.italic,
                     ),
                   ),
-                  const Icon(Icons.flash_on, color: Colors.orange, size: 28),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.flash_on, color: Colors.orange, size: 24),
+                  const SizedBox(width: 4),
                   const Text(
-                    'SALE',
+                    'OFFER',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.w900,
                       color: Colors.black,
                       fontStyle: FontStyle.italic,
@@ -1130,52 +1133,6 @@ class Home extends StatelessWidget {
       ),
     );
   }
-
-  // Widget _buildNewArrivalSection(BuildContext context) {
-  //   return Obx(() {
-  //     if (controller.newArrivalProducts.isEmpty) return const SizedBox.shrink();
-  //
-  //     return Padding(
-  //       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-  //       child: Container(
-  //         padding: const EdgeInsets.all(20),
-  //         decoration: BoxDecoration(
-  //           color: AppColors.newArrivalBackground,
-  //           borderRadius: BorderRadius.circular(12),
-  //         ),
-  //         child: Column(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             const Text(
-  //               'New Arrivals',
-  //               style: TextStyle(
-  //                 fontSize: 22,
-  //                 fontWeight: FontWeight.bold,
-  //                 color: AppColors.textPrimary,
-  //               ),
-  //             ),
-  //             const SizedBox(height: 10),
-  //             SizedBox(
-  //               height: 250,
-  //               child: ListView.builder(
-  //                 scrollDirection: Axis.horizontal,
-  //                 itemCount: controller.newArrivalProducts.length,
-  //                 itemBuilder: (context, index) {
-  //                   final product = controller.newArrivalProducts[index];
-  //                   return Container(
-  //                     width: 180,
-  //                     margin: const EdgeInsets.only(right: 10),
-  //                     child: _ArrivalItem(product: product),
-  //                   );
-  //                 },
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     );
-  //   });
-  // }
 
   Widget _buildProductGrid() {
     return Obx(() {
@@ -1369,8 +1326,8 @@ class _SlowScrollPhysics extends ScrollPhysics {
     ScrollMetrics position,
     double velocity,
   ) {
-    // Reduce the velocity by 50% to make the scroll slower/more damped
-    return super.createBallisticSimulation(position, velocity * 0.5);
+    // Increased scroll speed slightly from 0.5 to 0.75 for a more responsive, fluid scroll
+    return super.createBallisticSimulation(position, velocity * 0.75);
   }
 }
 
@@ -1656,108 +1613,3 @@ class _FlashItem extends StatelessWidget {
   }
 }
 
-class _ArrivalItem extends StatelessWidget {
-  const _ArrivalItem({required this.product});
-
-  final Map<String, dynamic> product;
-
-  @override
-  Widget build(BuildContext context) {
-    final image =
-        product['image5']?.toString().isNotEmpty == true
-            ? product['image5'].toString()
-            : product['image20']?.toString() ?? '';
-
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (_) => ProductDetails(
-                    productid: product['id']?.toString() ?? '',
-                    title: product['name']?.toString() ?? '',
-                    price: product['price']?.toString() ?? '0',
-                    image20: product['image20']?.toString() ?? '',
-                    description: product['details']?.toString() ?? '',
-                    videoLink: product['videoLink']?.toString() ?? '',
-                    catagory: product['catagory']?.toString() ?? 'Others',
-                    image5: product['image5']?.toString() ?? '',
-                    goldCoin: double.tryParse(product['gold_coin']?.toString() ?? '0') ?? 0.0,
-                    brand: product['brand']?.toString() ?? '',
-                    imageTwo: product['imageTwo']?.toString() ?? '',
-                    imageThree: product['imageThree']?.toString() ?? '',
-                    size: product['size']?.toString() ?? '',
-                    stock: int.tryParse(product['stock']?.toString() ?? '1') ?? 1,
-                    deliveryFee: product['deliveryFee']?.toString() ?? '',
-                    createdAt: product['createdAt'],
-                  ),
-            ),
-          );
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child:
-                      image.isEmpty
-                          ? Container(
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.image_not_supported),
-                          )
-                          : CachedNetworkImage(
-                            imageUrl: image,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            placeholder:
-                                (_, __) => Container(
-                                  color: Colors.grey[300],
-                                  child: const Center(
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                            errorWidget:
-                                (_, __, ___) => Container(
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.broken_image),
-                                ),
-                          ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                product['name']?.toString() ?? 'No Name',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                'Price: ৳${product['price']?.toString() ?? '0'}',
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: AppColors.selectedNavItem,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

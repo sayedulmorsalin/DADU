@@ -101,6 +101,18 @@ class _ProductDetailsState extends State<ProductDetails>
       CurvedAnimation(parent: _blinkController, curve: Curves.easeInOut),
     );
     _loadReviewsAndEligibility();
+    // Track product visit in background analytics
+    if (widget.productid.isNotEmpty) {
+      _apiService.logAnalyticsEvent(
+        eventType: 'product_view',
+        productId: widget.productid,
+        metadata: {
+          'name': widget.title,
+          'category': widget.catagory,
+          'brand': widget.brand,
+        },
+      );
+    }
   }
 
   @override
@@ -849,7 +861,6 @@ class _ProductDetailsState extends State<ProductDetails>
                                   if ([
                                     'Boots Master Grade',
                                     'Boots Master Grade Copy',
-                                    'Boots Copy 4 Grade',
                                     'Boots China Copy',
                                     'Boots Turf'
                                   ].contains(widget.catagory)) ...[
