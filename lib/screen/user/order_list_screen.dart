@@ -53,6 +53,7 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
                   itemMap['_order_date'] = orderMap['order_date'];
                   itemMap['paymentMethod'] = orderMap['paymentMethod'] ?? itemMap['paymentMethod'];
                   itemMap['paymentProof'] = orderMap['paymentProof'] ?? itemMap['paymentProof'];
+                  itemMap['_transaction_id'] = orderMap['transaction_id'];
                   displayedItems.add(itemMap);
                 }
               }
@@ -113,12 +114,12 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
   Widget _buildTopNotice(bool hasItems) {
     if (!hasItems) return const SizedBox.shrink();
 
-    if (widget.status == 'To Verify') {
+    if (widget.status == 'Preparing' || widget.status == 'To Verify') {
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: _buildStatusNotice(
-          'An admin will verify your order within 24 hours. Please wait until then.',
-          '২৪ ঘণ্টার মধ্যে একজন অ্যাডমিন আপনার অর্ডার যাচাই করবেন, অনুগ্রহ করে ততক্ষণ অপেক্ষা করুন।',
+          'Your order is being prepared. Please wait until then.',
+          'আপনার অর্ডারটি প্রস্তুত করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন।',
         ),
       );
     } else if (widget.status == 'To Ship') {
@@ -258,6 +259,19 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
                           color: AppColors.textSecondary,
                         ),
                       ),
+                      if (order.containsKey('_transaction_id') &&
+                          order['_transaction_id'] != null &&
+                          order['_transaction_id'].toString().trim().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'TrxID: ${order['_transaction_id']}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

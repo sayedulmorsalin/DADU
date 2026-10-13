@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/screen/product/home.dart';
 import 'package:dadu/services/local_notification_db.dart';
-import 'package:dadu/theme/app_colors.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -33,67 +32,12 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _logoController;
-  late AnimationController _textController;
-  late AnimationController _shimmerController;
-
-  late Animation<double> _logoScale;
-  late Animation<double> _logoFade;
-  late Animation<double> _textFade;
-  late Animation<double> _textScale;
-  late Animation<double> _shimmerValue;
-
+class _SplashScreenState extends State<SplashScreen> {
   String _loadingStatusText = "Loading DADU...";
 
   @override
   void initState() {
     super.initState();
-
-    // 1. Logo Animation Setup (Pulse + Scale + Fade)
-    _logoController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-
-    _logoScale = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeOutBack),
-    );
-
-    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeIn),
-    );
-
-    // 2. DADU Text Animation Setup (Scale + Fade reveal)
-    _textController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    );
-
-    _textFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeIn),
-    );
-
-    _textScale = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
-    );
-
-    // 3. Shimmer Glow Animation Setup
-    _shimmerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
-
-    _shimmerValue = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
-    );
-
-    // Start Animations
-    _logoController.forward().then((_) {
-      _textController.forward();
-    });
-
     // Run Background Initialization
     _initAppInBackground();
   }
@@ -136,9 +80,9 @@ class _SplashScreenState extends State<SplashScreen>
       debugPrint("Initialization error: $e");
     }
 
-    // Ensure minimum display duration (2.0 seconds) for smooth animation UX
+    // Ensure minimum display duration (3.0 seconds) for the full GIF animation cycle
     final elapsedMs = stopwatch.elapsedMilliseconds;
-    const minSplashMs = 2000;
+    const minSplashMs = 3000;
     if (elapsedMs < minSplashMs) {
       await Future.delayed(Duration(milliseconds: minSplashMs - elapsedMs));
     }
@@ -152,204 +96,56 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-
-  @override
-  void dispose() {
-    _logoController.dispose();
-    _textController.dispose();
-    _shimmerController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F14), // Luxurious dark background
+      backgroundColor: const Color(0xFFFCB400),
       body: Stack(
-        alignment: Alignment.center,
+        fit: StackFit.expand,
         children: [
-          // Background ambient gradient glow
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _shimmerController,
-              builder: (context, child) {
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: const Alignment(0, -0.2),
-                      radius: 1.2 + (_shimmerValue.value * 0.1),
-                      colors: [
-                        AppColors.primary.withValues(alpha: 0.25),
-                        const Color(0xFF161622),
-                        const Color(0xFF09090D),
-                      ],
-                      stops: const [0.0, 0.55, 1.0],
-                    ),
+          // Animated GIF from assets
+          Center(
+            child: Image.asset(
+              'assets/gif/splash.gif',
+              fit: BoxFit.contain,
+              width: double.infinity,
+              height: double.infinity,
+              errorBuilder: (context, error, stackTrace) {
+                return Center(
+                  child: Image.asset(
+                    'assets/icon/Logo.jpg',
+                    width: 150,
+                    height: 150,
                   ),
                 );
               },
             ),
           ),
 
-          // Main Center Content
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Animated App Icon / Logo
-                AnimatedBuilder(
-                  animation: _logoController,
-                  builder: (context, child) {
-                    return Opacity(
-                      opacity: _logoFade.value,
-                      child: Transform.scale(
-                        scale: _logoScale.value,
-                        child: Container(
-                          width: 110,
-                          height: 110,
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [
-                                const Color(0xFFFFD54F),
-                                AppColors.primary,
-                                const Color(0xFFFF6F00),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.5),
-                                blurRadius: 30,
-                                spreadRadius: 5,
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/icon/Logo.jpg',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: AppColors.primary,
-                                  child: const Icon(
-                                    Icons.sports_soccer,
-                                    size: 55,
-                                    color: Colors.black,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 32),
-
-                // Animated DADU Text with Custom Font & Metallic Gold Gradient
-                AnimatedBuilder(
-                  animation: _textController,
-                  builder: (context, child) {
-                    return Opacity(
-                      opacity: _textFade.value,
-                      child: Transform.scale(
-                        scale: _textScale.value,
-                        child: AnimatedBuilder(
-                          animation: _shimmerController,
-                          builder: (context, child) {
-                            return ShaderMask(
-                              shaderCallback: (bounds) {
-                                final shimmer = _shimmerValue.value;
-                                return LinearGradient(
-                                  colors: [
-                                    const Color(0xFFFFF8E1),
-                                    AppColors.primary,
-                                    const Color(0xFFFF8F00),
-                                    const Color(0xFFFFF8E1),
-                                  ],
-                                  stops: [
-                                    (shimmer - 0.3).clamp(0.0, 1.0),
-                                    shimmer,
-                                    (shimmer + 0.3).clamp(0.0, 1.0),
-                                    1.0,
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                ).createShader(bounds);
-                              },
-                              child: Text(
-                                'DADU',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 48,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 14.0,
-                                  color: Colors.white,
-                                  shadows: [
-                                    Shadow(
-                                      color: AppColors.primary.withValues(alpha: 0.6),
-                                      blurRadius: 20,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 12),
-
-                // Subtitle / Tagline
-                AnimatedBuilder(
-                  animation: _textController,
-                  builder: (context, child) {
-                    return Opacity(
-                      opacity: _textFade.value,
-                      child: Text(
-                        'SPORTS & FITNESS STORE',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 4.5,
-                          color: Colors.white54,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-
-          // Bottom Loading Indicator & Status Text
+          // Loading indicator & status while app is loading in the background
           Positioned(
-            bottom: 60,
+            bottom: 36,
+            left: 20,
+            right: 20,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  width: 36,
-                  height: 36,
+                const SizedBox(
+                  width: 22,
+                  height: 22,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.primary,
-                    ),
+                    strokeWidth: 2.2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.black54),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
                 Text(
                   _loadingStatusText,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white38,
-                    letterSpacing: 1.0,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black54,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ],

@@ -451,7 +451,7 @@ class _CartState extends State<Cart> {
                         builder: (context) => AlertDialog(
                           title: const Text('Order In Progress'),
                           content: const Text(
-                            'You currently have an active order in progress (Verify, Shipping, or To Receive).\n\nYou cannot place a new order until your current order is delivered.',
+                            'You currently have an active order in progress (Preparing, Shipping, or To Receive).\n\nYou cannot place a new order until your current order is delivered.',
                           ),
                           actions: [
                             TextButton(

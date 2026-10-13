@@ -66,6 +66,9 @@ dependencies:
   audioplayers: ^6.7.1
   http_parser: ^4.1.2
   google_fonts: ^6.2.1
+  google_mlkit_text_recognition: ^0.16.0
+  external_app_launcher: ^4.0.3
+  android_intent_plus: ^6.1.0
 
 
 
@@ -117,6 +120,11 @@ flutter:
     - assets/icon/safeguard.png
     - assets/icon/socks.png
     - assets/icon/mizuno.png
+    - assets/icon/new_balance.png
+    - assets/icon/sneaker.png
+    - assets/icon/slippers.png
+    - assets/gif/splash.gif
+    - assets/gif/Gemini_Generated_Gif_7cmtb77cmtb77cmt.gif
 
 
 
