@@ -203,6 +203,7 @@ Future<String?> deleteAccount() async {
       'free_delivery_status': false,
       'cart_items': [],
       'to_verify': [],
+      'to_preparing': [],
       'to_ship': [],
       'to_receive': [],
       'completed': [],

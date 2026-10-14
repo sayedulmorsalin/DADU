@@ -114,11 +114,19 @@ class _OrderListScreenState extends State<OrderListScreen> with TickerProviderSt
   Widget _buildTopNotice(bool hasItems) {
     if (!hasItems) return const SizedBox.shrink();
 
-    if (widget.status == 'Preparing' || widget.status == 'To Verify') {
+    if (widget.status == 'To Verify' || widget.status == 'Verify') {
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: _buildStatusNotice(
-          'Your order is being prepared. Please wait until then.',
+          'Your payment screenshot is being verified by our team. Please wait.',
+          'আপনার পেমেন্ট যাচাই করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন।',
+        ),
+      );
+    } else if (widget.status == 'Preparing') {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: _buildStatusNotice(
+          'Your order is verified and being prepared. Please wait until then.',
           'আপনার অর্ডারটি প্রস্তুত করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন।',
         ),
       );

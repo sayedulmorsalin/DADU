@@ -58,7 +58,6 @@ class _CheckOutState extends State<CheckOut>
   List<String> thanaList = [];
   File? _paymentProofImage;
   final ImagePicker _picker = ImagePicker();
-  bool _imageSelected = false;
   String? paymentProof;
   double deliveryPoints = 0;
   bool _freeDeliverySelected = false;
@@ -285,7 +284,6 @@ class _CheckOutState extends State<CheckOut>
     if (image != null) {
       setState(() {
         _paymentProofImage = File(image.path);
-        _imageSelected = true;
         _isScanningProof = true;
         _trxAutoDetected = false;
       });
@@ -404,7 +402,6 @@ class _CheckOutState extends State<CheckOut>
     _trxDebounceTimer?.cancel();
     setState(() {
       _paymentProofImage = null;
-      _imageSelected = false;
       _isScanningProof = false;
       _trxAutoDetected = false;
       _isValidatingTrx = false;
@@ -485,7 +482,6 @@ class _CheckOutState extends State<CheckOut>
       _freeDeliverySelected = !_freeDeliverySelected;
       if (_freeDeliverySelected) {
         _paymentProofImage = null;
-        _imageSelected = false;
         _isScanningProof = false;
         _trxAutoDetected = false;
         _isValidatingTrx = false;
@@ -618,35 +614,25 @@ class _CheckOutState extends State<CheckOut>
         _trxVerificationResult = verifyRes;
       });
 
-      if (!verifyRes.isValid) {
+      // If the transaction ID has already been redeemed for another order, reject duplicate submission
+      if (verifyRes.isAlreadyUsed) {
         setState(() => _isProcessing = false);
         _scrollToAndHighlightProof();
 
-        String errorMsg;
-        if (verifyRes.isAlreadyUsed) {
-          errorMsg =
-              '❌ ট্রানজেকশন আইডি পূর্বে ব্যবহৃত হয়েছে! নতুন TrxID প্রদান করুন।';
-        } else if (verifyRes.isNotFound) {
-          errorMsg =
-              '❌ ট্রানজেকশন আইডি মেলেনি! সঠিক TrxID লিখুন অথবা স্ক্রিনশট দিন।';
-        } else {
-          errorMsg = verifyRes.message;
-        }
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: const Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.error_outline_rounded,
                   color: Colors.white,
                   size: 26,
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    errorMsg,
-                    style: const TextStyle(
+                    '❌ ট্রানজেকশন আইডি পূর্বে ব্যবহৃত হয়েছে! নতুন TrxID প্রদান করুন।',
+                    style: TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
@@ -666,6 +652,8 @@ class _CheckOutState extends State<CheckOut>
         );
         return;
       }
+      // Note: If transaction id did not match (isNotFound / unverified),
+      // the user can still order and the payment screenshot is saved to Cloudflare for manual verification.
     }
 
     if (needupdate) {
@@ -724,8 +712,13 @@ class _CheckOutState extends State<CheckOut>
       final double remainingDeliveryPoints =
           (deliveryPoints - usedPoints).clamp(0.0, double.infinity).toDouble();
 
+      final bool isVerified =
+          _trxVerificationResult.isValid || _freeDeliverySelected;
+      final String targetArray = isVerified ? 'to_preparing' : 'to_verify';
+      final String orderStatus = isVerified ? 'preparing' : 'to_verify';
+
       final userUpdateData = {
-        "to_verify": FieldValue.arrayUnion([
+        targetArray: FieldValue.arrayUnion([
           {
             'order_id': 'ORD-${DateTime.now().millisecondsSinceEpoch}',
             'customerName': _nameController.text,
@@ -737,8 +730,12 @@ class _CheckOutState extends State<CheckOut>
             'district': selectedDistrict ?? '',
             'thana': selectedThana ?? '',
             'paymentMethod': _paymentMethod,
-            'paymentProof': '',
+            'paymentProof': paymentProof ?? '',
             'transaction_id': _transactionIdController.text.trim(),
+            'transactionId': _transactionIdController.text.trim(),
+            'paymentTrxId': _transactionIdController.text.trim(),
+            'isTrxVerified': isVerified,
+            'trxVerificationStatus': isVerified ? 'verified' : 'unverified',
             'items':
                 widget.cartItems
                     .map(
@@ -765,7 +762,7 @@ class _CheckOutState extends State<CheckOut>
               0.0,
               (sum, item) => sum + (item.freeCoin * item.quantity),
             ),
-            'order_status': "preparing",
+            'order_status': orderStatus,
             'freeDeliveryUsed': _freeDeliverySelected,
             'coinDiscountUsed': _coinDiscountSelected,
             'baseDeliveryCharge': baseDeliveryCharge,
@@ -782,23 +779,25 @@ class _CheckOutState extends State<CheckOut>
 
       await db.updateUserDetailsAfterBuy(currentUser.email!, userUpdateData);
 
-      // Mark the transaction as used in Cloudflare D1 database so it cannot be reused
+      // Mark the transaction as used in Cloudflare D1 database if it was verified
       if (!_freeDeliverySelected &&
           (_paymentMethod == 'bkash' ||
               _paymentMethod == 'nagad' ||
               _paymentMethod == 'rocket')) {
         final trxId = _transactionIdController.text.trim();
-        if (trxId.isNotEmpty) {
+        if (trxId.isNotEmpty && _trxVerificationResult.isValid) {
           _transactionVerificationService.markTransactionUsed(trxId);
         }
       }
 
-      // Fetch updated user details to get the to_verify list for the next screen
+      // Fetch updated user details to get the orders list for the next screen
       final updatedDetails = await db.getUserDetails(currentUser.email!);
-      final toVerifyOrders = updatedDetails?['to_verify'] as List<dynamic>?;
+      final relevantOrders = isVerified
+          ? (updatedDetails?['to_preparing'] as List<dynamic>?)
+          : (updatedDetails?['to_verify'] as List<dynamic>?);
 
       if (mounted) {
-        _showConfirmationDialog(toVerifyOrders);
+        _showConfirmationDialog(relevantOrders, isVerified: isVerified);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -812,15 +811,20 @@ class _CheckOutState extends State<CheckOut>
     }
   }
 
-  void _showConfirmationDialog(List<dynamic>? toVerifyOrders) {
+  void _showConfirmationDialog(
+    List<dynamic>? relevantOrders, {
+    required bool isVerified,
+  }) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder:
           (context) => AlertDialog(
-            title: const Text('Order Confirmed'),
-            content: const Text(
-              'Your order has been placed successfully!\n\nYour order is now preparing.',
+            title: Text(isVerified ? 'Order Confirmed' : 'Order Submitted'),
+            content: Text(
+              isVerified
+                  ? 'Your order has been placed successfully!\n\nYour order is verified and is now preparing.'
+                  : 'Your order has been placed successfully!\n\nYour payment screenshot has been uploaded and will be verified by our team. Once verified, it will move to preparing.',
             ),
             actions: [
               TextButton(
@@ -842,8 +846,8 @@ class _CheckOutState extends State<CheckOut>
                     MaterialPageRoute(
                       builder:
                           (context) => OrderListScreen(
-                            status: 'Preparing',
-                            orders: toVerifyOrders,
+                            status: isVerified ? 'Preparing' : 'To Verify',
+                            orders: relevantOrders,
                           ),
                     ),
                   );
@@ -2328,11 +2332,13 @@ class _CheckOutState extends State<CheckOut>
                     ),
                   )
                 else if (_trxVerificationResult.isNotFound)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Icon(
-                      Icons.error_outline_rounded,
-                      color: Color(0xFFE65100),
+                      _paymentProofImage != null
+                          ? Icons.info_outline_rounded
+                          : Icons.warning_amber_rounded,
+                      color: const Color(0xFFE65100),
                       size: 26,
                     ),
                   ),
@@ -2634,13 +2640,15 @@ class _CheckOutState extends State<CheckOut>
                           color: Color(0xFFC62828),
                         ),
                         SizedBox(width: 6),
-                        Text(
-                          'কীভাবে পেমেন্ট করবেন ভিডিও দেখুন',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFFC62828),
-                            decoration: TextDecoration.underline,
+                        Flexible(
+                          child: Text(
+                            'কীভাবে পেমেন্ট করবেন ভিডিও দেখুন',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFC62828),
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
                       ],
@@ -2659,12 +2667,12 @@ class _CheckOutState extends State<CheckOut>
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF3E0),
+          color: const Color(0xFFFFF8E1),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFFB8C00), width: 1.8),
+          border: Border.all(color: const Color(0xFFFFA000), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFE65100).withValues(alpha: 0.12),
+              color: const Color(0xFFFFA000).withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -2676,13 +2684,13 @@ class _CheckOutState extends State<CheckOut>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
-                color: Color(0xFFE65100),
+                color: Color(0xFFF57C00),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
-                Icons.priority_high_rounded,
+                Icons.info_outline_rounded,
                 color: Colors.white,
-                size: 26,
+                size: 24,
               ),
             ),
             const SizedBox(width: 14),
@@ -2691,34 +2699,73 @@ class _CheckOutState extends State<CheckOut>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'ট্রানজেকশন আইডি সঠিক নয় বা মেলেনি! ✕',
+                    'ট্রানজেকশন আইডি ডাটাবেজে মেলেনি',
                     style: TextStyle(
-                      fontSize: 18,
+                      fontSize: 16.5,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFFBF360C),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Transaction ID Not Found / Incorrect',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
                       color: Color(0xFFE65100),
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'এই ট্রানজেকশন আইডিটি আমাদের ডাটাবেজে পাওয়া যায়নি। অনুগ্রহ করে সঠিক TrxID টাইপ করেছেন কিনা এবং আমাদের নম্বরে টাকা পাঠিয়েছেন কিনা তা যাচাই করুন, অথবা পেমেন্ট স্ক্রিনশট আপলোড করুন।',
+                    'Transaction ID Not Found in Database',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFF57C00),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _paymentProofImage != null
+                        ? 'আইডিটি ডাটাবেজে মেলেনি, তবে আপনি পেমেন্ট স্ক্রিনশট সংযুক্ত করায় অর্ডার সম্পন্ন করতে পারবেন। আমাদের টিম ম্যানুয়ালি যাচাই করবে।'
+                        : 'এই ট্রানজেকশন আইডিটি ডাটাবেজে মেলেনি। অনুগ্রহ করে পেমেন্ট স্ক্রিনশট আপলোড করুন, স্ক্রিনশট থাকলেই আপনি অর্ডার সম্পন্ন করতে পারবেন।',
+                    style: const TextStyle(
+                      fontSize: 13.5,
                       fontWeight: FontWeight.w500,
                       color: Color(0xFFBF360C),
                       height: 1.35,
                     ),
                   ),
+                  if (_paymentProofImage != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF81C784)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_rounded,
+                            color: Color(0xFF2E7D32),
+                            size: 16,
+                          ),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'স্ক্রিনশট সংযুক্ত আছে — আপনি অর্ডার করতে পারবেন',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E7D32),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 12),
-                  Row(
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       OutlinedButton.icon(
                         onPressed: () {
@@ -2754,7 +2801,6 @@ class _CheckOutState extends State<CheckOut>
                           ),
                         ),
                       ),
-                      const SizedBox(width: 10),
                       TextButton.icon(
                         onPressed: _openOrderAndPaymentInstructions,
                         style: TextButton.styleFrom(
