@@ -29,6 +29,8 @@ class ApiService {
   // In-memory cache to reduce network requests
   final Map<String, List<Map<String, dynamic>>> _productsCache = {};
   final Map<String, Map<String, dynamic>> _productDetailsCache = {};
+  final Map<String, List<Map<String, dynamic>>> _recommendationsCache = {};
+  final Map<String, DateTime> _recommendationsCacheExpiry = {};
 
   /// Fetches products from the API and maps them to the app's internal format.
   Future<List<Map<String, dynamic>>> fetchProducts({
@@ -217,6 +219,8 @@ class ApiService {
   void clearCache() {
     _productsCache.clear();
     _productDetailsCache.clear();
+    _recommendationsCache.clear();
+    _recommendationsCacheExpiry.clear();
   }
 
   // --- Messaging Methods ---
@@ -779,7 +783,18 @@ class ApiService {
   Future<List<Map<String, dynamic>>> fetchRecommendations({
     int limit = 10,
     String? category,
+    bool forceRefresh = false,
   }) async {
+    final cacheKey = 'rec_${limit}_${category?.toLowerCase().trim() ?? "all"}';
+    final now = DateTime.now();
+
+    if (!forceRefresh &&
+        _recommendationsCache.containsKey(cacheKey) &&
+        _recommendationsCacheExpiry.containsKey(cacheKey) &&
+        now.isBefore(_recommendationsCacheExpiry[cacheKey]!)) {
+      return _recommendationsCache[cacheKey]!;
+    }
+
     try {
       final User? user = FirebaseAuth.instance.currentUser;
       final String? token = await user?.getIdToken();
@@ -815,7 +830,7 @@ class ApiService {
           return url;
         }
 
-        return list.map((item) {
+        final results = list.map((item) {
           return {
             "id": item['id']?.toString() ?? '',
             "name": item['name'] ?? 'No Name',
@@ -852,6 +867,12 @@ class ApiService {
           final stock = product['stock'];
           return (stock is int) ? stock > 0 : true;
         }).toList();
+
+        // Cache recommendations in memory for 5 minutes
+        _recommendationsCache[cacheKey] = results;
+        _recommendationsCacheExpiry[cacheKey] = now.add(const Duration(minutes: 5));
+
+        return results;
       }
       return [];
     } catch (_) {
