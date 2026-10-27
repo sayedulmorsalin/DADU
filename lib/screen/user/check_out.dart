@@ -58,7 +58,6 @@ class _CheckOutState extends State<CheckOut>
   List<String> thanaList = [];
   File? _paymentProofImage;
   final ImagePicker _picker = ImagePicker();
-  bool _imageSelected = false;
   String? paymentProof;
   double deliveryPoints = 0;
   bool _freeDeliverySelected = false;
@@ -285,7 +284,6 @@ class _CheckOutState extends State<CheckOut>
     if (image != null) {
       setState(() {
         _paymentProofImage = File(image.path);
-        _imageSelected = true;
         _isScanningProof = true;
         _trxAutoDetected = false;
       });
@@ -404,7 +402,6 @@ class _CheckOutState extends State<CheckOut>
     _trxDebounceTimer?.cancel();
     setState(() {
       _paymentProofImage = null;
-      _imageSelected = false;
       _isScanningProof = false;
       _trxAutoDetected = false;
       _isValidatingTrx = false;
@@ -485,7 +482,6 @@ class _CheckOutState extends State<CheckOut>
       _freeDeliverySelected = !_freeDeliverySelected;
       if (_freeDeliverySelected) {
         _paymentProofImage = null;
-        _imageSelected = false;
         _isScanningProof = false;
         _trxAutoDetected = false;
         _isValidatingTrx = false;
@@ -618,17 +614,46 @@ class _CheckOutState extends State<CheckOut>
         _trxVerificationResult = verifyRes;
       });
 
-      if (!verifyRes.isValid) {
+      // If the transaction ID has already been redeemed for another order, reject duplicate submission
+      if (verifyRes.isAlreadyUsed) {
         setState(() => _isProcessing = false);
+        _scrollToAndHighlightProof();
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(verifyRes.message),
+            content: const Row(
+              children: [
+                Icon(
+                  Icons.error_outline_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '❌ ট্রানজেকশন আইডি পূর্বে ব্যবহৃত হয়েছে! নতুন TrxID প্রদান করুন।',
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 4),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'ভিডিও দেখুন',
+              textColor: Colors.yellowAccent,
+              onPressed: _openOrderAndPaymentInstructions,
+            ),
           ),
         );
         return;
       }
+      // Note: If transaction id did not match (isNotFound / unverified),
+      // the user can still order and the payment screenshot is saved to Cloudflare for manual verification.
     }
 
     if (needupdate) {
@@ -687,8 +712,13 @@ class _CheckOutState extends State<CheckOut>
       final double remainingDeliveryPoints =
           (deliveryPoints - usedPoints).clamp(0.0, double.infinity).toDouble();
 
+      final bool isVerified =
+          _trxVerificationResult.isValid || _freeDeliverySelected;
+      final String targetArray = isVerified ? 'to_preparing' : 'to_verify';
+      final String orderStatus = isVerified ? 'preparing' : 'to_verify';
+
       final userUpdateData = {
-        "to_verify": FieldValue.arrayUnion([
+        targetArray: FieldValue.arrayUnion([
           {
             'order_id': 'ORD-${DateTime.now().millisecondsSinceEpoch}',
             'customerName': _nameController.text,
@@ -700,8 +730,12 @@ class _CheckOutState extends State<CheckOut>
             'district': selectedDistrict ?? '',
             'thana': selectedThana ?? '',
             'paymentMethod': _paymentMethod,
-            'paymentProof': '',
+            'paymentProof': paymentProof ?? '',
             'transaction_id': _transactionIdController.text.trim(),
+            'transactionId': _transactionIdController.text.trim(),
+            'paymentTrxId': _transactionIdController.text.trim(),
+            'isTrxVerified': isVerified,
+            'trxVerificationStatus': isVerified ? 'verified' : 'unverified',
             'items':
                 widget.cartItems
                     .map(
@@ -728,7 +762,7 @@ class _CheckOutState extends State<CheckOut>
               0.0,
               (sum, item) => sum + (item.freeCoin * item.quantity),
             ),
-            'order_status': "preparing",
+            'order_status': orderStatus,
             'freeDeliveryUsed': _freeDeliverySelected,
             'coinDiscountUsed': _coinDiscountSelected,
             'baseDeliveryCharge': baseDeliveryCharge,
@@ -745,23 +779,25 @@ class _CheckOutState extends State<CheckOut>
 
       await db.updateUserDetailsAfterBuy(currentUser.email!, userUpdateData);
 
-      // Mark the transaction as used in Cloudflare D1 database so it cannot be reused
+      // Mark the transaction as used in Cloudflare D1 database if it was verified
       if (!_freeDeliverySelected &&
           (_paymentMethod == 'bkash' ||
               _paymentMethod == 'nagad' ||
               _paymentMethod == 'rocket')) {
         final trxId = _transactionIdController.text.trim();
-        if (trxId.isNotEmpty) {
+        if (trxId.isNotEmpty && _trxVerificationResult.isValid) {
           _transactionVerificationService.markTransactionUsed(trxId);
         }
       }
 
-      // Fetch updated user details to get the to_verify list for the next screen
+      // Fetch updated user details to get the orders list for the next screen
       final updatedDetails = await db.getUserDetails(currentUser.email!);
-      final toVerifyOrders = updatedDetails?['to_verify'] as List<dynamic>?;
+      final relevantOrders = isVerified
+          ? (updatedDetails?['to_preparing'] as List<dynamic>?)
+          : (updatedDetails?['to_verify'] as List<dynamic>?);
 
       if (mounted) {
-        _showConfirmationDialog(toVerifyOrders);
+        _showConfirmationDialog(relevantOrders, isVerified: isVerified);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -775,15 +811,20 @@ class _CheckOutState extends State<CheckOut>
     }
   }
 
-  void _showConfirmationDialog(List<dynamic>? toVerifyOrders) {
+  void _showConfirmationDialog(
+    List<dynamic>? relevantOrders, {
+    required bool isVerified,
+  }) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder:
           (context) => AlertDialog(
-            title: const Text('Order Confirmed'),
-            content: const Text(
-              'Your order has been placed successfully!\n\nYour order is now preparing.',
+            title: Text(isVerified ? 'Order Confirmed' : 'Order Submitted'),
+            content: Text(
+              isVerified
+                  ? 'Your order has been placed successfully!\n\nYour order is verified and is now preparing.'
+                  : 'Your order has been placed successfully!\n\nYour payment screenshot has been uploaded and will be verified by our team. Once verified, it will move to preparing.',
             ),
             actions: [
               TextButton(
@@ -805,8 +846,8 @@ class _CheckOutState extends State<CheckOut>
                     MaterialPageRoute(
                       builder:
                           (context) => OrderListScreen(
-                            status: 'Preparing',
-                            orders: toVerifyOrders,
+                            status: isVerified ? 'Preparing' : 'To Verify',
+                            orders: relevantOrders,
                           ),
                     ),
                   );
@@ -1700,6 +1741,181 @@ class _CheckOutState extends State<CheckOut>
     }
   }
 
+  static const String _instructionVideoUrl =
+      'https://www.facebook.com/share/r/1DaDjFG5bE/';
+
+  Future<void> _openOrderAndPaymentInstructions() async {
+    try {
+      final uri = Uri.parse(_instructionVideoUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        await launchUrl(uri);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'ভিডিওটি ওপেন করা সম্ভব হয়নি। অনুগ্রহ করে ইন্টারনেট কানেকশন চেক করুন।',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildOrderAndPaymentInstructionCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1877F2).withValues(alpha: 0.12),
+            const Color(0xFF0D47A1).withValues(alpha: 0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF1877F2).withValues(alpha: 0.4),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1877F2).withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _openOrderAndPaymentInstructions,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1877F2), Color(0xFF0D47A1)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF1877F2).withValues(alpha: 0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 34,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'কীভাবে পেমেন্ট ও অর্ডার করবেন?',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0D47A1),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1877F2),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.play_circle_fill_rounded,
+                                  color: Colors.white,
+                                  size: 11,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  'GUIDE',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'ভিডিও নির্দেশিকা দেখে ধাপে ধাপে পেমেন্ট করুন ও সঠিকভাবে অর্ডার প্লেস করুন।',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade800,
+                          height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Row(
+                        children: [
+                          Text(
+                            'ভিডিও দেখতে চাপুন (Watch Video Guide)',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1877F2),
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 14,
+                            color: Color(0xFF1877F2),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPayNowButton() {
     final String brandName = _getPaymentBrandName();
     final String bengaliName = _getPaymentBrandBengaliName();
@@ -1851,6 +2067,29 @@ class _CheckOutState extends State<CheckOut>
                     ),
                   ),
                 ),
+                InkWell(
+                  onTap: _openOrderAndPaymentInstructions,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.play_circle_fill_rounded,
+                        size: 15,
+                        color: brandColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'ভিডিও গাইড',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.bold,
+                          color: brandColor,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -1863,6 +2102,8 @@ class _CheckOutState extends State<CheckOut>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _buildOrderAndPaymentInstructionCard(),
+        const SizedBox(height: 10),
         const Text(
           'Transaction ID / Payment Verification (ট্রানজেকশন আইডি)',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -2047,47 +2288,70 @@ class _CheckOutState extends State<CheckOut>
         TextFormField(
           controller: _transactionIdController,
           textCapitalization: TextCapitalization.characters,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
           decoration: InputDecoration(
             labelText: 'Transaction ID / TrxID (ট্রানজেকশন আইডি)',
+            labelStyle: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
             hintText: 'e.g. BL489QZX87 or 72K83M9A',
-            prefixIcon: const Icon(Icons.receipt_long),
+            prefixIcon: const Icon(Icons.receipt_long, size: 24),
             suffixIcon: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (_isValidatingTrx)
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    padding: EdgeInsets.symmetric(horizontal: 10),
                     child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
                     ),
                   )
                 else if (_trxVerificationResult.isValid)
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(Icons.check_circle, color: AppColors.success),
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      color: Color(0xFF2E7D32),
+                      size: 26,
+                    ),
                   )
                 else if (_trxVerificationResult.isAlreadyUsed)
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(Icons.cancel, color: AppColors.error),
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(
+                      Icons.cancel_rounded,
+                      color: Color(0xFFC62828),
+                      size: 26,
+                    ),
                   )
                 else if (_trxVerificationResult.isNotFound)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(Icons.error_outline, color: AppColors.warning),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(
+                      _paymentProofImage != null
+                          ? Icons.info_outline_rounded
+                          : Icons.warning_amber_rounded,
+                      color: const Color(0xFFE65100),
+                      size: 26,
+                    ),
                   ),
                 if (_paymentProofImage != null)
                   IconButton(
                     icon:
                         _isScanningProof
                             ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(strokeWidth: 2.5),
                             )
-                            : const Icon(Icons.document_scanner_outlined),
+                            : const Icon(Icons.document_scanner_outlined, size: 24),
                     tooltip: 'Re-scan Screenshot',
                     onPressed: _isScanningProof ? null : _rescanPaymentProof,
                   ),
@@ -2095,17 +2359,20 @@ class _CheckOutState extends State<CheckOut>
             ),
             helperText:
                 _trxAutoDetected
-                    ? '✓ Auto-extracted from screenshot. Edit if needed.'
-                    : 'Enter manually or auto-filled from screenshot.',
+                    ? '✓ স্ক্রিনশট থেকে ট্রানজেকশন আইডি সনাক্ত করা হয়েছে'
+                    : 'ম্যানুয়ালি ট্রানজেকশন আইডি লিখুন অথবা স্ক্রিনশট দিন',
             helperStyle: TextStyle(
+              fontSize: 13,
               color:
                   _trxAutoDetected
                       ? AppColors.success
                       : AppColors.textSecondary,
               fontWeight:
-                  _trxAutoDetected ? FontWeight.bold : FontWeight.normal,
+                  _trxAutoDetected ? FontWeight.bold : FontWeight.w500,
             ),
-            border: const OutlineInputBorder(),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
           validator: (value) {
             if (!_freeDeliverySelected &&
@@ -2113,7 +2380,7 @@ class _CheckOutState extends State<CheckOut>
                     _paymentMethod == 'nagad' ||
                     _paymentMethod == 'rocket')) {
               if (value == null || value.trim().isEmpty) {
-                return 'Please enter or scan the Transaction ID';
+                return 'Please enter or scan the Transaction ID (ট্রানজেকশন আইডি দিন)';
               }
             }
             return null;
@@ -2130,29 +2397,49 @@ class _CheckOutState extends State<CheckOut>
     if (_isValidatingTrx) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: AppColors.surfaceGrey,
-          borderRadius: BorderRadius.circular(10),
+          color: const Color(0xFFF5F7FA),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.4),
+            width: 1.5,
           ),
         ),
         child: Row(
           children: [
             SizedBox(
-              width: 18,
-              height: 18,
+              width: 24,
+              height: 24,
               child: CircularProgressIndicator(
-                strokeWidth: 2,
+                strokeWidth: 2.5,
                 color: Theme.of(context).primaryColor,
               ),
             ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Checking transaction status in database...',
-                style: TextStyle(fontSize: 13, color: AppColors.textPrimary),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'ট্রানজেকশন আইডি যাচাই করা হচ্ছে...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Checking transaction in database...',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -2169,36 +2456,60 @@ class _CheckOutState extends State<CheckOut>
 
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFFE8F5E9),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF81C784)),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF43A047), width: 1.8),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF2E7D32).withValues(alpha: 0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.check_circle, color: Color(0xFF2E7D32), size: 22),
-            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFF2E7D32),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  const Row(
                     children: [
-                      const Text(
-                        'Transaction Verified',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1B5E20),
+                      Expanded(
+                        child: Text(
+                          'ট্রানজেকশন আইডি সঠিক আছে! ✓',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF1B5E20),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                          horizontal: 8,
+                          vertical: 3,
                         ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF2E7D32),
@@ -2208,28 +2519,43 @@ class _CheckOutState extends State<CheckOut>
                           provider,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
                       if (amount != null) ...[
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Text(
                           amount,
                           style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
                             color: Color(0xFF1B5E20),
                           ),
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   const Text(
-                    '✓ Available and not used before. You can proceed with order!',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF2E7D32)),
+                    'Transaction Verified & Correct',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF2E7D32),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'পেমেন্ট ডাটাবেজে সফলভাবে মিলেছে। আপনি এখন অর্ডার প্লেস করতে পারেন।',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF1B5E20),
+                      height: 1.35,
+                    ),
                   ),
                 ],
               ),
@@ -2242,33 +2568,91 @@ class _CheckOutState extends State<CheckOut>
     if (_trxVerificationResult.isAlreadyUsed) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFFFFEBEE),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE57373)),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFE53935), width: 1.8),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFC62828).withValues(alpha: 0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
-        child: const Row(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.cancel, color: Color(0xFFC62828), size: 22),
-            SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFC62828),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.close_rounded,
+                color: Colors.white,
+                size: 26,
+              ),
+            ),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Transaction Already Used (ব্যবহৃত হয়ে গেছে)',
+                  const Text(
+                    'ট্রানজেকশন আইডি পূর্বে ব্যবহৃত হয়েছে! ✕',
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
                       color: Color(0xFFB71C1C),
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    'This Transaction ID has already been redeemed for another order. Please provide a new payment TrxID.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFFC62828)),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Transaction ID Already Used',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFC62828),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'এই ট্রানজেকশন আইডি দিয়ে ইতিমধ্যে অন্য একটি অর্ডার করা হয়েছে। অনুগ্রহ করে নতুন পেমেন্ট করুন এবং নতুন TrxID প্রদান করুন।',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFB71C1C),
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  InkWell(
+                    onTap: _openOrderAndPaymentInstructions,
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.play_circle_fill_rounded,
+                          size: 18,
+                          color: Color(0xFFC62828),
+                        ),
+                        SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'কীভাবে পেমেন্ট করবেন ভিডিও দেখুন',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFC62828),
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -2281,69 +2665,165 @@ class _CheckOutState extends State<CheckOut>
     if (_trxVerificationResult.isNotFound) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF3E0),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFFFB74D)),
+          color: const Color(0xFFFFF8E1),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFFFA000), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFFFA000).withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: Color(0xFFE65100),
-              size: 22,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0xFFF57C00),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.info_outline_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Transaction Not Found (ডাটাবেজে পাওয়া যায়নি)',
+                    'ট্রানজেকশন আইডি ডাটাবেজে মেলেনি',
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFBF360C),
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFE65100),
                     ),
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'This Transaction ID was not found in our database. Please double check that you typed the correct TrxID and sent payment to our official number.',
-                    style: TextStyle(fontSize: 12, color: Color(0xFFE65100)),
+                    'Transaction ID Not Found in Database',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFF57C00),
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        final text = _transactionIdController.text.trim();
-                        if (text.isNotEmpty) {
-                          _verifyTransactionId(text);
-                        }
-                      },
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        side: const BorderSide(color: Color(0xFFE65100)),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _paymentProofImage != null
+                        ? 'আইডিটি ডাটাবেজে মেলেনি, তবে আপনি পেমেন্ট স্ক্রিনশট সংযুক্ত করায় অর্ডার সম্পন্ন করতে পারবেন। আমাদের টিম ম্যানুয়ালি যাচাই করবে।'
+                        : 'এই ট্রানজেকশন আইডিটি ডাটাবেজে মেলেনি। অনুগ্রহ করে পেমেন্ট স্ক্রিনশট আপলোড করুন, স্ক্রিনশট থাকলেই আপনি অর্ডার সম্পন্ন করতে পারবেন।',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFBF360C),
+                      height: 1.35,
+                    ),
+                  ),
+                  if (_paymentProofImage != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
                       ),
-                      icon: const Icon(
-                        Icons.refresh,
-                        size: 15,
-                        color: Color(0xFFE65100),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE8F5E9),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF81C784)),
                       ),
-                      label: const Text(
-                        'Check Again',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFFE65100),
-                        ),
+                      child: const Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle_rounded,
+                            color: Color(0xFF2E7D32),
+                            size: 16,
+                          ),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'স্ক্রিনশট সংযুক্ত আছে — আপনি অর্ডার করতে পারবেন',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2E7D32),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                  ],
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          final text = _transactionIdController.text.trim();
+                          if (text.isNotEmpty) {
+                            _verifyTransactionId(text);
+                          }
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(
+                            color: Color(0xFFE65100),
+                            width: 1.5,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.refresh_rounded,
+                          size: 18,
+                          color: Color(0xFFE65100),
+                        ),
+                        label: const Text(
+                          'আবার চেক করুন',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFE65100),
+                          ),
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: _openOrderAndPaymentInstructions,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                        ),
+                        icon: const Icon(
+                          Icons.play_circle_fill_rounded,
+                          size: 18,
+                          color: Color(0xFF1877F2),
+                        ),
+                        label: const Text(
+                          'ভিডিও গাইড',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1877F2),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -2356,30 +2836,71 @@ class _CheckOutState extends State<CheckOut>
     if (_trxVerificationResult.isError) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surfaceGrey,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+          color: const Color(0xFFFFF3E0),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.error.withValues(alpha: 0.6),
+            width: 1.5,
+          ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.error_outline, color: AppColors.error, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _trxVerificationResult.message,
-                style: const TextStyle(fontSize: 12, color: AppColors.error),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: AppColors.error,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                color: Colors.white,
+                size: 24,
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.refresh, size: 18),
-              onPressed: () {
-                final text = _transactionIdController.text.trim();
-                if (text.isNotEmpty) {
-                  _verifyTransactionId(text);
-                }
-              },
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'যাচাইকরণে সমস্যা হয়েছে',
+                    style: TextStyle(
+                      fontSize: 16.5,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.error,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _trxVerificationResult.message,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      final text = _transactionIdController.text.trim();
+                      if (text.isNotEmpty) {
+                        _verifyTransactionId(text);
+                      }
+                    },
+                    icon: const Icon(Icons.refresh_rounded, size: 16),
+                    label: const Text(
+                      'চেক করুন (Retry)',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -2594,7 +3115,7 @@ class _CheckOutState extends State<CheckOut>
             ),
             const SizedBox(height: 16),
             _buildOrderSummary(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             _buildUpdateBanner(),
 
             _buildFreeDeliveryButton(),
@@ -2776,6 +3297,37 @@ class _CheckOutState extends State<CheckOut>
                 );
               },
             ),
+            const SizedBox(height: 12),
+            Center(
+              child: InkWell(
+                onTap: _openOrderAndPaymentInstructions,
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.ondemand_video_rounded,
+                        size: 18,
+                        color: Color(0xFF1877F2),
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'কীভাবে পেমেন্ট ও অর্ডার সম্পন্ন করবেন? ভিডিও দেখুন',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1877F2),
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),

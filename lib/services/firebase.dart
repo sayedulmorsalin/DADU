@@ -233,10 +233,14 @@ class dataBase {
         }
 
         final toVerify = castToList(data['to_verify']);
+        final toPreparing = castToList(data['to_preparing']);
         final toShip = castToList(data['to_ship']);
         final toReceive = castToList(data['to_receive']);
 
-        return toVerify.isNotEmpty || toShip.isNotEmpty || toReceive.isNotEmpty;
+        return toVerify.isNotEmpty ||
+            toPreparing.isNotEmpty ||
+            toShip.isNotEmpty ||
+            toReceive.isNotEmpty;
       }
       return false;
     } catch (e) {

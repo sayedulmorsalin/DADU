@@ -163,12 +163,11 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     newArrivalProducts.clear();
     recommendedProducts.clear();
 
-    // Force reload everything
+    // Force reload initial products (which also populates recommendedProducts)
     await loadInitialProducts();
     await loadBanners(forceRefresh: true);
     await loadFlashSaleProducts(forceRefresh: true);
     await loadNewArrivalProducts();
-    await loadRecommendations();
   }
 
   Future<void> loadInitialProducts() async {
@@ -293,8 +292,8 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     newArrivalProducts.assignAll(items);
   }
 
-  Future<void> loadRecommendations() async {
-    final items = await apiService.fetchRecommendations(limit: 10);
+  Future<void> loadRecommendations({bool forceRefresh = false}) async {
+    final items = await apiService.fetchRecommendations(limit: 10, forceRefresh: forceRefresh);
     recommendedProducts.assignAll(items);
   }
 

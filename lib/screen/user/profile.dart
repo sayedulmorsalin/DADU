@@ -35,10 +35,12 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
   List<dynamic>? toReceive = null;
   List<dynamic>? toShip = null;
   List<dynamic>? toVerify = null;
+  List<dynamic>? toPreparing = null;
   List<dynamic>? Completed = null;
   int toReceiveCount = 0;
   int toShipCount = 0;
   int toVerifyCount = 0;
+  int toPreparingCount = 0;
   int completedCount = 0;
   double freeDelivery = 0;
 
@@ -147,12 +149,14 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
           toReceive = _castToList(userDetails?["to_receive"]);
           toShip = _castToList(userDetails?["to_ship"]);
           toVerify = _castToList(userDetails?["to_verify"]);
+          toPreparing = _castToList(userDetails?["to_preparing"]);
           Completed = _castToList(userDetails?["completed"]);
 
           // Use list length as counts to ensure accuracy if count field is missing or out of sync
           toReceiveCount = toReceive?.length ?? 0;
           toShipCount = toShip?.length ?? 0;
           toVerifyCount = toVerify?.length ?? 0;
+          toPreparingCount = toPreparing?.length ?? 0;
           completedCount = Completed?.length ?? 0;
           _isLoading = false;
           freeDelivery = (freeDeliveryInfo / 130);
@@ -980,14 +984,21 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
 
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
           children: [
             GestureDetector(
-              onTap: () => _navigateToOrderPage(context, 'Preparing', toVerify),
+              onTap: () => _navigateToOrderPage(context, 'To Verify', toVerify),
+              child: _buildOrderStatus(
+                'Verify',
+                Icons.fact_check_outlined,
+                toVerifyCount,
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _navigateToOrderPage(context, 'Preparing', toPreparing),
               child: _buildOrderStatus(
                 'Preparing',
                 Icons.inventory_2_outlined,
-                toVerifyCount,
+                toPreparingCount,
               ),
             ),
             GestureDetector(
@@ -1074,14 +1085,24 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
 
     if (toVerifyCount > 0) {
       notices.add(_buildStatusNotice(
-        'Your order is being prepared. Please wait until then.',
-        'আপনার অর্ডারটি প্রস্তুত করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন।',
+        'Your payment is being verified by our team. Please wait.',
+        'আপনার পেমেন্ট যাচাই করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন।',
+      ));
+    }
+
+    if (toPreparingCount > 0) {
+      notices.add(Padding(
+        padding: EdgeInsets.only(top: toVerifyCount > 0 ? 8 : 0),
+        child: _buildStatusNotice(
+          'Your order is verified and being prepared. Please wait until then.',
+          'আপনার অর্ডারটি প্রস্তুত করা হচ্ছে, অনুগ্রহ করে অপেক্ষা করুন।',
+        ),
       ));
     }
 
     if (toShipCount > 0) {
       notices.add(Padding(
-        padding: EdgeInsets.only(top: toVerifyCount > 0 ? 8 : 0),
+        padding: EdgeInsets.only(top: (toVerifyCount > 0 || toPreparingCount > 0) ? 8 : 0),
         child: _buildStatusNotice(
           'Your order has been accepted. Your product has been handed over to the Steadfast courier service and will take 3-4 days to arrive. Please wait until then.',
           'আপনার অর্ডারটি গ্রহণ করা হয়েছে। আপনার পণ্যটি স্টিডফাস্ট কুরিয়ার সার্ভিসে হস্তান্তর করা হয়েছে এবং পৌঁছাতে ৩-৪ দিন সময় লাগবে। অনুগ্রহ করে ততক্ষণ অপেক্ষা করুন।',
