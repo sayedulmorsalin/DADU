@@ -13,7 +13,8 @@
         android:label="Dadu"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:enableOnBackInvokedCallback="true">
+        android:enableOnBackInvokedCallback="true"
+        android:hardwareAccelerated="true">
 
         <provider
             android:name="androidx.core.content.FileProvider"

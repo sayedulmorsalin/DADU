@@ -3,6 +3,8 @@ import 'package:dadu/services/deep_link_service.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:flutter_displaymode/flutter_displaymode.dart';
 import 'package:get/get.dart';
 
 void main() async {
@@ -35,6 +37,15 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     // Initialize deep link handling
     DeepLinkService().initDeepLinks(navigatorKey);
+    _setHighRefreshRate();
+  }
+
+  Future<void> _setHighRefreshRate() async {
+    try {
+      if (Platform.isAndroid) {
+        await FlutterDisplayMode.setHighRefreshRate();
+      }
+    } catch (_) {}
   }
 
   @override

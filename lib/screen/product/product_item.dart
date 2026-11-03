@@ -1,4 +1,5 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dadu/component/home_skeleton.dart';
 import 'package:dadu/screen/product/product_details.dart';
 import 'package:dadu/theme/app_colors.dart';
 import 'package:flutter/material.dart';
@@ -22,7 +23,7 @@ class ProductItem extends StatelessWidget {
   final String deliveryFee;
   final dynamic createdAt;
 
-  ProductItem({
+  const ProductItem({
     super.key,
     required this.productId,
     required this.title,
@@ -85,12 +86,17 @@ class ProductItem extends StatelessWidget {
         height: 135,
         width: double.infinity,
         fit: BoxFit.cover,
+        memCacheWidth: 400,
+        memCacheHeight: 400,
+        fadeInDuration: const Duration(milliseconds: 150),
+        fadeOutDuration: const Duration(milliseconds: 150),
         placeholder:
-            (_, __) => Container(
-              height: 135,
-              alignment: Alignment.center,
-              color: AppColors.placeholderBackground,
-              child: const CircularProgressIndicator(),
+            (_, __) => const ShimmerWidget(
+              child: SkeletonContainer(
+                height: 135,
+                width: double.infinity,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(10)),
+              ),
             ),
         errorWidget:
             (_, __, ___) => Container(
@@ -118,15 +124,18 @@ class ProductItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _navigateToDetails(context),
-      child: Card(
-        color: AppColors.cardBackground,
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: () => _navigateToDetails(context),
+        child: Card(
+          color: AppColors.cardBackground,
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          child: SizedBox(
+            height: 255,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(10),
@@ -218,9 +227,10 @@ class ProductItem extends StatelessWidget {
               ),
             ),
           ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
-

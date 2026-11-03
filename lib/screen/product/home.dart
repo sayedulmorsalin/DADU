@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:dadu/component/home_skeleton.dart';
 import 'package:dadu/component/notification_sheet.dart';
 import 'package:dadu/controller/home_controller.dart';
 import 'package:dadu/services/app_version_service.dart';
@@ -94,36 +95,34 @@ class Home extends StatelessWidget {
     return SafeArea(
       child: RefreshIndicator(
         onRefresh: controller.refreshData,
-        child: ListView(
+        child: CustomScrollView(
           controller: controller.scrollController,
-          physics: const _SlowScrollPhysics(), // Applying custom slow physics
-          children: [
-            _buildTopBar(context),
-            _buildBannerSection(context),
-            _buildOldBootButtons(context),
-            _buildSectionTitle('Brand'),
-            _buildBrandGrid(context),
-            _buildSectionTitle('Catagory'),
-            _buildCatagoryGrid(context),
-            _buildComboPackBanner(context),
-            _buildFlashSaleSection(context),
-            const _VersionUpdateBanner(),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: InfoBanner(),
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: SmoothGlideScrollPhysics(),
+          ),
+          cacheExtent: 1200,
+          slivers: [
+            SliverToBoxAdapter(child: RepaintBoundary(child: _buildTopBar(context))),
+            SliverToBoxAdapter(child: RepaintBoundary(child: _buildBannerSection(context))),
+            SliverToBoxAdapter(child: RepaintBoundary(child: _buildOldBootButtons(context))),
+            SliverToBoxAdapter(child: _buildSectionTitle('Brand')),
+            SliverToBoxAdapter(child: RepaintBoundary(child: _buildBrandGrid(context))),
+            SliverToBoxAdapter(child: _buildSectionTitle('Catagory')),
+            SliverToBoxAdapter(child: RepaintBoundary(child: _buildCatagoryGrid(context))),
+            SliverToBoxAdapter(child: RepaintBoundary(child: _buildComboPackBanner(context))),
+            SliverToBoxAdapter(child: RepaintBoundary(child: _buildFlashSaleSection(context))),
+            const SliverToBoxAdapter(child: _VersionUpdateBanner()),
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: InfoBanner(),
+              ),
             ),
-            _buildSectionTitle('Recommended For You'),
-            _buildProductGrid(),
-            Obx(
-              () =>
-                  controller.isLoadingMore.value
-                      ? const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                      : const SizedBox.shrink(),
+            SliverToBoxAdapter(
+              child: _buildSectionTitle('Recommended For You'),
             ),
-            const SizedBox(height: 12),
+            _ProductSliverGrid(controller: controller),
+            _LoadMoreSliver(controller: controller),
           ],
         ),
       ),
@@ -169,7 +168,7 @@ class Home extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 child: Row(
                   children: [
-                    Text(
+                    const Text(
                       "Dadu coin ",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -244,19 +243,7 @@ class Home extends StatelessWidget {
       final banners = controller.banners;
 
       if (banners.isEmpty) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Container(
-            width: double.infinity,
-            height: MediaQuery.of(context).size.width / 2.16,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: AppColors.placeholderBackground,
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Image.asset('assets/icon/banner.jpg', fit: BoxFit.cover),
-          ),
-        );
+        return const BannerSkeleton();
       }
 
       return Padding(
@@ -289,12 +276,14 @@ class Home extends StatelessWidget {
                             : CachedNetworkImage(
                               imageUrl: imageUrl,
                               fit: BoxFit.cover,
+                              memCacheWidth: 800,
                               placeholder:
-                                  (_, __) => Container(
-                                    color: AppColors.placeholderBackground,
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                                  (_, __) => const ShimmerWidget(
+                                    child: SkeletonContainer(
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      borderRadius: BorderRadius.all(
+                                        Radius.circular(12),
                                       ),
                                     ),
                                   ),
@@ -348,12 +337,17 @@ class Home extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _buildOldBootCard(
-              context: context,
+            child: _AnimatedOldBootCard(
               title: 'Buy Old Boot',
               subtitle: 'Pre-owned gear',
-              icon: Icons.shopping_bag_outlined,
-              gradientColors: const [Color(0xFF0D47A1), Color(0xFF1976D2)],
+              badgeText: 'VERIFIED',
+              icon: Icons.shopping_bag_rounded,
+              gradientColors: const [
+                Color(0xFF1E3A8A), // Deep Royal Navy
+                Color(0xFF2563EB), // Electric Blue
+                Color(0xFF0284C7), // Vibrant Cyan-Blue
+              ],
+              shadowColor: const Color(0xFF2563EB),
               onTap: () {
                 Navigator.push(
                   context,
@@ -366,12 +360,17 @@ class Home extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: _buildOldBootCard(
-              context: context,
+            child: _AnimatedOldBootCard(
               title: 'Sell Old Boot',
-              subtitle: 'Cash / Exchange',
-              icon: Icons.sell_outlined,
-              gradientColors: const [Color(0xFFE65100), Color(0xFFFF9800)],
+              subtitle: 'Cash / Trade',
+              badgeText: 'INSTANT',
+              icon: Icons.currency_exchange_rounded,
+              gradientColors: const [
+                Color(0xFF9A1B38), // Deep Ruby Red
+                Color(0xFFDC2626), // Bold Coral Flame
+                Color(0xFFEA580C), // Radiant Sunset Orange
+              ],
+              shadowColor: const Color(0xFFEA580C),
               onTap: () {
                 if (!controller.loggedIn.value) {
                   Navigator.push(
@@ -394,90 +393,7 @@ class Home extends StatelessWidget {
     );
   }
 
-  Widget _buildOldBootCard({
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required List<Color> gradientColors,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          height: 62,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            gradient: LinearGradient(
-              colors: gradientColors,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: gradientColors.first.withOpacity(0.28),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.85),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 11,
-                color: Colors.white.withOpacity(0.7),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildCustomerServiceFab(BuildContext context) {
     return Container(
@@ -490,7 +406,7 @@ class Home extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(0.4),
+            color: Colors.orange.withValues(alpha: 0.4),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -513,12 +429,12 @@ class Home extends StatelessWidget {
   }
 
   void _showCustomerServiceSheet(BuildContext context) {
-    const rawNumber = '01759598839';
+    const rawNumber = '+880 1346-444121';
     final cleanDigits = rawNumber.replaceAll(RegExp(r'\D'), '');
     final waNumber = cleanDigits.startsWith('88')
         ? cleanDigits
         : (cleanDigits.startsWith('0') ? '88$cleanDigits' : '880$cleanDigits');
-    final telNumber = cleanDigits.startsWith('0') ? cleanDigits : '0$cleanDigits';
+    final telNumber = cleanDigits.startsWith('880') ? '+$cleanDigits' : (cleanDigits.startsWith('0') ? cleanDigits : '0$cleanDigits');
 
     showModalBottomSheet(
       context: context,
@@ -656,7 +572,7 @@ class Home extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: iconBgColor.withOpacity(0.3),
+                      color: iconBgColor.withValues(alpha: 0.3),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -769,6 +685,7 @@ class Home extends StatelessWidget {
   Widget _buildBrandGrid(BuildContext context) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      physics: const SmoothGlideScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
@@ -807,7 +724,7 @@ class Home extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -832,30 +749,50 @@ class Home extends StatelessWidget {
 
   Widget _buildCatagoryGrid(BuildContext context) {
     return Obx(() {
-      return Column(
-        children: [
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            childAspectRatio: 3.2,
-            children: [
-              _buildCatagoryItem(context, 'Boots', 'assets/icon/boots.png'),
-              _buildCatagoryItem(context, 'Sneaker', 'assets/icon/sneaker.png'),
-              _buildCatagoryItem(context, 'Slippers', 'assets/icon/slippers.png'),
-              _buildCatagoryItem(context, 'Jersey', 'assets/icon/jersey.png'),
-              _buildCatagoryItem(context, 'Pant', 'assets/icon/pant.png'),
-              _buildCatagoryItem(context, 'Gloves', 'assets/icon/gloves.png'),
-              if (controller.showAllCategories.value) ...[
-                _buildCatagoryItem(context, 'Bag', 'assets/icon/bag.png'),
-                _buildCatagoryItem(context, 'Safe Guard', 'assets/icon/safeguard.png'),
-                _buildCatagoryItem(context, 'Socks', 'assets/icon/socks.png'),
-                _buildCatagoryItem(context, 'Others', 'assets/icon/other.png'),
-              ],
-            ],
-          ),
-          _buildMoreCategoryButton(),
+      final List<Map<String, String>> categories = [
+        {'name': 'Boots', 'icon': 'assets/icon/boots.png'},
+        {'name': 'Sneaker', 'icon': 'assets/icon/sneaker.png'},
+        {'name': 'Slippers', 'icon': 'assets/icon/slippers.png'},
+        {'name': 'Jersey', 'icon': 'assets/icon/jersey.png'},
+        {'name': 'Pant', 'icon': 'assets/icon/pant.png'},
+        {'name': 'Gloves', 'icon': 'assets/icon/gloves.png'},
+        if (controller.showAllCategories.value) ...[
+          {'name': 'Bag', 'icon': 'assets/icon/bag.png'},
+          {'name': 'Safe Guard', 'icon': 'assets/icon/safeguard.png'},
+          {'name': 'Socks', 'icon': 'assets/icon/socks.png'},
+          {'name': 'Others', 'icon': 'assets/icon/other.png'},
         ],
+      ];
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Column(
+          children: [
+            for (int i = 0; i < categories.length; i += 2)
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildCatagoryItem(
+                      context,
+                      categories[i]['name']!,
+                      categories[i]['icon']!,
+                    ),
+                  ),
+                  if (i + 1 < categories.length)
+                    Expanded(
+                      child: _buildCatagoryItem(
+                        context,
+                        categories[i + 1]['name']!,
+                        categories[i + 1]['icon']!,
+                      ),
+                    )
+                  else
+                    const Expanded(child: SizedBox.shrink()),
+                ],
+              ),
+            _buildMoreCategoryButton(),
+          ],
+        ),
       );
     });
   }
@@ -915,7 +852,7 @@ class Home extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.orange.withOpacity(0.3),
+                color: Colors.orange.withValues(alpha: 0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -929,7 +866,7 @@ class Home extends StatelessWidget {
                 child: Icon(
                   Icons.shopping_bag,
                   size: 100,
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white.withValues(alpha: 0.15),
                 ),
               ),
               const Padding(
@@ -970,7 +907,6 @@ class Home extends StatelessWidget {
       ),
     );
   }
-
 
   Widget _buildFlashSaleSection(BuildContext context) {
     return Obx(() {
@@ -1058,7 +994,7 @@ class Home extends StatelessWidget {
                 height: 180,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  physics: const _SlowScrollPhysics(),
+                  physics: const SmoothGlideScrollPhysics(),
                   itemCount: controller.flashProducts.length,
                   itemBuilder: (context, index) {
                     final product = controller.flashProducts[index];
@@ -1103,7 +1039,7 @@ class Home extends StatelessWidget {
         onTap: () {
           controller.scrollController.animateTo(
             controller.scrollController.offset + 400,
-            duration: const Duration(milliseconds: 1200), // Slower animation
+            duration: const Duration(milliseconds: 600),
             curve: Curves.easeOutCubic,
           );
         },
@@ -1132,62 +1068,6 @@ class Home extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Widget _buildProductGrid() {
-    return Obx(() {
-      if (controller.isInitialLoading.value) {
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 22),
-          child: Center(child: CircularProgressIndicator()),
-        );
-      }
-
-      if (controller.products.isEmpty) {
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 22),
-          child: Center(child: Text('No products found')),
-        );
-      }
-
-      return GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: controller.products.length,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 0.72,
-        ),
-        itemBuilder: (context, index) {
-          final product = controller.products[index];
-
-          return ProductItem(
-            productId: product['id']?.toString() ?? '',
-            title: product['name']?.toString() ?? 'No Title',
-            price: '৳${product['price']?.toString() ?? '0'}',
-            imagePath: product['image5']?.toString() ?? '',
-            image20: product['image20']?.toString() ?? '',
-            description:
-                product['details']?.toString() ?? 'No details available',
-            videoLink:
-                product['videoLink']?.toString() ?? 'No videoLink available',
-            catagory: product['catagory']?.toString() ?? 'Others',
-            image5: product['image5']?.toString() ?? '',
-            goldCoin: double.tryParse(product['gold_coin']?.toString() ?? '0') ?? 0.0,
-            brand: product['brand']?.toString() ?? '',
-            imageTwo: product['imageTwo']?.toString() ?? '',
-            imageThree: product['imageThree']?.toString() ?? '',
-            size: product['size']?.toString() ?? '',
-            stock: int.tryParse(product['stock']?.toString() ?? '1') ?? 1,
-            deliveryFee: product['deliveryFee']?.toString() ?? '',
-            createdAt: product['createdAt'],
-          );
-        },
-      );
-    });
   }
 
   Widget _buildProfileNavIcon() {
@@ -1288,6 +1168,7 @@ class Home extends StatelessWidget {
         );
       },
       child: Container(
+        height: 52,
         margin: const EdgeInsets.all(4),
         padding: const EdgeInsets.symmetric(horizontal: 10),
         decoration: BoxDecoration(
@@ -1309,27 +1190,247 @@ class Home extends StatelessWidget {
       ),
     );
   }
-
 }
 
-/// Custom ScrollPhysics to decrease manual scroll speed by increasing friction
-class _SlowScrollPhysics extends ScrollPhysics {
-  const _SlowScrollPhysics({super.parent});
+class _AnimatedOldBootCard extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final String badgeText;
+  final IconData icon;
+  final List<Color> gradientColors;
+  final Color shadowColor;
+  final VoidCallback onTap;
+
+  const _AnimatedOldBootCard({
+    required this.title,
+    required this.subtitle,
+    required this.badgeText,
+    required this.icon,
+    required this.gradientColors,
+    required this.shadowColor,
+    required this.onTap,
+  });
 
   @override
-  _SlowScrollPhysics applyTo(ScrollPhysics? ancestor) {
-    return _SlowScrollPhysics(parent: buildParent(ancestor));
+  State<_AnimatedOldBootCard> createState() => _AnimatedOldBootCardState();
+}
+
+class _AnimatedOldBootCardState extends State<_AnimatedOldBootCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shimmerController;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3200),
+    )..repeat();
   }
 
   @override
-  Simulation? createBallisticSimulation(
-    ScrollMetrics position,
-    double velocity,
-  ) {
-    // Increased scroll speed slightly from 0.5 to 0.75 for a more responsive, fluid scroll
-    return super.createBallisticSimulation(position, velocity * 0.75);
+  void dispose() {
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      scale: _isPressed ? 0.95 : 1.0,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOutCubic,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) {
+          setState(() => _isPressed = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _isPressed = false),
+        child: Container(
+          height: 68,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: widget.gradientColors,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: widget.shadowColor.withValues(alpha: 0.32),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.22),
+              width: 1.2,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              // Ambient geometric depth circles
+              Positioned(
+                right: -14,
+                top: -18,
+                child: Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: -20,
+                bottom: -20,
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withValues(alpha: 0.05),
+                  ),
+                ),
+              ),
+
+              // Animated diagonal light sheen sweep
+              AnimatedBuilder(
+                animation: _shimmerController,
+                builder: (context, child) {
+                  return FractionalTranslation(
+                    translation: Offset(
+                      (_shimmerController.value * 3.5) - 1.2,
+                      0,
+                    ),
+                    child: Transform.rotate(
+                      angle: 0.45,
+                      child: Container(
+                        width: 40,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white.withValues(alpha: 0.0),
+                              Colors.white.withValues(alpha: 0.18),
+                              Colors.white.withValues(alpha: 0.0),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              // Foreground card content
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Row(
+                  children: [
+                    // Modern frosted glass icon box
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(widget.icon, color: Colors.white, size: 21),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Title + Badge + Subtitle
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 5,
+                                  vertical: 1.5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.22),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  widget.badgeText,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  widget.subtitle,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.88),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Sleek arrow button
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.16),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 10,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
+
 
 class _VersionUpdateBanner extends StatefulWidget {
   const _VersionUpdateBanner();
@@ -1465,7 +1566,10 @@ class _TypingTextState extends State<_TypingText> {
 
   @override
   Widget build(BuildContext context) {
-    return Text(_displayedText, style: widget.style);
+    return SizedBox(
+      width: 85,
+      child: Text(_displayedText, style: widget.style),
+    );
   }
 }
 
@@ -1534,9 +1638,17 @@ class _FlashItem extends StatelessWidget {
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
+                    memCacheWidth: 350,
+                    memCacheHeight: 350,
                     placeholder:
-                        (_, __) => const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                        (_, __) => const ShimmerWidget(
+                          child: SkeletonContainer(
+                            width: double.infinity,
+                            height: double.infinity,
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(12),
+                            ),
+                          ),
                         ),
                     errorWidget: (_, __, ___) => const Icon(Icons.broken_image),
                   ),
@@ -1612,4 +1724,163 @@ class _FlashItem extends StatelessWidget {
     );
   }
 }
+class _ProductSliverGrid extends StatelessWidget {
+  final HomeController controller;
+  const _ProductSliverGrid({required this.controller});
 
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final isInitial = controller.isInitialLoading.value;
+      final items = controller.products;
+
+      // Pre-render skeleton cards with the exact same 255px grid geometry
+      // while loading so cards take their full space from the very first frame.
+      if (isInitial || items.isEmpty) {
+        return SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              mainAxisExtent: 255,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => const ProductCardSkeleton(),
+              childCount: 6,
+            ),
+          ),
+        );
+      }
+
+      return SliverPadding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            mainAxisExtent: 255,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              final product = items[index];
+              final productId = product['id']?.toString() ?? index.toString();
+              return ProductItem(
+                key: ValueKey(productId),
+                productId: productId,
+                title: product['name']?.toString() ?? 'No Title',
+                price: '৳${product['price']?.toString() ?? '0'}',
+                imagePath: product['image5']?.toString() ?? '',
+                image20: product['image20']?.toString() ?? '',
+                description:
+                    product['details']?.toString() ?? 'No details available',
+                videoLink:
+                    product['videoLink']?.toString() ?? 'No videoLink available',
+                catagory: product['catagory']?.toString() ?? 'Others',
+                image5: product['image5']?.toString() ?? '',
+                goldCoin:
+                    double.tryParse(product['gold_coin']?.toString() ?? '0') ??
+                    0.0,
+                brand: product['brand']?.toString() ?? '',
+                imageTwo: product['imageTwo']?.toString() ?? '',
+                imageThree: product['imageThree']?.toString() ?? '',
+                size: product['size']?.toString() ?? '',
+                stock: int.tryParse(product['stock']?.toString() ?? '1') ?? 1,
+                deliveryFee: product['deliveryFee']?.toString() ?? '',
+                createdAt: product['createdAt'],
+              );
+            },
+            childCount: items.length,
+            findChildIndexCallback: (Key key) {
+              if (key is ValueKey) {
+                final target = key.value.toString();
+                final idx = items.indexWhere(
+                  (p) => (p['id']?.toString() ?? '') == target,
+                );
+                return idx == -1 ? null : idx;
+              }
+              return null;
+            },
+          ),
+        ),
+      );
+    });
+  }
+}
+
+class _LoadMoreSliver extends StatelessWidget {
+  final HomeController controller;
+  const _LoadMoreSliver({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      if (controller.isLoadingMore.value) {
+        // Reserve the full 255px height for upcoming pagination cards so there is no layout jump
+        return SliverPadding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 20),
+          sliver: SliverGrid(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              mainAxisExtent: 255,
+            ),
+            delegate: SliverChildBuilderDelegate(
+              (context, index) => const ProductCardSkeleton(),
+              childCount: 2,
+            ),
+          ),
+        );
+      }
+      return const SliverToBoxAdapter(child: SizedBox(height: 20));
+    });
+  }
+}
+
+
+/// Silky-smooth gliding scroll physics with extended, gradual deceleration.
+class SmoothGlideScrollPhysics extends ClampingScrollPhysics {
+  final double frictionCoefficient;
+
+  const SmoothGlideScrollPhysics({
+    super.parent,
+    this.frictionCoefficient = 0.0068, // Lower friction allows the stopping animation to decelerate slowly and take more time
+  });
+
+  @override
+  SmoothGlideScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return SmoothGlideScrollPhysics(
+      parent: buildParent(ancestor),
+      frictionCoefficient: frictionCoefficient,
+    );
+  }
+
+  @override
+  Simulation? createBallisticSimulation(
+    ScrollMetrics position,
+    double velocity,
+  ) {
+    final tolerance = toleranceFor(position);
+
+    // If out of bounds, let ClampingScrollPhysics clamp smoothly at the boundaries
+    if (position.outOfRange) {
+      return super.createBallisticSimulation(position, velocity);
+    }
+
+    // Allow the stopping animation to play out gently all the way down to a whisper (< 4.0 px/s)
+    // so it takes more time and slows down with an extended, graceful curve
+    if (velocity.abs() < 4.0) {
+      return null;
+    }
+
+    return ClampingScrollSimulation(
+      position: position.pixels,
+      velocity: velocity,
+      friction: frictionCoefficient,
+      tolerance: Tolerance(velocity: 4.0, distance: tolerance.distance),
+    );
+  }
+}

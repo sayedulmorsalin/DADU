@@ -213,7 +213,7 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
       File imageFile = File(pickedFile.path);
       final newUrl = await imageService.uploadProfileImage(imageFile);
 
-      if (newUrl != null && oldUrl != null && oldUrl.isNotEmpty) {
+      if (oldUrl != null && oldUrl.isNotEmpty) {
         // Deletion is asynchronous and doesn't block the UI update
         imageService.deleteImage(oldUrl);
       }
@@ -233,9 +233,9 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
     showDialog(
       context: context,
       builder: (context) {
+        bool _isSaving = false;
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            bool _isSaving = false;
 
             return AlertDialog(
               title: const Text(
@@ -455,9 +455,9 @@ class _ProfileState extends State<Profile> with WidgetsBindingObserver, TickerPr
     showDialog(
       context: context,
       builder: (context) {
+        bool _isSaving = false;
         return StatefulBuilder(
           builder: (context, setDialogState) {
-            bool _isSaving = false;
 
             return AlertDialog(
               title: const Text(

@@ -97,9 +97,13 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     unawaited(updateUnreadCount());
     unawaited(_recordLoginTime());
 
-    // Only load if data is empty to save requests
+    // Load initial products, banners, and flash sale in parallel so the layout is fully resolved upfront
     if (products.isEmpty) {
-      await loadInitialProducts();
+      await Future.wait([
+        loadInitialProducts(),
+        if (banners.isEmpty) loadBanners(),
+        loadFlashSaleProducts(forceRefresh: true),
+      ]);
     }
 
     unawaited(_loadSecondaryDataStaggered());
@@ -138,13 +142,10 @@ class HomeController extends GetxController with WidgetsBindingObserver {
   }
 
   Future<void> _loadSecondaryDataStaggered() async {
-    await Future<void>.delayed(const Duration(milliseconds: 150));
     if (banners.isEmpty) await loadBanners();
+    if (flashProducts.isEmpty) await loadFlashSaleProducts(forceRefresh: true);
 
-    await Future<void>.delayed(const Duration(milliseconds: 220));
-    await loadFlashSaleProducts(forceRefresh: true);
-
-    await Future<void>.delayed(const Duration(milliseconds: 220));
+    await Future<void>.delayed(const Duration(milliseconds: 150));
     if (newArrivalProducts.isEmpty) await loadNewArrivalProducts();
 
     await Future<void>.delayed(const Duration(milliseconds: 220));
@@ -203,18 +204,23 @@ class HomeController extends GetxController with WidgetsBindingObserver {
 
     isLoadingMore.value = true;
 
-    final moreProducts = await apiService.fetchProducts(limit: 20, page: apiPage);
-    if (moreProducts.isEmpty || moreProducts.length < 20) {
-      hasMore.value = false;
+    try {
+      final moreProducts = await apiService.fetchProducts(limit: 20, page: apiPage);
+      if (moreProducts.isEmpty || moreProducts.length < 20) {
+        hasMore.value = false;
+      }
+      if (moreProducts.isNotEmpty) {
+        final existingIds = products.map((p) => p['id']?.toString()).toSet();
+        final uniqueProducts = moreProducts.where((p) => !existingIds.contains(p['id']?.toString())).toList();
+        if (uniqueProducts.isNotEmpty) {
+          products.addAll(uniqueProducts);
+        }
+        apiPage++;
+      }
+    } catch (_) {
+    } finally {
+      isLoadingMore.value = false;
     }
-    if (moreProducts.isNotEmpty) {
-      final existingIds = products.map((p) => p['id']?.toString()).toSet();
-      final uniqueProducts = moreProducts.where((p) => !existingIds.contains(p['id']?.toString())).toList();
-      products.addAll(uniqueProducts);
-      apiPage++;
-    }
-
-    isLoadingMore.value = false;
   }
 
   Future<void> loadBanners({bool forceRefresh = false}) async {
@@ -386,8 +392,13 @@ class HomeController extends GetxController with WidgetsBindingObserver {
     scrollController.addListener(() {
       if (!scrollController.hasClients) return;
 
-      final threshold = scrollController.position.maxScrollExtent - 220;
-      if (scrollController.position.pixels >= threshold) {
+      // Trigger prefetch well before reaching the bottom (~1200px / 5 rows)
+      // to ensure uninterrupted, continuous infinite scrolling
+      final threshold = scrollController.position.maxScrollExtent - 1200;
+      if (scrollController.position.pixels >= threshold &&
+          !isLoadingMore.value &&
+          !isInitialLoading.value &&
+          hasMore.value) {
         unawaited(loadMoreProducts());
       }
     });

@@ -55,10 +55,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     }
   }
 
-  void _resetForm() {
-    _formKey.currentState?.reset();
-  }
-
   @override
   void dispose() {
     _emailController.dispose();

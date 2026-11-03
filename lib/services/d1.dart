@@ -55,7 +55,7 @@ class ApiService {
       // the server can personalise the response in future, but the request
       // succeeds even for unauthenticated guests.
       final User? user = FirebaseAuth.instance.currentUser;
-      final String? token = await user?.getIdToken();
+      final String? token = await user?.getIdToken(false);
 
       String url = '$_baseUrl/products?limit=$limit&page=$page';
       if (category != null) {
@@ -303,7 +303,7 @@ class ApiService {
   Future<bool> fetchMessagingStatus() async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      final String? token = await user?.getIdToken();
+      final String? token = await user?.getIdToken(false);
 
       final response = await http.get(
         Uri.parse('$_baseUrl/messages/status'),
@@ -752,7 +752,7 @@ class ApiService {
   }) async {
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      final String? token = await user?.getIdToken();
+      final String? token = await user?.getIdToken(false);
 
       final body = {
         'eventType': eventType,
@@ -797,7 +797,7 @@ class ApiService {
 
     try {
       final User? user = FirebaseAuth.instance.currentUser;
-      final String? token = await user?.getIdToken();
+      final String? token = await user?.getIdToken(false);
 
       String url = '$_baseUrl/products/recommendations?limit=$limit';
       if (category != null && category.isNotEmpty) {
